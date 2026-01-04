@@ -213,13 +213,17 @@ function Caja() {
     const caja = await getUltimaCajaAbierta(sucursalID, userID);
     setCajaAbierta(caja);
 
+    // obtener el saldo más reciente primero
+    const saldo = await getUltimoSaldoSucursal(sucursalID, userID);
+    setCajaMontoAnterior(saldo);
+
     if (caja?.id) {
       // Caja abierta → limpiar nuevaCaja, preparar cerrarCajaDto
       setNuevaCaja(null);
       setCerrarCajaDto({
         registroCajaId: caja.id,
         usuarioCierra: userID,
-        comentarioFinal: "", // 👈 forzar a vacío
+        comentarioFinal: "",
       });
 
       const [movs, vtas] = await Promise.all([
@@ -229,21 +233,18 @@ function Caja() {
       setMovimientos(movs);
       setVentas(vtas);
     } else {
-      // Caja cerrada → limpiar cerrarCajaDto, preparar nuevaCaja
+      // Caja cerrada → limpiar cerrarCajaDto, preparar nuevaCaja con el saldo que ACABAMOS de traer
       setCerrarCajaDto(null);
       setNuevaCaja({
-        saldoInicial: cajaMontoAnterior,
+        saldoInicial: saldo, // <-- usar el saldo fresco
         sucursalId: sucursalID,
         usuarioInicioId: userID,
-        comentario: "", // 👈 forzar a vacío
+        comentario: "",
       });
       setMovimientos([]);
       setVentas([]);
     }
-
-    const saldo = await getUltimoSaldoSucursal(sucursalID, userID);
-    setCajaMontoAnterior(saldo);
-  }, [sucursalID, userID, cajaMontoAnterior]);
+  }, [sucursalID, userID]);
 
   useEffect(() => {
     reloadContext();

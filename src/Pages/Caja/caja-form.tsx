@@ -70,7 +70,7 @@ function CajaForm({
 }: CajaInicioProps) {
   const [openCierreCajaDialog, setOpenCierreCajaDialog] = useState(false);
 
-  const truncateInputSaldo: boolean = cajaMontoAnterior > 0 ? true : false;
+  // const truncateInputSaldo: boolean = cajaMontoAnterior > 0 ? true : false;
 
   const fechaApertura = cajaAbierta?.fechaApertura
     ? typeof cajaAbierta.fechaApertura === "string"
@@ -116,22 +116,26 @@ function CajaForm({
                 id="saldoInicial"
                 name="saldoInicial"
                 type="number"
+                // Usamos el valor de nuevaCaja (controlado). Si por alguna razón nuevaCaja es null,
+                // mostramos cajaMontoAnterior como fallback para que no quede vacío.
                 value={
-                  truncateInputSaldo
-                    ? Number(cajaMontoAnterior)
-                    : nuevaCaja?.saldoInicial ?? ""
+                  nuevaCaja
+                    ? // si existe nuevaCaja usar su saldo (editable)
+                      nuevaCaja.saldoInicial ?? ""
+                    : // fallback visual, no controlamos si no existe nuevaCaja
+                      cajaMontoAnterior ?? ""
                 }
-                onChange={truncateInputSaldo ? undefined : handleChangeGeneric}
+                onChange={handleChangeGeneric}
                 placeholder="Ingrese su saldo inicial para este turno"
                 required
-                disabled={truncateInputSaldo}
-                readOnly={truncateInputSaldo}
               />
               <span
                 className="text-xs text-muted-foreground"
                 aria-live="polite"
               >
-                {truncateInputSaldo ? "Tomando saldo anterior" : "\u00A0"}
+                {cajaMontoAnterior > 0
+                  ? "Tomando saldo anterior (puedes editarlo)"
+                  : "\u00A0"}
               </span>
             </div>
 
