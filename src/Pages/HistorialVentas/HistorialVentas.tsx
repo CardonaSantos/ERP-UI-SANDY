@@ -29,7 +29,7 @@ import {
 import { PageHeader } from "@/utils/components/PageHeaderPos";
 import VentaDetalleDialog from "../POS/VentaDetalleDialog";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
-import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { ventasHistorialKeys } from "./Keys/query";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 
@@ -187,7 +187,7 @@ export default function HistorialVentasMain() {
   // ---------- Fetch con tu wrapper ----------
   const {
     data: ventasPage,
-    isFetching, // 👈 usar este para spinners
+    isFetching,
     isError,
   } = useApiQuery<VentasApiResponse>(
     ventasHistorialKeys.listSucursal(sucursalId, queryParams),
@@ -195,9 +195,11 @@ export default function HistorialVentasMain() {
     { params: queryParams },
     {
       enabled: Number.isFinite(sucursalId) && sucursalId > 0,
-      placeholderData: keepPreviousData, // 👈 clave
-      staleTime: 30_000,
-      refetchOnWindowFocus: false, // 👈 evita “brincos”
+
+      staleTime: 0, // nunca considerado "fresh"
+      refetchOnMount: "always", // siempre refetch al montar
+      refetchOnReconnect: true, // refetch al volver conexión
+      refetchOnWindowFocus: true, // refetch al volver a la pestaña
     }
   );
 
