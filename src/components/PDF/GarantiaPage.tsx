@@ -8,30 +8,25 @@ import Garantia from "./Garantia";
 const API_URL = import.meta.env.VITE_API_URL;
 
 function GarantiaPage() {
-  // Obtén el parámetro idSale de la URL
-  const { id } = useParams(); // Extrae el valor de idSale
+  const { id } = useParams();
   console.log("El id del param es: ", id);
 
   const [venta, setVenta] = useState<VentaHistorialPDF>();
 
   const getSale = async () => {
     try {
-      // Asegúrate de concatenar correctamente el idSale a la URL
       const response = await axios.get(`${API_URL}/venta/get-sale/${id}`);
       if (response.status === 200) {
         setVenta(response.data);
       }
     } catch (error) {
-      console.log("Error al conseguir el registro de venta");
       toast.error("Error al encontrar registro de venta");
     }
   };
 
   useEffect(() => {
     getSale();
-  }, [id]); // Escucha por cambios en idSale
-
-  console.log("La venta para la garantía es: ", venta);
+  }, [id]);
 
   return (
     <div>

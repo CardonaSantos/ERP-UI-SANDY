@@ -73,7 +73,6 @@ export default function TableVentas({
       if (s) {
         onSortChange(s.id as any, s.desc ? "desc" : "asc");
       } else {
-        // default del backend
         onSortChange("fechaVenta", "desc");
       }
     },

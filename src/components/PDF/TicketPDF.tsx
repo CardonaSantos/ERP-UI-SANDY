@@ -8,19 +8,14 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer";
-import logo from "@/assets/Agroservicio.png";
-
+import logo from "@/assets/NOVAPOSPNG.png";
 import { VentaHistorialPDF } from "@/Types/PDF/VentaHistorialPDF";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import localizedFormat from "dayjs/plugin/localizedFormat";
-
 dayjs.extend(localizedFormat);
 dayjs.locale("es");
 
-// Register custom font (optional, but recommended for better styling)
-
-// Register custom font (optional, but recommended for better styling)
 Font.register({
   family: "Roboto",
   src: "https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-light-webfont.ttf",

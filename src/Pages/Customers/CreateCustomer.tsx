@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-
 // shadcn/ui
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,8 +105,6 @@ interface FormDataEdit
   nit?: string;
   observaciones?: string;
 }
-
-// ================= Utils =================
 
 // ================ Edit Dialog ================
 function EditCustomerDialog({
@@ -247,7 +244,6 @@ export default function ClientesPageRefactor() {
 
   const queryClient = useQueryClient();
 
-  // ---------- data (React Query) ----------
   const clientesQuery = useApiQuery<ClienteResponse[]>(
     ["clientes"],
     "/client/get-all-customers",
@@ -352,11 +348,6 @@ export default function ClientesPageRefactor() {
 
   const onCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // const { ok, msg } = validateDpiNitEither(formData.dpi, formData.nit);
-    // if (!ok) {
-    //   toast.warning(msg);
-    //   return;
-    // }
     setOpenConfirmCreate(true);
   };
 
@@ -380,16 +371,10 @@ export default function ClientesPageRefactor() {
   };
 
   const handleConfirmSave = async () => {
-    // validaciones mínimas
     if (!editData.nombre?.trim()) {
       toast.warning("El nombre es requerido");
       return;
     }
-    // const { ok, msg } = validateDpiNitEither(editData.dpi, editData.nit);
-    // if (!ok) {
-    //   toast.warning(msg);
-    //   return;
-    // }
     await actualizarCliente.mutateAsync(editData);
     setOpenConfirmSave(false);
   };
@@ -399,7 +384,6 @@ export default function ClientesPageRefactor() {
     setOpenConfirmDelete(false);
   };
 
-  // ---------- UI ----------
   return (
     <div className="container mx-auto px-3 sm:px-6">
       <PageHeader

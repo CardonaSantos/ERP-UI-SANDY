@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  // CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -26,7 +25,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import axios from "axios";
 import {
   AlertTriangle,
   ArrowDownIcon,
@@ -53,7 +51,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import SelectComponent, { SingleValue } from "react-select";
 import {
@@ -66,10 +64,9 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import dayjs from "dayjs";
-
 import dayOfYear from "dayjs/plugin/dayOfYear";
-import isLeapYear from "dayjs/plugin/isLeapYear"; // ES 2015
-import advancedFormat from "dayjs/plugin/advancedFormat"; // ES 2015
+import isLeapYear from "dayjs/plugin/isLeapYear";
+import advancedFormat from "dayjs/plugin/advancedFormat";
 import currency from "currency.js";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -80,188 +77,63 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { EditMetaTiendaDialog } from "./EditMetaTiendaDialog";
+import { EditMetaCobroDialog } from "./EditMetaCobroDialog";
+import {
+  DepositoCobro,
+  EstadoMetaCobro,
+  EstadoMetaTienda,
+  MetaCobros,
+  MetaInterfaceDTO,
+  MetaTienda,
+  TipoMeta,
+} from "./types";
+import {
+  useCreateMetaCobro,
+  useCreateMetaTienda,
+  useDeleteDepositoCobro,
+  useDeleteMetaCobro,
+  useDeleteMetaTienda,
+  useMetasCobros,
+  useMetasSummary,
+  useMetasTienda,
+  useMetasUsers,
+} from "@/hooks/metas-hook/useMetas";
+import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 
 dayjs.extend(advancedFormat);
 dayjs.extend(dayOfYear);
 dayjs.extend(isLeapYear);
-
-const API_URL = import.meta.env.VITE_API_URL;
-interface MetaCobros {
-  id: number; // ID de la meta
-  usuarioId: number; // ID del usuario al que pertenece la meta
-  sucursalId: number; // ID de la sucursal asociada a la meta
-  fechaCreado: string; // Fecha de creación de la meta (ISO 8601)
-  fechaInicio: string; // Fecha de inicio de la meta (ISO 8601)
-  fechaFin: string; // Fecha de fin de la meta (ISO 8601)
-  montoMeta: number; // Monto objetivo de la meta
-  montoActual: number; // Monto acumulado actual
-  cumplida: boolean; // Indica si la meta fue cumplida
-  fechaCumplida: string | null; // Fecha en que se cumplió la meta, si aplica
-  numeroDepositos: number; // Número de depósitos asociados a la meta
-  tituloMeta: string; // Título descriptivo de la meta
-  DepositoCobro: DepositoCobro[]; // Lista de depósitos asociados a la meta
-  sucursal: Sucursal; // Información de la sucursal
-  usuario: Usuario; // Información del usuario
-  estado: EstadoMetaCobro;
-}
-
-enum EstadoMetaCobro {
-  CANCELADO = "CANCELADO",
-  ABIERTO = "ABIERTO",
-  FINALIZADO = "FINALIZADO",
-  CERRADO = "CERRADO",
-}
-
-interface DepositoCobro {
-  id: number; // ID del depósito
-  usuarioId: number; // ID del usuario que realizó el depósito
-  sucursalId: number; // ID de la sucursal asociada al depósito
-  numeroBoleta: string; // Número de boleta o comprobante del depósito
-  fechaRegistro: string; // Fecha de registro del depósito (ISO 8601)
-  montoDepositado: number; // Monto del depósito realizado
-  descripcion: string; // Descripción adicional del depósito
-  metaCobroId: number; // ID de la meta a la que está asociado el depósito
-}
-
-interface Sucursal {
-  id: number; // ID de la sucursal
-  nombre: string; // Nombre de la sucursal
-  direccion: string; // Dirección de la sucursal
-  telefono: string; // Teléfonos de contacto
-  pbx: string; // PBX de la sucursal
-}
-
-interface Usuario {
-  id: number; // ID del usuario
-  nombre: string; // Nombre del usuario
-  rol: string; // Rol del usuario (por ejemplo, ADMIN, VENDEDOR, etc.)
-}
-
-enum EstadoMetaTienda {
-  CANCELADO = "CANCELADO",
-  ABIERTO = "ABIERTO",
-  FINALIZADO = "FINALIZADO",
-  CERRADO = "CERRADO",
-}
-enum EstadoMetaSelect {
-  CANCELADO = "CANCELADO",
-  CERRADO = "CERRADO",
-  ABIERTO = "ABIERTO",
-  // FINALIZADO = "FINALIZADO",
-}
-
-enum EstadoMetaSelectCumplida {
-  CERRADO = "CERRADO",
-  CANCELADO = "CANCELADO",
-}
-
-//INTERFACES PARA METAS DE TIENDAS
-// Interfaz principal para la meta de ventas o tienda
-interface MetaTienda {
-  id: number; // ID único de la meta
-  cumplida: boolean; // Indica si la meta ha sido cumplida
-  fechaCumplida: string | null; // Fecha en que se cumplió la meta, si aplica
-  fechaFin: string; // Fecha de finalización de la meta (ISO 8601)
-  fechaInicio: string; // Fecha de inicio de la meta (ISO 8601)
-  montoActual: number; // Progreso actual del monto
-  montoMeta: number; // Monto objetivo de la meta
-  numeroVentas: number; // Número total de ventas realizadas
-  sucursalId: number; // ID de la sucursal asociada
-  tituloMeta: string; // Título o descripción de la meta
-  usuarioId: number; // ID del usuario asociado a la meta
-  sucursal: SucursalMetaTiendas; // Detalles de la sucursal asociada
-  usuario: UsuarioMetaTiendas; // Detalles del usuario asociado
-
-  estado: EstadoMetaTienda;
-}
-
-// Interfaz para la sucursal
-interface SucursalMetaTiendas {
-  id: number; // ID único de la sucursal
-  nombre: string; // Nombre de la sucursal
-  telefono: string; // Teléfono(s) de la sucursal
-  direccion: string; // Dirección de la sucursal
-}
-
-// Interfaz para el usuario
-interface UsuarioMetaTiendas {
-  id: number; // ID único del usuario
-  nombre: string; // Nombre del usuario
-  correo: string; // Correo electrónico del usuario
-  rol: string; // Rol del usuario (e.g., ADMIN, VENDEDOR, etc.)
-}
-
-type TipoMeta = "Tienda" | "Cobro"; // Tipo literal para restringir los valores posibles
-
-interface MetaInterfaceDTO {
-  usuarioId: number | null;
-  tipoMeta: TipoMeta;
-  tituloMeta: string;
-  montoMeta: number;
-  fechaFin: string;
-  sucursalId: number;
-}
-
-interface UsuarioSucursal {
-  id: number; // ID único del usuario
-  nombre: string; // Nombre completo del usuario
-  correo: string; // Correo electrónico del usuario
-  sucursal: Sucursal; // Relación con la sucursal
-}
-
-interface Sucursal {
-  id: number; // ID único de la sucursal
-  nombre: string; // Nombre de la sucursal
-}
 
 interface OptionSelected {
   value: number;
   label: string;
 }
 
-interface EditMetaTiendaDialogProps {
-  open: boolean;
-  getMetasTienda: () => void;
-
-  onClose: () => void;
-  metaTienda: MetaTienda | null;
-  // onUpdate: (updatedMeta: MetaTienda) => void; // Función para actualizar
-}
-
-interface EditMetaCobro {
-  open: boolean;
-  getMetasCobros: () => void;
-  onClose: () => void;
-  metaCobro: MetaCobros | null;
-}
-
 function Metas() {
-  const userId = useStore((state) => state.userId) ?? 0;
-  const sucursalId = useStore((state) => state.sucursalId) ?? 0;
-  const [metasCobros, setMetasCobros] = useState<MetaCobros[]>([]);
+  /* ========================= Context ========================= */
+  const userId = useStore((s) => s.userId) ?? 0;
+  const sucursalId = useStore((s) => s.sucursalId) ?? 0;
 
-  const [metasTienda, setMetasTienda] = useState<MetaTienda[]>([]);
-  const [usuarios, setUsuarios] = useState<UsuarioSucursal[]>([]);
+  /* ========================= Queries ========================= */
+  const { data: metasTienda = [] } = useMetasTienda(sucursalId);
+  const { data: metasCobros = [] } = useMetasCobros(sucursalId);
+  const { data: usuarios = [] } = useMetasUsers();
+  const { data: s } = useMetasSummary();
+
+  const summary = s ?? { metasTienda: [], metasCobros: [] };
+  const metasTiendaSummary = summary.metasTienda;
+  const metasCobrosSummary = summary.metasCobros;
+
+  /* ========================= Mutations (hooks) ========================= */
+  const createTienda = useCreateMetaTienda();
+  const createCobro = useCreateMetaCobro();
+  const deleteTienda = useDeleteMetaTienda();
+  const deleteCobro = useDeleteMetaCobro();
+  const deleteDeposito = useDeleteDepositoCobro();
+
+  /* ========================= Local state (kept names used by JSX) ========================= */
   const [searchTerm, setSearchTerm] = useState("");
-  console.log(setSearchTerm);
-
-  const [openUpdateMetaTienda, setOpenUpdateMetaTienda] = useState(false);
-  const [openUpdateMetaCobro, setOpenUpdateMetaCobro] = useState(false);
-
-  const [metaTiendaSelected, setMetaTiendaSelected] =
-    useState<MetaTienda | null>(null);
-
-  const [metaCobroSelected, setMetaCobroSelected] = useState<MetaCobros | null>(
-    null
-  );
-
-  const [metasCobrosSummary, setMetasCobrosSummary] = useState<MetaCobros[]>(
-    []
-  );
-
-  const [metasTiendaSummary, setMetasTiendaSummary] = useState<MetaTienda[]>(
-    []
-  );
 
   const [metaDto, setMetaDto] = useState<MetaInterfaceDTO>({
     usuarioId: 0,
@@ -269,252 +141,181 @@ function Metas() {
     tituloMeta: "",
     montoMeta: 0,
     fechaFin: "",
-    sucursalId: sucursalId,
+    sucursalId,
   });
 
-  const getMetasCobros = async () => {
-    try {
-      const response = await axios.get(
-        `${API_URL}/metas/get-all-cobros-metas/${sucursalId}`
-      );
+  console.log("El set: ", setSearchTerm);
 
-      if (response.status === 200) {
-        setMetasCobros(response.data);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Error al conseguir los registros de metas de cobros");
-    }
-  };
+  const [opcionSeleccionada, setOpcionSeleccionada] = useState<{
+    value: number;
+    label: string;
+  } | null>(null);
 
-  const getMetasTienda = async () => {
-    try {
-      const response = await axios.get(
-        `${API_URL}/metas/get-all-seller-goals/${sucursalId}`
-      );
-      if (response.status === 200) {
-        setMetasTienda(response.data);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Error al conseguir los registros de metas de tiendas");
-    }
-  };
-
-  const getMetasToSummary = async () => {
-    try {
-      const response = await axios.get(
-        `${API_URL}/metas/get-all-metas-to-summary`
-      );
-      if (response.status === 200) {
-        setMetasTiendaSummary(response.data.metasTienda);
-        setMetasCobrosSummary(response.data.metasCobros);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Error al conseguir los registros de metas de tiendas");
-    }
-  };
-
-  const getUsuarios = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/metas/get-all-metas-users`);
-      if (response.status === 200) {
-        setUsuarios(response.data);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Error al cargar los usuarios");
-    }
-  };
-
-  useEffect(() => {
-    if (sucursalId) {
-      getMetasCobros();
-      getMetasTienda();
-      getUsuarios();
-      getMetasToSummary();
-    }
-  }, []);
-
-  const filteredMetasTienda = metasTienda.filter(
-    (meta) =>
-      (meta.tituloMeta ? meta.tituloMeta.toLowerCase() : "").includes(
-        searchTerm.toLowerCase()
-      ) ||
-      meta.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meta.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  const [metaTiendaSelected, setMetaTiendaSelected] =
+    useState<MetaTienda | null>(null);
+  const [metaCobroSelected, setMetaCobroSelected] = useState<MetaCobros | null>(
+    null
   );
 
-  const filteredMetasCobros = metasCobros.filter(
-    (meta) =>
-      (meta.tituloMeta ? meta.tituloMeta.toLowerCase() : "").includes(
-        searchTerm.toLowerCase()
-      ) ||
-      meta.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meta.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [openUpdateMetaTienda, setOpenUpdateMetaTienda] = useState(false);
+  const [openUpdateMetaCobro, setOpenUpdateMetaCobro] = useState(false);
 
-  const optionsUsuarios = usuarios.map((user) => ({
-    value: user.id,
-    label: `${user.nombre} (${user.sucursal.nombre})`,
-  }));
+  /* usado en el JSX para eliminar cobros */
+  const [CobroToDelete, setCobroToDelete] = useState(0);
 
-  const [opcionSeleccionada, setOpcionSeleccionada] =
-    useState<OptionSelected | null>(null);
+  /* diálogos de eliminación (tienda / cobro) */
+  const [openDeleteG, setOpenDeleteG] = useState(false); // mantiene nombre original (usado en JSX)
+  const [openDeleteCobro, setOpenDeleteCobro] = useState(false);
 
-  const handleChangeUser = (
-    opcionSeleccionada: SingleValue<OptionSelected>
-  ) => {
-    setOpcionSeleccionada(opcionSeleccionada);
-    setMetaDto((datosPrevios) => ({
-      ...datosPrevios,
-      usuarioId: opcionSeleccionada?.value || null, // Actualizar el usuarioId
-    }));
-  };
-  console.log("La data a enviar es: ", metaDto);
+  const [goalToDelete, setGoalToDelete] = useState<number | null>(null);
+  const [passwordAdmin, setPasswordAdmin] = useState("");
+  const [passwordAdminCobro, setPasswordAdminCobro] = useState("");
 
-  const handleSubmitGoal = async () => {
-    try {
-      const { usuarioId, tipoMeta, fechaFin, montoMeta } = metaDto;
-
-      if (!usuarioId || !tipoMeta || !fechaFin || !montoMeta) {
-        toast.info("Faltan datos para continuar");
-        return;
-      }
-
-      const user = usuarios.find((user) => user.id === usuarioId);
-      const endpoint =
-        tipoMeta === "Tienda"
-          ? `${API_URL}/metas`
-          : `${API_URL}/metas/regist-new-meta-cobros`;
-
-      const requestBody = {
-        usuarioId,
-        tipoMeta,
-        tituloMeta: metaDto.tituloMeta || null, // Título puede ser opcional
-        montoMeta,
-        fechaFin: new Date(fechaFin),
-        sucursalId: sucursalId,
-      };
-
-      const response = await axios.post(endpoint, requestBody);
-      if (response.status === 201) {
-        toast.success(`Meta registrada para el usuario ${user?.nombre}`);
-        resetForm(); // Restablecer el formulario
-        getMetasCobros();
-        getMetasTienda();
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        metaDto.tipoMeta === "Tienda"
-          ? "Error al crear meta de tienda"
-          : "Error al crear meta de cobros"
-      );
-    }
-  };
-
-  const resetForm = () => {
-    setMetaDto({
-      usuarioId: null,
-      tipoMeta: "Tienda",
-      tituloMeta: "",
-      montoMeta: 0,
-      fechaFin: "",
-      sucursalId: sucursalId,
-    });
-    setOpcionSeleccionada(null);
-  };
-  console.log("Los usuarios son: ", usuarios);
-
+  /* depósitos dialog */
   const [openDepositosDialog, setOpenDepositosDialog] = useState(false);
-  const [selectedMeta, setSelectedMeta] = useState<MetaCobros>();
+  const [selectedMeta, setSelectedMeta] = useState<MetaCobros | undefined>(
+    undefined
+  );
 
-  const handleOpenDepositos = (meta: MetaCobros) => {
-    setSelectedMeta(meta);
-    setOpenDepositosDialog(true);
-  };
+  /* selectedDepo (usado en JSX para confirmar eliminación de depósito) */
+  const [selectedDepo, setSelectedDepo] = useState<DepositoCobro | undefined>(
+    undefined
+  );
 
-  const formatearMoneda = (monto: number) => {
-    return currency(monto, {
+  /* auxiliar para eliminar depósitos (modal confirm) */
+  const [openDeletDepo, setOpenDeletDepo] = useState(false);
+
+  /* ========================= Computed / Memos ========================= */
+
+  const filteredMetasTienda = useMemo(
+    () =>
+      metasTienda.filter(
+        (m) =>
+          m.tituloMeta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          m.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          m.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [metasTienda, searchTerm]
+  );
+
+  const filteredMetasCobros = useMemo(
+    () =>
+      metasCobros.filter(
+        (m) =>
+          m.tituloMeta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          m.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          m.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [metasCobros, searchTerm]
+  );
+
+  const optionsUsuarios = useMemo(
+    () =>
+      usuarios.map((u) => ({
+        value: u.id,
+        label: `${u.nombre} (${u.sucursal.nombre})`,
+      })),
+    [usuarios]
+  );
+
+  /* ========================= Helpers ========================= */
+
+  const formatearMoneda = (m: number) =>
+    currency(m, {
       symbol: "Q",
       separator: ",",
       decimal: ".",
       precision: 2,
     }).format();
+
+  const calcularReferencia = () => {
+    const totalDias = dayjs().daysInMonth();
+    return (dayjs().date() / totalDias) * 100;
   };
 
-  const [openDeletDepo, setOpenDeletDepo] = useState(false);
-  const [selectedDepo, setSelectedDepo] = useState<DepositoCobro>();
+  /* ========================= Handlers (mutations via hooks + toasts) ========================= */
 
-  const onConfirmDelete = async (id: number) => {
-    console.log("EL DEPOSITO ELIMINADO ES: ", id);
-
+  /**
+   * Crear meta (Tienda o Cobro) usando las mutaciones.
+   * Mantiene el mismo comportamiento que antes + toast.promise.
+   */
+  const handleSubmitGoal = async () => {
     try {
-      const response = await axios.delete(
-        `${API_URL}/metas/delete-one-payment/${selectedMeta?.id}/${selectedDepo?.id}`
-      );
-      if (response.status === 200 || response.status === 201) {
-        toast.success("Depósito eliminado correctamente");
-        setOpenDeletDepo(false);
-        setOpenDepositosDialog(false);
-        getMetasCobros();
+      const { usuarioId, tipoMeta, fechaFin, montoMeta } = metaDto;
+      if (!usuarioId || !tipoMeta || !fechaFin || !montoMeta) {
+        toast.info("Faltan datos para continuar");
+        return;
       }
+
+      const payload = { ...metaDto, fechaFin: new Date(fechaFin), sucursalId };
+      const mutation = tipoMeta === "Tienda" ? createTienda : createCobro;
+
+      toast.promise(mutation.mutateAsync(payload), {
+        loading: "Registrando meta...",
+        success: "Meta registrada correctamente",
+        error: (e) => getApiErrorMessageAxios(e),
+      });
     } catch (error) {
       console.log(error);
-      toast.error("Error al eliminar registro");
+    } finally {
+      resetForm();
     }
   };
 
-  const calcularReferencia = () => {
-    const hoy = dayjs();
-    const totalDiasMes = dayjs().daysInMonth(); // Obtiene el total de días en el mes actual
-    const diaActual = hoy.date(); // Obtiene el día actual del mes (1-31)
-
-    return (diaActual / totalDiasMes) * 100; // Calcula el porcentaje del mes transcurrido
+  const handleChangeUser = (op: SingleValue<OptionSelected>) => {
+    setOpcionSeleccionada(op);
+    setMetaDto((prev) => ({ ...prev, usuarioId: op?.value ?? 0 }));
   };
 
-  console.log("Las metas de tienda son: ", metasTienda);
+  const resetForm = () => {
+    setMetaDto({
+      usuarioId: 0,
+      tipoMeta: "Tienda",
+      tituloMeta: "",
+      montoMeta: 0,
+      fechaFin: "",
+      sucursalId,
+    });
+    setOpcionSeleccionada(null);
+  };
 
-  const [openDeleteCobro, setOpenDeleteCobro] = useState(false);
-  const [CobroToDelete, setCobroToDelete] = useState(0);
-  const [passwordAdminCobro, setPasswordAdminCobro] = useState("");
-
-  const [openDeleteG, setOpenDeleteG] = useState(false);
-  const [goalToDelete, setGoalToDelete] = useState(0);
-  const [passwordAdmin, setPasswordAdmin] = useState("");
-
-  const handleDeleteMeta = async () => {
+  /**
+   * Eliminar meta de TIENDA (dialog que en tu JSX llama handleDeleteMeta)
+   * Reemplaza la llamada axios anterior, usa la mutación y cierra modal.
+   */
+  const handleDeleteMeta = () => {
     try {
       if (!goalToDelete || !userId || !passwordAdmin || goalToDelete <= 0) {
         toast.info("Faltan datos para completar la acción");
         return;
       }
 
-      const response = await axios.delete(
-        `${API_URL}/metas/delete-one-goal/${goalToDelete}/${userId}`,
+      toast.promise(
+        deleteTienda.mutateAsync({
+          goalId: goalToDelete,
+          userId,
+          passwordAdmin,
+        }),
         {
-          data: {
-            passwordAdmin: passwordAdmin,
-          },
+          loading: "Eliminando meta...",
+          success: "Meta eliminada",
+          error: (e) => getApiErrorMessageAxios(e),
         }
       );
-
-      if (response.status === 200 || response.status === 201) {
-        toast.success("Registro de meta eliminado");
-        getMetasTienda();
-        setOpenDeleteG(false);
-        setPasswordAdmin("");
-        setGoalToDelete(0);
-      }
     } catch (error) {
       console.log(error);
-      toast.error("Error al eliminar el registro");
+    } finally {
+      setOpenDeleteG(false);
+      setPasswordAdmin("");
+      setGoalToDelete(null);
     }
   };
 
-  const handleDeleteCobro = async () => {
+  /**
+   * Eliminar meta de COBRO (dialog específico para cobros).
+   * Mantengo el nombre handleDeleteCobro porque el JSX lo llama así.
+   */
+  const handleDeleteCobro = () => {
     try {
       if (
         !CobroToDelete ||
@@ -526,84 +327,111 @@ function Metas() {
         return;
       }
 
-      const response = await axios.delete(
-        `${API_URL}/metas/delete-one-cobro-goal/${CobroToDelete}/${userId}`,
+      toast.promise(
+        deleteCobro.mutateAsync({
+          cobroId: CobroToDelete,
+          userId,
+          passwordAdmin: passwordAdminCobro,
+        }),
         {
-          data: {
-            passwordAdmin: passwordAdminCobro,
-          },
+          loading: "Eliminando meta...",
+          success: "Meta eliminada",
+          error: (e) => getApiErrorMessageAxios(e),
         }
       );
-
-      if (response.status === 200 || response.status === 201) {
-        toast.success("Registro de meta eliminado");
-        getMetasCobros();
-        setOpenDeleteCobro(false);
-        setPasswordAdminCobro("");
-        setCobroToDelete(0);
-      }
     } catch (error) {
       console.log(error);
-      toast.error("Error al eliminar el registro");
+    } finally {
+      setOpenDeleteCobro(false);
+      setPasswordAdminCobro("");
+      setCobroToDelete(0);
     }
   };
 
-  const getMetasCobroTotal = () => {
-    return metasCobrosSummary.reduce((acc, meta) => acc + meta.montoMeta, 0);
+  /**
+   * Abrir dialogo de depósitos (mantengo nombre handler usado en JSX).
+   */
+  const handleOpenDepositos = (meta: MetaCobros) => {
+    setSelectedMeta(meta);
+    setOpenDepositosDialog(true);
   };
 
-  const getMetasCobroAvance = () => {
-    return metasCobrosSummary.reduce((acc, meta) => acc + meta.montoActual, 0);
+  /**
+   * Confirmación de eliminación de depósito (usado en el dialog de depósitos).
+   * Reemplaza el axios.delete anterior por la mutación deleteDeposito.
+   */
+  const onConfirmDelete = () => {
+    if (!selectedMeta || !selectedDepo) {
+      toast.info("Selecciona el depósito a eliminar");
+      return;
+    }
+
+    try {
+      toast.promise(
+        deleteDeposito.mutateAsync({
+          metaId: selectedMeta.id,
+          depositoId: selectedDepo.id,
+        }),
+        {
+          loading: "Eliminando depósito...",
+          success: "Depósito eliminado",
+          error: (e) => getApiErrorMessageAxios(e),
+        }
+      );
+    } catch (error) {
+      console.log("Error: ", error);
+    } finally {
+      setOpenDeletDepo(false);
+      setOpenDepositosDialog(false);
+      setSelectedDepo(undefined);
+      setSelectedMeta(undefined);
+    }
   };
 
-  const getMetasCobroRestante = () => {
-    return getMetasCobroTotal() - getMetasCobroAvance();
-  };
+  /* ========================= Aggregate helpers (estadísticas) ========================= */
 
-  const getPercentMetaCobro = () => {
-    let montoMeta = metasCobrosSummary.reduce(
-      (acc, meta) => acc + meta.montoMeta,
-      0
-    );
-    let montoActual = metasCobrosSummary.reduce(
-      (acc, meta) => acc + meta.montoActual,
-      0
-    );
-    const porcentaje = montoActual >= 0 ? (montoActual / montoMeta) * 100 : 0;
-    console.log("El porcentaje de avance es: ", porcentaje.toFixed(1));
+  /* Metas tienda */
+  const getMetasTiendaTotal = () =>
+    metasTiendaSummary.reduce((acc, meta) => acc + meta.montoMeta, 0);
 
-    return porcentaje;
-  };
+  const getMetasTiendaAvance = () =>
+    metasTiendaSummary.reduce((acc, meta) => acc + meta.montoActual, 0);
 
-  //METAS DE TIENDAS
-  const getMetasTiendaTotal = () => {
-    return metasTiendaSummary.reduce((acc, meta) => acc + meta.montoMeta, 0);
-  };
-
-  const getMetasTiendaAvance = () => {
-    return metasTiendaSummary.reduce((acc, meta) => acc + meta.montoActual, 0);
-  };
-
-  const getMetasTiendaRestante = () => {
-    return getMetasTiendaTotal() - getMetasTiendaAvance();
-  };
+  const getMetasTiendaRestante = () =>
+    getMetasTiendaTotal() - getMetasTiendaAvance();
 
   const getPercentTiendaCobro = () => {
-    let montoMeta = metasTiendaSummary.reduce(
-      (acc, meta) => acc + meta.montoMeta,
+    const montoMeta = metasTiendaSummary.reduce(
+      (acc, m) => acc + m.montoMeta,
       0
     );
-    let montoActual = metasTiendaSummary.reduce(
-      (acc, meta) => acc + meta.montoActual,
+    const montoActual = metasTiendaSummary.reduce(
+      (acc, m) => acc + m.montoActual,
       0
     );
-    const porcentaje = montoActual >= 0 ? (montoActual / montoMeta) * 100 : 0;
-    console.log(
-      "El porcentaje de avance de metas tienda es: ",
-      porcentaje.toFixed(1)
-    );
+    return montoMeta > 0 ? (montoActual / montoMeta) * 100 : 0;
+  };
 
-    return porcentaje;
+  /* Metas cobros */
+  const getMetasCobroTotal = () =>
+    metasCobrosSummary.reduce((acc, meta) => acc + meta.montoMeta, 0);
+
+  const getMetasCobroAvance = () =>
+    metasCobrosSummary.reduce((acc, meta) => acc + meta.montoActual, 0);
+
+  const getMetasCobroRestante = () =>
+    getMetasCobroTotal() - getMetasCobroAvance();
+
+  const getPercentMetaCobro = () => {
+    const montoMeta = metasCobrosSummary.reduce(
+      (acc, m) => acc + m.montoMeta,
+      0
+    );
+    const montoActual = metasCobrosSummary.reduce(
+      (acc, m) => acc + m.montoActual,
+      0
+    );
+    return montoMeta > 0 ? (montoActual / montoMeta) * 100 : 0;
   };
 
   return (
@@ -637,10 +465,7 @@ function Metas() {
         <TabsContent value="asignar">
           <Card>
             <CardHeader>
-              <CardTitle>Asignar Metas</CardTitle>
-              <CardDescription>
-                Asigna metas a usuarios y cobradores
-              </CardDescription>
+              <CardDescription></CardDescription>
             </CardHeader>
             <CardContent>
               <form className="space-y-4">
@@ -1353,7 +1178,7 @@ function Metas() {
                         className="w-full"
                         variant="destructive"
                         onClick={() => {
-                          onConfirmDelete(selectedDepo.id);
+                          onConfirmDelete();
                         }}
                       >
                         Eliminar
@@ -1372,8 +1197,6 @@ function Metas() {
             </CardContent>
           </Card>
         </TabsContent>
-        {/* TAB PAR METAS DE COBRO */}
-
         {/* TAB PAR METAS DE COBRO */}
         <TabsContent value="totales">
           {/* Resumen de metas de cobros */}
@@ -1607,8 +1430,6 @@ function Metas() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* TAB PAR METAS DE COBRO */}
       </Tabs>
 
       {/* DIALOG PARA ELIMINACIONES DE METAS EN TIENDAS */}
@@ -1713,288 +1534,17 @@ function Metas() {
 
       {/* DIALOG PARA ACTUALIZACION DE METAS DE TIENDAS*/}
       <EditMetaTiendaDialog
-        getMetasTienda={getMetasTienda}
         open={openUpdateMetaTienda}
         onClose={() => setOpenUpdateMetaTienda(false)}
         metaTienda={metaTiendaSelected}
       />
 
       <EditMetaCobroDialog
-        getMetasCobros={getMetasCobros}
         open={openUpdateMetaCobro}
         onClose={() => setOpenUpdateMetaCobro(false)}
         metaCobro={metaCobroSelected}
       />
     </div>
-  );
-}
-
-export function EditMetaTiendaDialog({
-  open,
-  onClose,
-  metaTienda,
-  getMetasTienda,
-}: EditMetaTiendaDialogProps) {
-  const [formData, setFormData] = useState<MetaTienda | null>(null);
-  const userRol = useStore((state) => state.userRol);
-
-  useEffect(() => {
-    if (metaTienda) {
-      // Clonar el objeto para evitar modificar el estado original
-      setFormData({ ...metaTienda });
-    }
-  }, [metaTienda]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!formData) return;
-    const { name, value } = e.target;
-    setFormData((prev) => (prev ? { ...prev, [name]: value } : null));
-  };
-
-  const handleSave = async () => {
-    if (formData) {
-      try {
-        const response = await axios.patch(
-          `${API_URL}/metas/update-one-meta/${formData.id}`,
-          {
-            tituloMeta: formData.tituloMeta,
-            EstadoMetaTienda: formData.estado,
-            montoMeta: Number(formData.montoMeta),
-            montoActual: Number(formData.montoActual),
-          }
-        );
-
-        if (response.status === 200) {
-          toast.success("Registro actualizado");
-          // onUpdate(formData); // Enviar solo los datos editados al backend
-          onClose();
-          await getMetasTienda();
-        }
-      } catch (error) {
-        console.log(error);
-        toast.error("Error al actualizar");
-      }
-    }
-  };
-
-  const handleChangeEstadoMetaTienda = (estado: EstadoMetaTienda) => {
-    setFormData((dataPrev) =>
-      dataPrev
-        ? {
-            ...dataPrev,
-            estado: estado,
-          }
-        : null
-    );
-  };
-
-  console.log("La data cambiando es: ", formData);
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-center justify-center ">
-            <Edit className="h-5 w-5 text-blue-500" />
-            Editar Meta de Tienda
-          </DialogTitle>
-        </DialogHeader>
-        <div className="py-4 space-y-4">
-          <div>
-            <label className="text-sm font-medium">Título de la Meta</label>
-            <Input
-              name="tituloMeta"
-              value={formData?.tituloMeta || ""}
-              onChange={handleInputChange}
-              placeholder="Título de la meta"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Monto Meta</label>
-            <Input
-              name="montoMeta"
-              type="number"
-              value={formData?.montoMeta || ""}
-              onChange={handleInputChange}
-              placeholder="Monto objetivo"
-            />
-          </div>
-
-          {userRol == "ADMIN" ? (
-            <div>
-              <label className="text-sm font-medium">Monto Actual</label>
-              <Input
-                name="montoActual"
-                type="number"
-                value={formData?.montoActual || ""}
-                onChange={handleInputChange}
-                placeholder="Monto objetivo"
-              />
-            </div>
-          ) : null}
-
-          <Select onValueChange={handleChangeEstadoMetaTienda}>
-            <SelectTrigger className="w-full">
-              <SelectValue
-                placeholder={formData?.estado ?? "Seleccione un estado"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {formData?.estado === EstadoMetaTienda.FINALIZADO
-                ? Object.values(EstadoMetaSelectCumplida).map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado}
-                    </SelectItem>
-                  ))
-                : Object.values(EstadoMetaSelect).map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado}
-                    </SelectItem>
-                  ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <DialogFooter className="sm:justify-end">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
-            <X className="mr-2 h-4 w-4" />
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            variant="default"
-            className="w-full sm:w-auto"
-          >
-            <Check className="mr-2 h-4 w-4" />
-            Guardar Cambios
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function EditMetaCobroDialog({
-  open,
-  onClose,
-  metaCobro,
-  getMetasCobros,
-}: EditMetaCobro) {
-  const [formDataCobro, setFormDataCobro] = useState<MetaCobros | null>(null);
-
-  useEffect(() => {
-    if (metaCobro) {
-      // Clonar el objeto para evitar modificar el estado original
-      setFormDataCobro({ ...metaCobro });
-    }
-  }, [metaCobro]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!formDataCobro) return;
-    const { name, value } = e.target;
-    setFormDataCobro((prev) => (prev ? { ...prev, [name]: value } : null));
-  };
-
-  const handleSave = async () => {
-    if (formDataCobro) {
-      console.log("El id del registro de cobro: ", formDataCobro.id);
-
-      try {
-        const response = await axios.patch(
-          `${API_URL}/metas/update-one-meta-cobro/${formDataCobro.id}`,
-          {
-            tituloMeta: formDataCobro.tituloMeta,
-            EstadoMetaTienda: formDataCobro.estado,
-            montoMeta: formDataCobro.montoMeta,
-          }
-        );
-
-        if (response.status === 200) {
-          toast.success("Registro actualizado");
-          // onUpdate(formData); // Enviar solo los datos editados al backend
-          onClose();
-          await getMetasCobros();
-        }
-      } catch (error) {
-        console.log(error);
-        toast.error("Error al actualizar");
-      }
-    }
-  };
-
-  const handleChangeEstadoMetaTienda = (estado: EstadoMetaCobro) => {
-    setFormDataCobro((dataPrev) =>
-      dataPrev
-        ? {
-            ...dataPrev,
-            estado: estado,
-          }
-        : null
-    );
-  };
-
-  console.log("La data cambiando es: ", formDataCobro);
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-center justify-center ">
-            <Edit className="h-5 w-5 text-blue-500" />
-            Editar Meta de Cobros
-          </DialogTitle>
-        </DialogHeader>
-        <div className="py-4 space-y-4">
-          <div>
-            <label className="text-sm font-medium">Título de la Meta</label>
-            <Input
-              name="tituloMeta"
-              value={formDataCobro?.tituloMeta || ""}
-              onChange={handleInputChange}
-              placeholder="Título de la meta"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Monto Meta</label>
-            <Input
-              name="montoMeta"
-              type="number"
-              value={formDataCobro?.montoMeta || ""}
-              onChange={handleInputChange}
-              placeholder="Monto objetivo"
-            />
-          </div>
-
-          <Select onValueChange={handleChangeEstadoMetaTienda}>
-            <SelectTrigger className="w-full">
-              <SelectValue
-                placeholder={formDataCobro?.estado ?? "Seleccione un estado"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(EstadoMetaSelect).map((estado) => (
-                <SelectItem key={estado} value={estado ?? ""}>
-                  {estado}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <DialogFooter className="flex gap-2">
-          <Button variant="destructive" onClick={onClose} className="w-full ">
-            <X className="mr-2 h-4 w-4" />
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} variant="default" className="w-full">
-            <Check className="mr-2 h-4 w-4" />
-            Guardar Cambios
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

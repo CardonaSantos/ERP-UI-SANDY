@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer";
-import logo from "@/assets/Agroservicio.png";
+import logo from "@/assets/NOVAPOSPNG.png";
 
 import { VentaHistorialPDF } from "@/Types/PDF/VentaHistorialPDF";
 import dayjs from "dayjs";
@@ -17,8 +17,15 @@ import localizedFormat from "dayjs/plugin/localizedFormat";
 
 dayjs.extend(localizedFormat);
 dayjs.locale("es");
+const colors = {
+  primary: "#2ECC9A",
+  primaryDark: "#1FA97A",
+  textDark: "#1E1E1E",
+  textGray: "#666666",
+  borderLight: "#DDEEE8",
+  backgroundSoft: "#F7F9F9",
+};
 
-// Registrar fuentes personalizadas
 Font.register({
   family: "Roboto",
   fonts: [
@@ -56,6 +63,7 @@ const Garantia: React.FC<GarantiaProps> = ({ venta }) => {
       padding: 30,
       backgroundColor: "#FFFFFF",
       lineHeight: 1.4,
+      color: colors.textDark,
     },
     header: {
       flexDirection: "column",
@@ -65,34 +73,34 @@ const Garantia: React.FC<GarantiaProps> = ({ venta }) => {
     logo: {
       width: 90,
       height: 50,
-      marginBottom: 1,
+      marginBottom: 4,
     },
     title: {
       fontSize: 16,
       fontWeight: "bold",
-      color: "#E67E22", // Naranja más oscuro, apropiado para ferretería
+      color: colors.primary,
       textAlign: "center",
     },
     subtitle: {
       fontSize: 12,
-      color: "#555",
+      color: colors.textGray,
       textAlign: "center",
       marginBottom: 5,
     },
     section: {
       marginBottom: 10,
-      borderLeft: 2,
-      borderColor: "#E67E22",
+      borderLeft: 3,
+      borderColor: colors.primary,
       paddingLeft: 8,
     },
     sectionTitle: {
       fontSize: 11,
       fontWeight: "bold",
       marginBottom: 3,
-      color: "#333",
+      color: colors.primaryDark,
       textAlign: "left",
-      backgroundColor: "#F5F5F5",
-      padding: 3,
+      backgroundColor: colors.backgroundSoft,
+      padding: 4,
     },
     row: {
       flexDirection: "row",
@@ -101,16 +109,17 @@ const Garantia: React.FC<GarantiaProps> = ({ venta }) => {
     label: {
       fontWeight: "bold",
       width: "40%",
-      color: "#555",
+      color: colors.textGray,
     },
     value: {
       width: "60%",
-      color: "#333",
+      color: colors.textDark,
     },
     terms: {
-      marginTop: 5,
+      marginTop: 4,
       fontSize: 9,
       lineHeight: 1.4,
+      color: colors.textDark,
     },
     signatureSection: {
       marginTop: 15,
@@ -120,7 +129,7 @@ const Garantia: React.FC<GarantiaProps> = ({ venta }) => {
     signatureLine: {
       marginTop: 15,
       borderTopWidth: 1,
-      borderColor: "#000000",
+      borderColor: colors.textDark,
       width: "70%",
       alignSelf: "center",
     },
@@ -128,34 +137,21 @@ const Garantia: React.FC<GarantiaProps> = ({ venta }) => {
       marginTop: 10,
       fontSize: 9,
       textAlign: "center",
-      color: "#555",
+      color: colors.textGray,
     },
     divider: {
       borderBottomWidth: 1,
-      borderColor: "#DDDDDD",
+      borderColor: colors.borderLight,
       marginVertical: 8,
     },
     warrantyBox: {
       border: 1,
-      borderColor: "#E67E22",
+      borderColor: colors.primary,
       padding: 8,
       marginTop: 5,
-      backgroundColor: "#FFF8F0",
+      backgroundColor: colors.backgroundSoft,
     },
   });
-
-  // Función para determinar el período de garantía según el tipo de producto
-  const determinarPeriodoGarantia = (nombreProducto: string) => {
-    const nombreLower = nombreProducto?.toLowerCase() || "";
-
-    if (nombreLower.includes("eléctric") || nombreLower.includes("electric")) {
-      return "12 meses";
-    } else if (nombreLower.includes("manual") || nombreLower.includes("mano")) {
-      return "6 meses";
-    } else {
-      return "3 meses";
-    }
-  };
 
   return (
     <Document>
@@ -187,12 +183,6 @@ const Garantia: React.FC<GarantiaProps> = ({ venta }) => {
                   : "No disponible"}
               </Text>
             </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Sucursal:</Text>
-              <Text style={styles.value}>
-                {venta?.sucursal?.direccion || "Tienda Principal"}
-              </Text>
-            </View>
           </View>
 
           {/* Información del Producto */}
@@ -210,27 +200,10 @@ const Garantia: React.FC<GarantiaProps> = ({ venta }) => {
                 {producto?.producto?.descripcion || "No disponible"}
               </Text>
             </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Marca:</Text>
-              <Text style={styles.value}>
-                {producto?.producto?.marca || "No especificada"}
-              </Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Modelo:</Text>
-              <Text style={styles.value}>
-                {producto?.producto?.modelo || venta?.imei || "No especificado"}
-              </Text>
-            </View>
+
             <View style={styles.row}>
               <Text style={styles.label}>Cantidad:</Text>
               <Text style={styles.value}>{producto?.cantidad || "1"}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Período de Garantía:</Text>
-              <Text style={styles.value}>
-                {determinarPeriodoGarantia(producto?.producto?.nombre)}
-              </Text>
             </View>
           </View>
 

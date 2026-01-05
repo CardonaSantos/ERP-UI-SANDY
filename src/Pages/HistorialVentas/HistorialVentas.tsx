@@ -35,11 +35,9 @@ import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 
 registerLocale("es", es);
 
-/** ---------- Filtros (UI) compatibles con QueryVentasTable ---------- */
 type QueryVentasUI = {
   page: number;
   limit: number;
-  // El backend sigue recibiendo estos nombres aunque los campos de data sean fecha/total
   sortBy: "fechaVenta" | "totalVenta" | "clienteNombre";
   sortDir: "asc" | "desc";
   sucursalId: number;
@@ -56,7 +54,7 @@ type QueryVentasUI = {
   cats?: number[];
   //flags de filtrado ventas mias o global
   isVendedor: boolean;
-  usuarioId: number;
+  usuarioId?: number;
   metodoPago?: string[];
 };
 
@@ -71,7 +69,6 @@ const defaultMeta: PaginationMeta = {
   sortDir: "desc",
 };
 
-/** Multi-select simple con checkboxes (para método de pago / comprobante) */
 function MultiChecks({
   label,
   options,
@@ -119,7 +116,6 @@ export default function HistorialVentasMain() {
   const sucursalId = useStore((s) => s.sucursalId) ?? 0;
   const userId = useStore((s) => s.userId) ?? 0;
   const rol = useStore((s) => s.userRol) ?? "";
-  // ---------- Estado de filtros ----------
   const [texto, setTexto] = useState<string>("");
   const [fechaDesde, setFechaDesde] = useState<Date | null>(null);
   const [fechaHasta, setFechaHasta] = useState<Date | null>(null);
@@ -134,7 +130,6 @@ export default function HistorialVentasMain() {
   const [isOpenDetalle, setIsOpenDetalle] = useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] =
     useState<VentaResumen | null>(null);
-  // UI: Dialog eliminar
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [ventaEliminar, setVentaEliminar] = useState<{
     venta: VentaResumen | null;
@@ -142,7 +137,6 @@ export default function HistorialVentasMain() {
     adminPassword: string;
   }>({ venta: null, motivo: "", adminPassword: "" });
   const textoDeferred = useDeferredValue(texto);
-  // Construimos objeto de query params compatibles con backend
   const queryParams: QueryVentasUI = useMemo(
     () => ({
       page,
@@ -160,11 +154,11 @@ export default function HistorialVentasMain() {
       montoMin: montoMin ? Number(montoMin) : undefined,
       montoMax: montoMax ? Number(montoMax) : undefined,
       isVendedor: rol !== "ADMIN",
-      usuarioId: userId,
+      // usuarioId: userId,
       tipoComprobante: comprobantes.length
         ? (comprobantes as TipoComprobante[])
         : undefined,
-      metodoPago: metodosPago.length ? metodosPago : undefined, // <--- AQUÍ
+      metodoPago: metodosPago.length ? metodosPago : undefined,
     }),
     [
       page,
@@ -178,7 +172,7 @@ export default function HistorialVentasMain() {
       montoMin,
       montoMax,
       rol,
-      userId,
+      // userId,
       comprobantes,
       metodosPago,
     ]
@@ -278,7 +272,7 @@ export default function HistorialVentasMain() {
     }));
 
     const payload = {
-      usuarioId: userId, // ahora sí enviamos el usuario actual
+      usuarioId: userId,
       motivo: ventaEliminar.motivo,
       totalVenta: v.total,
       productos,
@@ -286,7 +280,6 @@ export default function HistorialVentasMain() {
       sucursalId,
       adminPassword: ventaEliminar.adminPassword,
     };
-    console.log("El payload de eliminacion es: ", payload);
 
     toast.promise(deleteMutation.mutateAsync(payload), {
       loading: "Eliminando registro...",

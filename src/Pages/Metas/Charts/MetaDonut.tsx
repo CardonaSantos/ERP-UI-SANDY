@@ -1,4 +1,3 @@
-// src/components/Chart/MetaDonut.tsx
 "use client";
 
 import { ResponsivePie } from "@nivo/pie";

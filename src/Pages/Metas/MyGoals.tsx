@@ -135,9 +135,7 @@ interface MetasResponse {
 
 function MyGoals() {
   const userId = useStore((state) => state.userId) ?? 0;
-  const [metas, setMetas] = useState<MetasResponse | null>(null); // Estado para guardar las metas
-  // const [loading, setLoading] = useState<boolean>(true); // Estado de carga
-  // const [error, setError] = useState<string | null>(null); // Estado de error
+  const [metas, setMetas] = useState<MetasResponse | null>(null);
 
   //======================>
   const [selectedMetaId, setSelectedMetaId] = useState<number | null>(null);
@@ -152,14 +150,12 @@ function MyGoals() {
   const [openDeletDepo, setOpenDeletDepo] = useState(false);
   const [selectedDepo, setSelectedDepo] = useState<DepositoCobro>();
 
-  // const [loadingMetas, setLoadingMetas] = useState(true);
-
   const fetchGoals = async () => {
     try {
       const response = await axios.get<MetasResponse>(
         `${API_URL}/metas/get-all-my-goals/${userId}`
-      ); // Tipar la respuesta de Axios
-      setMetas(response.data); // Guardar las metas en el estado
+      );
+      setMetas(response.data);
     } catch (err) {
       console.error("Error al obtener las metas:", err);
     }
