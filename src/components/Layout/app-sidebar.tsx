@@ -101,23 +101,6 @@ const menuItemsAdmin = [
   // === Ventas ===
   { icon: ShoppingCart, label: "Punto de Venta", href: "/punto-venta" },
   { icon: Clock, label: "Historial de Ventas", href: "/historial/ventas" },
-  // {
-  //   icon: ClipboardPen,
-  //   label: "Gestión de Ventas",
-  //   submenu: [
-  //     {
-  //       icon: Trash2,
-  //       label: "Ventas Eliminadas",
-  //       href: "/historial/ventas-eliminaciones",
-  //     },
-  //     {
-  //       icon: FileText,
-  //       label: "Plantillas de Créditos",
-  //       href: "/plantillas-venta-cuotas",
-  //     },
-  //   ],
-  // },
-
   // === Créditos ===
   { icon: CreditCard, label: "Créditos", href: "/creditos" },
 
@@ -130,16 +113,6 @@ const menuItemsAdmin = [
 
       { icon: Boxes, label: "Crear Producto", href: "/crear-producto" },
 
-      // {
-      //   icon: NotepadText,
-      //   label: "Historial de Precios",
-      //   href: "/historial-cambios-precio",
-      // },
-      // {
-      //   icon: FileStack,
-      //   label: "Stock Eliminado",
-      //   href: "/stock-eliminaciones",
-      // },
       {
         icon: Truck,
         label: "Entregas de Stock",

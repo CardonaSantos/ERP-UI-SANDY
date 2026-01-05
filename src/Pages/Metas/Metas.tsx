@@ -111,6 +111,7 @@ interface OptionSelected {
 }
 
 function Metas() {
+  const userRol = useStore((state) => state.userRol) ?? "";
   /* ========================= Context ========================= */
   const userId = useStore((s) => s.userId) ?? 0;
   const sucursalId = useStore((s) => s.sucursalId) ?? 0;
@@ -433,6 +434,7 @@ function Metas() {
     );
     return montoMeta > 0 ? (montoActual / montoMeta) * 100 : 0;
   };
+  const isSuperAdmin: boolean = userRol !== "SUPER_ADMIN" ? true : false;
 
   return (
     <div className="container mx-auto p-4">
@@ -779,6 +781,7 @@ function Metas() {
                                     setOpenUpdateMetaTienda(true);
                                     setMetaTiendaSelected(meta);
                                   }}
+                                  disabled={isSuperAdmin}
                                   className="flex items-center gap-2 hover:bg-gray-100 text-xs py-1"
                                 >
                                   <Edit className="h-3 w-3 text-blue-500" />
@@ -790,6 +793,7 @@ function Metas() {
                                     setGoalToDelete(meta.id);
                                     setOpenDeleteG(true);
                                   }}
+                                  disabled={isSuperAdmin}
                                   className="flex items-center gap-2 text-red-500 hover:bg-red-100 text-xs py-1"
                                 >
                                   <Delete className="h-3 w-3" />

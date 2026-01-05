@@ -61,9 +61,11 @@ export function EditMetaTiendaDialog({
         id: formData.id,
         payload: {
           tituloMeta: formData.tituloMeta,
-          estado: formData.estado,
+          EstadoMetaTienda: formData.estado,
           montoMeta: formData.montoMeta,
           montoActual: formData.montoActual,
+          fechaInicio: formData.fechaInicio,
+          fechaFin: formData.fechaFin,
         },
       }),
       {
@@ -124,6 +126,26 @@ export function EditMetaTiendaDialog({
               />
             </div>
           )}
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Fecha inicio</label>
+            <Input
+              name="fechaInicio"
+              type="date"
+              value={formData?.fechaInicio?.slice(0, 10) || ""}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Fecha fin</label>
+            <Input
+              name="fechaFin"
+              type="date"
+              value={formData?.fechaFin?.slice(0, 10) || ""}
+              onChange={handleInputChange}
+            />
+          </div>
 
           <div className="space-y-1 sm:col-span-2">
             <label className="text-sm font-medium">Estado</label>

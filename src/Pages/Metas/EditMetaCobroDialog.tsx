@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Check, Edit, X } from "lucide-react";
+import { Check, Edit, X, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -35,44 +35,48 @@ export function EditMetaCobroDialog({
   const updateMeta = useUpdateMetaCobro();
 
   useEffect(() => {
-    if (metaCobro) setFormData({ ...metaCobro });
+    if (metaCobro) {
+      setFormData({
+        ...metaCobro,
+        fechaInicio: metaCobro.fechaInicio?.slice(0, 10) ?? "",
+        fechaFin: metaCobro.fechaFin?.slice(0, 10) ?? "",
+      });
+    }
   }, [metaCobro]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!formData) return;
     const { name, value } = e.target;
-    setFormData((prev) => (prev ? { ...prev, [name]: value } : null));
+    setFormData((prev) => (prev ? { ...prev, [name]: value } : prev));
   };
 
   const handleSave = () => {
-    try {
-      if (!formData) return;
+    if (!formData) return;
 
-      toast.promise(
-        updateMeta.mutateAsync({
-          id: formData.id,
-          payload: {
-            tituloMeta: formData.tituloMeta,
-            estado: formData.estado,
-            montoMeta: Number(formData.montoMeta),
-          },
-        }),
-        {
-          loading: "Actualizando meta...",
-          success: "Meta actualizada",
-          error: "Error al actualizar",
-        }
-      );
-    } catch (error) {
-      console.log(error);
-    } finally {
-      onClose();
-    }
+    toast.promise(
+      updateMeta.mutateAsync({
+        id: formData.id,
+        payload: {
+          tituloMeta: formData.tituloMeta,
+          montoMeta: Number(formData.montoMeta),
+          estadoMetaCobro: formData.estado,
+          fechaInicio: formData.fechaInicio || undefined,
+          fechaFin: formData.fechaFin || undefined,
+        },
+      }),
+      {
+        loading: "Actualizando meta...",
+        success: "Meta actualizada",
+        error: "Error al actualizar",
+      }
+    );
+
+    onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-center gap-2 text-lg font-semibold">
             <Edit className="h-5 w-5 text-blue-500" />
@@ -81,7 +85,7 @@ export function EditMetaCobroDialog({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-          <div className="space-y-1">
+          <div className="space-y-1 md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground">
               Título de la meta
             </label>
@@ -106,7 +110,7 @@ export function EditMetaCobroDialog({
             />
           </div>
 
-          <div className="space-y-1 md:col-span-2">
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">
               Estado
             </label>
@@ -127,6 +131,32 @@ export function EditMetaCobroDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              Fecha inicio
+            </label>
+            <Input
+              name="fechaInicio"
+              type="date"
+              value={formData?.fechaInicio ?? ""}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              Fecha fin
+            </label>
+            <Input
+              name="fechaFin"
+              type="date"
+              value={formData?.fechaFin ?? ""}
+              onChange={handleInputChange}
+            />
           </div>
         </div>
 

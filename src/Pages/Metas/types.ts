@@ -15,6 +15,8 @@ export interface MetaCobros {
   sucursal: Sucursal; // Información de la sucursal
   usuario: Usuario; // Información del usuario
   estado: EstadoMetaCobro;
+
+  estadoMetaCobro?: string;
 }
 
 export enum EstadoMetaCobro {
@@ -59,7 +61,7 @@ export enum EstadoMetaSelect {
   CANCELADO = "CANCELADO",
   CERRADO = "CERRADO",
   ABIERTO = "ABIERTO",
-  // FINALIZADO = "FINALIZADO",
+  FINALIZADO = "FINALIZADO",
 }
 
 export enum EstadoMetaSelectCumplida {
@@ -82,6 +84,7 @@ export interface MetaTienda {
   sucursal: SucursalMetaTiendas;
   usuario: UsuarioMetaTiendas;
   estado: EstadoMetaTienda;
+  EstadoMetaTienda?: EstadoMetaTienda;
 }
 
 export interface SucursalMetaTiendas {
