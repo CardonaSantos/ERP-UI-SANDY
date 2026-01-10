@@ -20,10 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-import dayjs from "dayjs";
-import "dayjs/locale/es";
-import localizedFormat from "dayjs/plugin/localizedFormat";
-
 import SelectM from "react-select";
 import { Link } from "react-router-dom";
 
@@ -59,11 +55,13 @@ import {
   CategoriaWithCount,
   CATS_LIST_QK,
 } from "../Categorias/CategoriasMainPage";
-// import { validateDpiNitEither } from "../Customers/helpers/regex.regex";
 
-// =================== Dayjs ===================
+import dayjs from "dayjs";
+import "dayjs/locale/es";
+import localizedFormat from "dayjs/plugin/localizedFormat";
 dayjs.extend(localizedFormat);
 dayjs.locale("es");
+
 function formatearFechaUTC(fecha: string) {
   return dayjs(fecha).format("DD/MM/YYYY hh:mm A");
 }
@@ -113,9 +111,9 @@ type ProductoPOS = {
 };
 
 interface CartItem {
-  uid: string; // 👈 clave única (source+id)
+  uid: string;
   id: number;
-  source: SourceType; // 👈 NUEVO
+  source: SourceType;
   nombre: string;
   quantity: number;
   selectedPriceId: number;
@@ -231,9 +229,15 @@ export default function PuntoVenta() {
     cuotasTotalesPropuestas: 2,
     interesTipo: "NONE",
     interesPorcentaje: 0,
+    interesSobreVenta: 0,
     planCuotaModo: "IGUALES",
-    diasEntrePagos: 30,
-    fechaPrimeraCuota: dayjs().add(30, "day").format("YYYY-MM-DD"),
+    diasEntrePagos: 15,
+
+    fechaPrimeraCuota: dayjs()
+      .tz("America/Guatemala")
+      .add(15, "day")
+      .format("YYYY-MM-DD"),
+
     comentario: "",
     garantiaMeses: 0,
     testigos: undefined,
@@ -583,19 +587,16 @@ export default function PuntoVenta() {
 
   const handleCreateCreditRequest = async (payload: any) => {
     try {
-      //validar cliente, metodo de pago, monto, etc.
-
-      toast.promise(createCreditRequest(payload), {
+      await toast.promise(createCreditRequest(payload), {
         success: "Crédito enviado para autorización, esperando respuesta...",
-        loading: "Enviando solicitud de aprovación de crédito",
+        loading: "Enviando solicitud de aprobación de crédito",
         error: (error) => getApiErrorMessageAxios(error),
       });
 
-      console.log("PAYLOAD GENERADO POR CREDITO REQ: ", payload);
+      console.log("Crédito enviado correctamente", payload);
     } catch (error) {
+      console.error("Error creando crédito:", error);
       toast.error(getApiErrorMessageAxios(error));
-    } finally {
-      //limpiar campos, limpiar cart, cliente, etc... Y fetchear datos de nuevo, refresh
     }
   };
 

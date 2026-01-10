@@ -1,6 +1,5 @@
 "use client";
 import * as React from "react";
-import dayjs from "dayjs";
 import {
   Card,
   CardContent,
@@ -38,7 +37,6 @@ import {
   FormCreditoState,
   InteresTipoCreditoVenta,
   PlanCuotaModo,
-  PropuestaCuota,
 } from "./credito-venta.interfaces";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import {
@@ -49,109 +47,24 @@ import {
   PlanCuotaModoServer,
 } from "../interfaces/buildpayload.interface";
 import { toInt, toMoney } from "./helpers";
-// import { formattMoneda } from "@/Pages/Utils/Utils";
-
-// ========================= Utils =========================
+import { useCreditoFormLogic } from "./useCreditoFormLogic";
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-function repartirConPesos(total: number, pesos: number[]): number[] {
-  const sumPesos = pesos.reduce((a, b) => a + b, 0) || 1;
-  const brutos = pesos.map((p) => (total * p) / sumPesos);
-  const rounded = brutos.map(r2);
-  const diff = r2(total - rounded.reduce((a, b) => r2(a + b), 0));
-  if (Math.abs(diff) >= 0.01) {
-    rounded[rounded.length - 1] = r2(rounded[rounded.length - 1] + diff);
-  }
-  return rounded;
-}
-
-// Genera cuotas considerando: enganche, SIN aplicar interés al monto de cuotas.
-// PRIMERA_MAYOR: solo habilita enganche y reparte el resto según plan (iguales/crec/dec).
-function generarCuotas({
-  totalProductos,
-  enganche,
-  cuotasTotales,
-  plan,
-  fechaPrimeraCuota,
-  diasEntrePagos,
-}: // interesTipo, // se ignora para el cálculo de montos; sólo metadato
-// interesPorcentaje, // se ignora para el cálculo de montos; sólo metadato
-{
-  totalProductos: number;
-  enganche: number;
-  cuotasTotales: number;
-  plan: PlanCuotaModo;
-  fechaPrimeraCuota: string; // YYYY-MM-DD
-  diasEntrePagos: number;
-  interesTipo: InteresTipoCreditoVenta;
-  interesPorcentaje: number;
-}): PropuestaCuota[] {
-  const cuotas: PropuestaCuota[] = [];
-  const hoy = dayjs().format("YYYY-MM-DD");
-
-  if (enganche > 0) {
-    cuotas.push({
-      numero: 0,
-      fechaISO: hoy,
-      monto: r2(enganche),
-      etiqueta: "ENGANCHE",
-    });
-  }
-
-  const principalBase = Math.max(0, r2(totalProductos - enganche));
-  const n = Math.max(1, Number(cuotasTotales) || 1);
-
-  // El interés NO modifica el monto de las cuotas; sólo se guarda como número.
-  const principalParaRepartir = principalBase;
-
-  let pesos: number[] = [];
-  if (plan === "IGUALES" || plan === "PRIMERA_MAYOR") {
-    pesos = Array.from({ length: n }, () => 1);
-  } else if (plan === "CRECIENTES") {
-    pesos = Array.from({ length: n }, (_, i) => i + 1);
-  } else {
-    // DECRECIENTES
-    pesos = Array.from({ length: n }, (_, i) => n - i);
-  }
-
-  const montos = repartirConPesos(principalParaRepartir, pesos);
-
-  const primera = fechaPrimeraCuota || hoy; // por defecto: HOY
-  for (let i = 0; i < n; i++) {
-    const fecha = dayjs(primera)
-      .add(i * (Number(diasEntrePagos) || 30), "day")
-      .format("YYYY-MM-DD");
-
-    cuotas.push({
-      numero: i + 1,
-      fechaISO: fecha,
-      monto: r2(montos[i]),
-      etiqueta: "NORMAL",
-    });
-  }
-  return cuotas;
-}
-
-// ========================= Tipos Props =========================
 type PropsCreditoForm = {
   value: FormCreditoState;
-  onChange: React.Dispatch<React.SetStateAction<FormCreditoState>>; // requerido
-  onSubmit?: (payload: any) => void;
+  onChange: React.Dispatch<React.SetStateAction<FormCreditoState>>;
   handleCreateCreditRequest: (payload: any) => Promise<void>;
   autoRecalc?: boolean;
   readOnly?: boolean;
   isPendingCreditRequest: boolean;
-
   setOpenCreateRequest: React.Dispatch<React.SetStateAction<boolean>>;
   openCreateRequest: boolean;
   userRol: string;
 };
 
-// ========================= Componente =========================
 export default function CreditoForm({
   value,
   onChange,
-  //   onSubmit, volver a usar?
   handleCreateCreditRequest,
   isPendingCreditRequest,
   openCreateRequest,
@@ -160,50 +73,27 @@ export default function CreditoForm({
   readOnly = false,
   userRol,
 }: PropsCreditoForm) {
-  const form = value;
-  const setForm = onChange;
-
-  const [editingCuotas, setEditingCuotas] = React.useState(false);
-
-  // Recalculo automático de cuotas (ignora interés) cuando NO estamos editando manualmente
-  React.useEffect(() => {
-    if (!autoRecalc || editingCuotas) return;
-
-    setForm((prev) => {
-      const enganche =
-        prev.planCuotaModo === "PRIMERA_MAYOR"
-          ? Number(prev.cuotaInicialPropuesta || 0)
-          : 0;
-
-      const cuotas = generarCuotas({
-        totalProductos: Number(prev.totalPropuesto || 0),
-        enganche,
-        cuotasTotales: Number(prev.cuotasTotalesPropuestas || 1),
-        plan: prev.planCuotaModo,
-        fechaPrimeraCuota:
-          prev.fechaPrimeraCuota || dayjs().format("YYYY-MM-DD"), // HOY por defecto
-        diasEntrePagos: Number(prev.diasEntrePagos || 30),
-        interesTipo: prev.interesTipo,
-        interesPorcentaje: Number(prev.interesPorcentaje || 0),
-      });
-
-      return { ...prev, cuotasPropuestas: cuotas };
-    });
-  }, [
-    autoRecalc,
+  const {
+    form,
+    totalUI,
+    engancheUI,
+    principalUI,
+    sumCuotasSinEnganche,
+    isVendedor,
     editingCuotas,
-    form.totalPropuesto,
-    form.cuotaInicialPropuesta,
-    form.cuotasTotalesPropuestas,
-    form.planCuotaModo,
-    form.fechaPrimeraCuota,
-    form.diasEntrePagos,
-    form.interesTipo,
-    form.interesPorcentaje,
-    setForm,
-  ]);
+    setEditingCuotas,
+    setField,
+    updateCuota,
+    updateCuotaFecha,
+    handleRegenerarCuotas,
+  } = useCreditoFormLogic({
+    value,
+    setForm: onChange,
+    autoRecalc,
+    userRol,
+  });
 
-  // =================== Derivados UI ===================
+  const setForm = onChange;
   const sumCuotas = React.useMemo(
     () =>
       r2(
@@ -214,134 +104,7 @@ export default function CreditoForm({
     [form.cuotasPropuestas]
   );
 
-  // =================== Mutadores ===================
-  function setField<K extends keyof FormCreditoState>(
-    key: K,
-    v: FormCreditoState[K]
-  ) {
-    setForm((prev) => ({ ...prev, [key]: v }));
-  }
-
-  function updateCuota(idx: number, patch: Partial<PropuestaCuota>) {
-    setForm((prev) => {
-      const next = [...(prev.cuotasPropuestas || [])];
-      next[idx] = { ...next[idx], ...patch };
-      return { ...prev, cuotasPropuestas: next };
-    });
-  }
-
-  // Cambiar fecha de una cuota y REFLUIR las siguientes manteniendo el intervalo (diasEntrePagos)
-  function updateCuotaFecha(idx: number, nuevaFechaISO: string) {
-    setForm((prev) => {
-      const next = [...(prev.cuotasPropuestas || [])];
-      if (!next[idx]) return prev;
-
-      const isEnganche =
-        next[idx].etiqueta === "ENGANCHE" || next[idx].numero === 0;
-
-      // Siempre actualizamos la fecha de la cuota editada
-      next[idx] = { ...next[idx], fechaISO: nuevaFechaISO };
-
-      // Si es ENGANCHE, no arrastramos fechas
-      if (isEnganche) {
-        return { ...prev, cuotasPropuestas: next };
-      }
-
-      const intervalo = Math.max(1, Number(prev.diasEntrePagos || 30));
-      for (let j = idx + 1; j < next.length; j++) {
-        // No refluimos a través del enganche si existiera en medio (por diseño sólo está al inicio)
-        if (next[j].etiqueta === "ENGANCHE" || next[j].numero === 0) continue;
-        const fecha = dayjs(nuevaFechaISO)
-          .add((j - idx) * intervalo, "day")
-          .format("YYYY-MM-DD");
-        next[j] = { ...next[j], fechaISO: fecha };
-      }
-
-      // Mantener sincronizada la fechaPrimeraCuota si cambiamos la #1
-      if (next[idx].numero === 1) {
-        return {
-          ...prev,
-          fechaPrimeraCuota: nuevaFechaISO,
-          cuotasPropuestas: next,
-        };
-      }
-
-      return { ...prev, cuotasPropuestas: next };
-    });
-  }
-
-  const handleRegenerarCuotas = React.useCallback(() => {
-    setForm((prev) => {
-      const enganche =
-        prev.planCuotaModo === "PRIMERA_MAYOR"
-          ? Number(prev.cuotaInicialPropuesta || 0)
-          : 0;
-
-      const cuotas = generarCuotas({
-        totalProductos: Number(prev.totalPropuesto || 0),
-        enganche,
-        cuotasTotales: Number(prev.cuotasTotalesPropuestas || 1),
-        plan: prev.planCuotaModo,
-        fechaPrimeraCuota:
-          prev.fechaPrimeraCuota || dayjs().format("YYYY-MM-DD"), // HOY por defecto
-        diasEntrePagos: Number(prev.diasEntrePagos || 30),
-        interesTipo: prev.interesTipo,
-        interesPorcentaje: Number(prev.interesPorcentaje || 0),
-      });
-
-      return { ...prev, cuotasPropuestas: cuotas };
-    });
-  }, [setForm]);
-
-  function handleSubmit() {
-    const tieneCliente = !!form.clienteId || !!form.nombreCliente?.trim();
-    if (!tieneCliente) {
-      alert("Debes seleccionar un cliente o ingresar el snapshot del cliente.");
-      return;
-    }
-
-    if (
-      form.planCuotaModo === "PRIMERA_MAYOR" &&
-      Number(form.cuotaInicialPropuesta) <= 0
-    ) {
-      alert("En PRIMERA_MAYOR, el enganche debe ser mayor a 0.");
-      return;
-    }
-
-    const payload = buildSolicitudPayload(form);
-    if (handleCreateCreditRequest) handleCreateCreditRequest(payload);
-    else {
-      console.log("Payload solicitud crédito (sin onSubmit):", payload);
-      alert("Payload construido. Revisa la consola del navegador.");
-    }
-  }
-
-  // =================== Render ===================
   const planEsPrimeraMayor = form.planCuotaModo === "PRIMERA_MAYOR";
-  const totalUI = r2(form.totalPropuesto);
-
-  const cuotas = Array.isArray(form.cuotasPropuestas)
-    ? form.cuotasPropuestas
-    : [];
-  const engancheUI = r2(
-    cuotas.find((c) => c?.etiqueta === "ENGANCHE" || c?.numero === 0)?.monto ??
-      (form.planCuotaModo === "PRIMERA_MAYOR" ? form.cuotaInicialPropuesta : 0)
-  );
-  const principalUI = r2(totalUI - engancheUI);
-  const sumCuotasSinEnganche = r2(
-    cuotas
-      .filter(
-        (c) =>
-          (c?.etiqueta ?? (c?.numero === 0 ? "ENGANCHE" : "NORMAL")) !==
-          "ENGANCHE"
-      )
-      .reduce((acc, c) => acc + r2(c?.monto), 0)
-  );
-
-  // Como el interés NO se aplica a cuotas, hay consistencia si la suma de cuotas == principal
-  const isConsistent = Math.abs(sumCuotasSinEnganche - principalUI) <= 0.01;
-  const interesPct = Number(form?.interesPorcentaje || 0);
-  const isVendedor: boolean = userRol != "ADMIN" ? true : false;
 
   return (
     <div className="mx-auto w-full max-w-6xl mt-2">
@@ -372,7 +135,7 @@ export default function CreditoForm({
                     min={0}
                     step={0.01}
                     value={form.totalPropuesto}
-                    disabled={readOnly}
+                    // disabled={readOnly}
                     onChange={(e) =>
                       setField(
                         "totalPropuesto",
@@ -421,7 +184,6 @@ export default function CreditoForm({
                   <Input
                     type="date"
                     value={form.fechaPrimeraCuota || ""}
-                    disabled={readOnly}
                     onChange={(e) =>
                       setField("fechaPrimeraCuota", e.target.value)
                     }
@@ -504,6 +266,32 @@ export default function CreditoForm({
                     </div>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Interés sobre la venta</Label>
+                  <div className="grid grid-cols-5 gap-2">
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={form.interesSobreVenta}
+                          onChange={(e) =>
+                            setField(
+                              "interesSobreVenta",
+                              Math.max(
+                                0,
+                                Math.min(100, Number(e.target.value || 0))
+                              )
+                            )
+                          }
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {planEsPrimeraMayor && (
@@ -577,7 +365,7 @@ export default function CreditoForm({
               <Card className="mt-2 border-dashed">
                 <CardHeader className="py-3">
                   <CardTitle className="text-base">
-                    Calendario de cuotas (propuesto)
+                    Calendario de cuotas
                   </CardTitle>
                   <CardDescription>
                     Fechas y montos editables. El total final se confirmará al
@@ -754,23 +542,13 @@ export default function CreditoForm({
                 <span>· Enganche = {engancheUI.toFixed(2)}</span>
                 <span>· Principal = {principalUI.toFixed(2)}</span>
                 <span>· Suma cuotas = {sumCuotasSinEnganche.toFixed(2)}</span>
-                {interesPct > 0 && (
-                  <span>
-                    · Interés (no aplicado a cuotas) = {interesPct.toFixed(2)}%
-                  </span>
-                )}
-                {!isConsistent && (
-                  <span className="text-red-500">
-                    · Inconsistencia en montos
-                  </span>
-                )}
               </div>
 
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={handleSubmit}
+                  onClick={handleRegenerarCuotas}
                 >
                   Recalcular y validar
                 </Button>
@@ -793,9 +571,10 @@ export default function CreditoForm({
                     disabled: isPendingCreditRequest,
                     loading: isPendingCreditRequest,
                     loadingText: "Enviando petición...",
-                    onClick: () => {
-                      handleCreateCreditRequest(buildSolicitudPayload(form)),
-                        setOpenCreateRequest(false);
+                    onClick: async () => {
+                      const payload = buildSolicitudPayload(form);
+                      await handleCreateCreditRequest(payload);
+                      setOpenCreateRequest(false);
                     },
                   }}
                   cancelButton={{
@@ -815,18 +594,15 @@ export default function CreditoForm({
 
 // ========================= Builder de payload =========================
 export function buildSolicitudPayload(form: FormCreditoState): BuildPayload {
-  // Reglas mínimas
   if (!form.clienteId) {
     throw new Error("clienteId es requerido por el DTO del servidor.");
   }
 
-  // ===== Líneas (XOR producto/presentación) =====
   const lineas: LineaPayload[] = (form.lineas || [])
     .map((l) => {
       const cantidad = toInt(l.cantidad);
       const precioUnitario = toMoney(l.precioUnitario);
       const precioListaRef = toMoney(
-        // si en el form en algún momento guardas precioListaRef, úsalo; si no, fallback
         (l as any).precioListaRef ?? cantidad * precioUnitario
       );
       const subtotal = toMoney(l.subtotal ?? cantidad * precioUnitario);
@@ -841,7 +617,7 @@ export function buildSolicitudPayload(form: FormCreditoState): BuildPayload {
         precioUnitario,
         precioListaRef,
         subtotal,
-        precioSeleccionadoId: l.precioSeleccionadoId, //nuevo
+        precioSeleccionadoId: l.precioSeleccionadoId,
       };
     })
     .filter((ln) => ln.productoId || ln.presentacionId);
@@ -852,16 +628,14 @@ export function buildSolicitudPayload(form: FormCreditoState): BuildPayload {
     );
   }
 
-  // ===== Cuotas propuestas (lo que ves en el calendario del UI) =====
   const cuotasPropuestas: CuotaPropuestaPayload[] = (
     form.cuotasPropuestas || []
   )
     .map((c) => ({
       numero: toInt(c.numero),
-      fechaISO: c.fechaISO, // 'YYYY-MM-DD'
+      fechaISO: c.fechaISO,
       monto: toMoney(c.monto),
       etiqueta: c.etiqueta ?? (c.numero === 0 ? "ENGANCHE" : "NORMAL"),
-      // origen/esManual: los omito; el server setea AUTO/false por default
     }))
     .sort((a, b) => a.numero - b.numero);
 
@@ -869,7 +643,6 @@ export function buildSolicitudPayload(form: FormCreditoState): BuildPayload {
     throw new Error("Debe enviar al menos una cuota propuesta.");
   }
 
-  // Enganche “consistente”: si hay cuota #0/ENGANCHE, úsala; si no, respeta regla del plan
   const engancheDeCuotas =
     cuotasPropuestas.find((q) => q.etiqueta === "ENGANCHE")?.monto ?? 0;
   const enganchePorPlan =
@@ -879,23 +652,28 @@ export function buildSolicitudPayload(form: FormCreditoState): BuildPayload {
   const cuotaInicialPropuesta =
     engancheDeCuotas > 0 ? engancheDeCuotas : enganchePorPlan || undefined;
 
-  // ===== Cabecera =====
   const payload: BuildPayload = {
     sucursalId: toInt(form.sucursalId),
     clienteId: toInt(form.clienteId),
+    // totalPropuesto: toMoney(form.totalPropuesto),
+
     totalPropuesto: toMoney(form.totalPropuesto),
-    cuotaInicialPropuesta, // opcional si 0
+    interesSobreVenta: toInt(form.interesSobreVenta || 0),
+    // interesSobreVenta: toInt(form.interesSobreVenta || 0),
+
+    cuotaInicialPropuesta,
     cuotasTotalesPropuestas: toInt(form.cuotasTotalesPropuestas || 1),
     interesTipo: form.interesTipo as InteresTipoServer,
-    interesPorcentaje: toInt(form.interesPorcentaje || 0), // sólo se guarda
+    interesPorcentaje: toInt(form.interesPorcentaje || 0),
     planCuotaModo: form.planCuotaModo as PlanCuotaModoServer,
     diasEntrePagos: toInt(form.diasEntrePagos || 30),
-    fechaPrimeraCuota: form.fechaPrimeraCuota || undefined, // 'YYYY-MM-DD'
+    fechaPrimeraCuota: form.fechaPrimeraCuota || undefined,
     comentario: form.comentario || undefined,
     solicitadoPorId: toInt(form.solicitadoPorId),
     lineas,
     cuotasPropuestas,
   };
+  console.log("El payload generado es: ", payload);
 
   return payload;
 }

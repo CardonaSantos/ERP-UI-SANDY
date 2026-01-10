@@ -34,6 +34,9 @@ export type BuildPayload = {
 
   interesTipo: InteresTipoServer;
   interesPorcentaje: number; // entero 0..100
+
+  interesSobreVenta: number; // entero 0..100
+
   planCuotaModo: PlanCuotaModoServer;
   diasEntrePagos: number; // entero
   fechaPrimeraCuota?: string; // 'YYYY-MM-DD'

@@ -394,7 +394,7 @@ export default function CreditoDetails() {
   const fullName = [credito.cliente?.nombre, credito.cliente?.apellidos]
     .filter(Boolean)
     .join(" ");
-  const venta = credito.montos.venta ?? 0;
+  const venta = credito.montos.totalProgramado ?? 0;
   const pagado = credito.montos.totalPagado ?? 0;
   const saldo = venta - pagado;
 
