@@ -1,3 +1,5 @@
+"use client";
+
 import { useStore } from "@/components/Context/ContextSucursal";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,19 +20,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import {
   AtSign,
   Building,
-  ChartNoAxesColumn,
-  Ghost,
+  ChromeIcon as ChartNoAxesColumn,
+  Shield,
   ToggleLeft,
   UserIcon,
+  Edit,
+  Trash2,
+  Lock,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -41,8 +47,8 @@ interface User {
   activo: boolean;
   correo: string;
   rol: string;
-  contrasena?: string; // Opcional
-  contrasenaConfirm?: string; // Opcional
+  contrasena?: string;
+  contrasenaConfirm?: string;
 }
 
 interface Sucursal {
@@ -62,6 +68,8 @@ interface UsuarioResponse {
 
 function UserConfig() {
   const userId = useStore((state) => state.userId);
+  const userRol = useStore((state) => state.userRol);
+
   const [user, setUser] = useState<User>({
     activo: true,
     correo: "",
@@ -83,6 +91,9 @@ function UserConfig() {
   });
 
   const [users, setUsers] = useState<UsuarioResponse[]>([]);
+  const [truncateClose, setTruncateClose] = useState(false);
+  const [closeConfirm, setCloseConfirm] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
 
   const getUser = async () => {
     try {
@@ -92,7 +103,7 @@ function UserConfig() {
         setUser({
           ...user,
           ...userData,
-          contrasena: "", // Resetea valores no proporcionados
+          contrasena: "",
           contrasenaConfirm: "",
         });
       }
@@ -124,15 +135,9 @@ function UserConfig() {
     getUsers();
   }, []);
 
-  console.log(user);
-
-  //================================>
-  const [truncateClose, setTruncateClose] = useState(false); // Previene doble envío al cerrar
-  const [closeConfirm, setCloseConfirm] = useState(false); // Controla el dialog para cerrar
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (truncateClose) return; // Evitar doble clic
+    if (truncateClose) return;
     setTruncateClose(true);
 
     if (!user.contrasenaConfirm) {
@@ -149,7 +154,7 @@ function UserConfig() {
       if (response.status === 201 || response.status === 200) {
         toast.success("Usuario actualizado correctamente");
         getUser();
-        setCloseConfirm(false); // Cierra el diálogo explícitamente
+        setCloseConfirm(false);
       }
     } catch (error) {
       toast.error("Error al registrar cambio, verifique sus credenciales.");
@@ -161,18 +166,12 @@ function UserConfig() {
   const handleChangeInputs = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target; //tomas las props del objeto target
-
+    const { name, value } = e.target;
     setUser((datosPrevios) => ({
       ...datosPrevios,
       [name]: value,
     }));
   };
-
-  console.log("los usuarios son: ", users);
-  console.log("El usuario a enviar es: ", userEdit);
-
-  const [openEdit, setOpenEdit] = useState(false);
 
   const handleToggleEditActivo = (key: keyof User) => {
     setUserEdit((previaData) => ({
@@ -185,15 +184,24 @@ function UserConfig() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-
     setUserEdit((datosPrevios) => ({
       ...datosPrevios,
       [name]: value,
     }));
   };
 
+  const canEditUser = (targetUserId: number): boolean => {
+    if (userRol === "SUPER_ADMIN") return true;
+    return userId === targetUserId;
+  };
+
   const handleSubmitEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!canEditUser(userEdit.id)) {
+      toast.error("No tienes permisos para editar este usuario");
+      return;
+    }
 
     if (!userEdit.contrasenaConfirm) {
       toast.info("Ingrese su contraseña para confirmar el cambio");
@@ -212,7 +220,7 @@ function UserConfig() {
       };
 
       const response = await axios.patch(
-        `${API_URL}/user/update-user/as-admin/${userId}`, // Enviar el ID del admin actual
+        `${API_URL}/user/update-user/as-admin/${userId}`,
         payload
       );
 
@@ -227,74 +235,86 @@ function UserConfig() {
     }
   };
 
-  const userRol = useStore((state) => state.userRol);
+  const getRolBadgeVariant = (rol: string) => {
+    switch (rol) {
+      case "SUPER_ADMIN":
+        return "destructive";
+      case "ADMIN":
+        return "default";
+      default:
+        return "secondary";
+    }
+  };
 
   return (
-    <div className="container mx-auto flex justify-center items-center">
+    <div className="container mx-auto py-6 px-4">
       <Tabs defaultValue="usuario" className="w-full">
-        <div className="flex justify-center">
-          <TabsList className="w-full max-w-4xl flex justify-center space-x-4">
-            <TabsTrigger value="usuario" className="flex-1 text-center">
-              Mi usuario
+        <div className="flex justify-center mb-6">
+          <TabsList className="w-full max-w-md">
+            <TabsTrigger value="usuario" className="flex-1">
+              Mi Usuario
             </TabsTrigger>
-            <TabsTrigger value="usuarios" className="flex-1 text-center">
-              Usuarios
+            <TabsTrigger value="usuarios" className="flex-1">
+              Todos los Usuarios
             </TabsTrigger>
           </TabsList>
         </div>
+
+        {/* Tab: Mi Usuario */}
         <TabsContent value="usuario">
-          <Card className="w-full max-w-4xl mx-auto shadow-xl">
+          <Card className="w-full max-w-2xl mx-auto">
             <CardHeader>
-              <CardTitle className="text-center">
-                Editar Mi Usuario {user.nombre ? user.nombre : ""}
-              </CardTitle>
-              <CardDescription className="text-center">
-                Actualiza tu información personal.
+              <CardTitle className="text-2xl">Editar Mi Perfil</CardTitle>
+              <CardDescription>
+                Actualiza tu información personal y cambia tu contraseña.
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <CardContent className="space-y-4">
-                {/* Información personal */}
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="nombre">Nombre</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="nombre">Nombre completo</Label>
                     <Input
                       id="nombre"
                       name="nombre"
                       type="text"
                       value={user.nombre || ""}
                       onChange={handleChangeInputs}
-                      placeholder="Ingresa tu nombre"
+                      placeholder="Tu nombre completo"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="correo">Correo</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="correo">Correo electrónico</Label>
                     <Input
                       id="correo"
                       name="correo"
-                      type="text"
+                      type="email"
                       value={user.correo || ""}
                       onChange={handleChangeInputs}
-                      placeholder="Ingresa tu correo"
+                      placeholder="tu@correo.com"
                     />
                   </div>
                 </div>
-                {/* Cambio de contraseña */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="contrasena">Nueva Contraseña</Label>
+
+                <div className="border-t pt-4 space-y-4">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Cambiar contraseña
+                  </h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="contrasena">Nueva contraseña</Label>
                     <Input
                       id="contrasena"
                       name="contrasena"
                       type="password"
                       value={user.contrasena || ""}
                       onChange={handleChangeInputs}
-                      placeholder="Ingresa tu nueva contraseña"
+                      placeholder="Deja en blanco para mantener la actual"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="contrasenaConfirm">
-                      Confirmar Contraseña
+                      Confirmar con tu contraseña actual
                     </Label>
                     <Input
                       id="contrasenaConfirm"
@@ -302,99 +322,128 @@ function UserConfig() {
                       type="password"
                       value={user.contrasenaConfirm || ""}
                       onChange={handleChangeInputs}
-                      placeholder="Confirma con tu contraseña de administrador"
+                      placeholder="Tu contraseña actual"
                     />
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-end space-x-4">
+              <CardFooter>
                 <Button
                   className="w-full"
                   type="button"
-                  variant="default"
                   onClick={() => setCloseConfirm(true)}
                 >
-                  Actualizar
+                  Actualizar información
                 </Button>
               </CardFooter>
             </form>
-            {/* Diálogo de confirmación */}
-            <Dialog open={closeConfirm} onOpenChange={setCloseConfirm}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="text-center">
-                    Confirmar Actualización
-                  </DialogTitle>
-                  <DialogDescription className="text-center">
-                    ¿Estás seguro de actualizar tu información?
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="flex space-x-4">
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => setCloseConfirm(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="w-full"
-                    type="button"
-                    onClick={handleSubmit}
-                  >
-                    Confirmar
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </Card>
+
+          {/* Dialog de confirmación para actualizar perfil */}
+          <Dialog open={closeConfirm} onOpenChange={setCloseConfirm}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirmar actualización</DialogTitle>
+                <DialogDescription>
+                  ¿Estás seguro de que deseas actualizar tu información? Los
+                  cambios se guardarán inmediatamente.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setCloseConfirm(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="button" onClick={handleSubmit}>
+                  Confirmar cambios
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
-        <TabsContent value="usuarios">
-          <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">Lista de Usuarios</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {users &&
-                users.map((usuario) => (
-                  <div
+
+        {/* Tab: Lista de Usuarios */}
+        <TabsContent value="usuarios" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight">Usuarios</h2>
+            </div>
+            <Badge variant="outline" className="text-sm">
+              {users.length} {users.length === 1 ? "usuario" : "usuarios"}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {users && users.length > 0 ? (
+              users.map((usuario) => {
+                const canEdit = canEditUser(usuario.id);
+                const isSuperAdmin = userRol === "SUPER_ADMIN";
+
+                return (
+                  <Card
                     key={usuario.id}
-                    className="bg-white dark:bg-transparent shadow-md rounded-lg p-6 mb-4 flex flex-col gap-3 border-4"
+                    className="overflow-hidden hover:shadow-lg transition-shadow duration-200"
                   >
-                    <h2 className="text-xl font-semibold flex items-center gap-2">
-                      <UserIcon className="" />
-                      {usuario.nombre}
-                    </h2>
-                    <p className="text-gray-600 flex items-center gap-2">
-                      <AtSign className="" />
-                      <span className="font-medium">Correo:</span>{" "}
-                      {usuario.correo}
-                    </p>
-                    <p className="text-gray-600 flex items-center gap-2">
-                      <Building className="" />
-                      <span className="font-medium">Sucursal:</span>{" "}
-                      {usuario.sucursal.nombre}
-                    </p>
-                    <p className="text-gray-600 flex items-center gap-2">
-                      <ChartNoAxesColumn className="" />
-                      <span className="font-medium">Total Ventas:</span>{" "}
-                      {usuario.totalVentas}
-                    </p>
-                    <p className="text-gray-600 flex items-center gap-2">
-                      <ToggleLeft className="" />
-                      <span className="font-medium">Activo:</span>{" "}
-                      {usuario.activo == true ? "Activo" : "Desactivado"}
-                    </p>
-                    <p className="text-gray-600 flex items-center gap-2">
-                      <Ghost className="" />
-                      <span className="font-medium">Rol:</span> {usuario.rol}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        disabled={userRol !== "SUPER_ADMIN"}
-                        className="w-full"
-                        variant={"destructive"}
-                      >
-                        Eliminar
-                      </Button>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 flex-1">
+                          <CardTitle className="text-xl flex items-center gap-2">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <UserIcon className="h-5 w-5 text-primary" />
+                            </div>
+                            <span className="truncate">{usuario.nombre}</span>
+                          </CardTitle>
+                        </div>
+                        <Badge variant={getRolBadgeVariant(usuario.rol)}>
+                          {usuario.rol === "SUPER_ADMIN" && (
+                            <Shield className="h-3 w-3 mr-1" />
+                          )}
+                          {usuario.rol}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <AtSign className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground truncate">
+                            {usuario.correo}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Building className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground truncate">
+                            {usuario.sucursal.nombre}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <ChartNoAxesColumn className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground">
+                            {usuario.totalVentas} ventas
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="flex items-center gap-2">
+                          <ToggleLeft
+                            className={`h-4 w-4 ${
+                              usuario.activo
+                                ? "text-green-600"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                          <span className="text-sm font-medium">
+                            {usuario.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+
+                    <CardFooter className="flex gap-2 bg-muted/50">
                       <Button
                         onClick={() => {
                           setUserEdit({
@@ -403,108 +452,148 @@ function UserConfig() {
                             id: usuario.id,
                             nombre: usuario.nombre,
                             rol: usuario.rol,
+                            contrasena: "",
+                            contrasenaConfirm: "",
                           });
                           setOpenEdit(true);
                         }}
-                        className="w-full"
-                        variant={"default"}
+                        disabled={!canEdit}
+                        variant="default"
+                        className="flex-1"
+                        size="sm"
                       >
+                        <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </Button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-            <Dialog onOpenChange={setOpenEdit} open={openEdit}>
-              <DialogContent className="sm:max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-center">
-                    Editar Usuario {userEdit.nombre}
-                  </DialogTitle>
-                  <DialogDescription className="text-center">
-                    Editar mis usuarios en las sucursales
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="nombre" className="text-right">
-                      Nombre
-                    </Label>
+                      <Button
+                        disabled={!isSuperAdmin}
+                        variant="destructive"
+                        className="flex-1"
+                        size="sm"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground">
+                  No hay usuarios para mostrar
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Dialog para editar usuario */}
+          <Dialog onOpenChange={setOpenEdit} open={openEdit}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Edit className="h-5 w-5" />
+                  Editar Usuario: {userEdit.nombre}
+                </DialogTitle>
+                <DialogDescription>
+                  {canEditUser(userEdit.id)
+                    ? "Realiza cambios en la información del usuario."
+                    : "Solo puedes editar tu propio usuario."}
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleSubmitEditUser} className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-nombre">Nombre</Label>
                     <Input
                       name="nombre"
                       onChange={handleChangeEditUser}
-                      id="nombre"
+                      id="edit-nombre"
                       value={userEdit.nombre}
-                      className="col-span-3"
+                      disabled={!canEditUser(userEdit.id)}
                     />
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="correo" className="text-right">
-                      Correo
-                    </Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-correo">Correo</Label>
                     <Input
                       name="correo"
                       onChange={handleChangeEditUser}
-                      id="correo"
+                      id="edit-correo"
+                      type="email"
                       value={userEdit.correo}
-                      className="col-span-3"
+                      disabled={!canEditUser(userEdit.id)}
                     />
                   </div>
 
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="contrasena" className="text-right">
-                      Nueva contraseña
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-contrasena">
+                      Nueva contraseña (opcional)
                     </Label>
                     <Input
                       onChange={handleChangeEditUser}
-                      id="contrasena"
+                      id="edit-contrasena"
                       name="contrasena"
                       type="password"
-                      value={userEdit.contrasena}
-                      className="col-span-3"
+                      value={userEdit.contrasena || ""}
+                      placeholder="Dejar en blanco para mantener actual"
+                      disabled={!canEditUser(userEdit.id)}
                     />
                   </div>
 
-                  {userRol === "SUPER_ADMIN" ? (
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="activo" className="text-right">
-                        Activo
-                      </Label>
+                  {userRol === "SUPER_ADMIN" && (
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="edit-activo" className="text-base">
+                          Estado del usuario
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {userEdit.activo
+                            ? "Usuario activo"
+                            : "Usuario desactivado"}
+                        </p>
+                      </div>
                       <Switch
-                        id="activo"
+                        id="edit-activo"
                         checked={userEdit.activo}
                         onCheckedChange={() => handleToggleEditActivo("activo")}
                       />
                     </div>
-                  ) : null}
+                  )}
 
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="contrasenaConfirm" className="text-right">
-                      Confirmar contraseña de administrador
+                  <div className="space-y-2 pt-4 border-t">
+                    <Label htmlFor="edit-contrasenaConfirm">
+                      Confirmar con tu contraseña
                     </Label>
                     <Input
                       onChange={handleChangeEditUser}
-                      id="contrasenaConfirm"
+                      id="edit-contrasenaConfirm"
                       name="contrasenaConfirm"
                       type="password"
-                      placeholder="Ingrese su contraseña como administrador para confirmar los cambios"
-                      value={userEdit.contrasenaConfirm}
-                      className="col-span-3"
+                      placeholder="Tu contraseña de administrador"
+                      value={userEdit.contrasenaConfirm || ""}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Ingresa tu contraseña actual para confirmar los cambios
+                    </p>
                   </div>
                 </div>
+
                 <DialogFooter>
                   <Button
-                    className="w-full"
                     type="button"
-                    onClick={handleSubmitEditUser}
+                    variant="outline"
+                    onClick={() => setOpenEdit(false)}
                   >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={!canEditUser(userEdit.id)}>
                     Guardar cambios
                   </Button>
                 </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

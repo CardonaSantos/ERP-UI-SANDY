@@ -45,7 +45,6 @@ import {
   ProductosResponse,
 } from "./interfaces/newProductsPOSResponse";
 import TablePOS from "./table/header";
-import { keepPreviousData } from "@tanstack/react-query";
 import { MetodoPagoMainPOS } from "./interfaces/methodPayment";
 import CreditoForm from "./credito-props-components/credito-form-component";
 import { FormCreditoState } from "./credito-props-components/credito-venta.interfaces";
@@ -376,9 +375,12 @@ export default function PuntoVenta() {
     "products/get-products-presentations-for-pos",
     { params: apiParams },
     {
-      refetchOnWindowFocus: true,
-      placeholderData: keepPreviousData,
       staleTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      retry: 1,
+      refetchInterval: 10_000,
     }
   );
 
@@ -389,8 +391,16 @@ export default function PuntoVenta() {
     error: errorCustomers,
   } = useApiQuery<Client[]>(
     ["clients-all"],
-    "client/get-all-customers"
-    // { enabled: true }
+    "client/get-all-customers",
+    undefined,
+    {
+      staleTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      retry: 1,
+      refetchInterval: 10_000,
+    }
   );
 
   const { mutateAsync: createSale, isPending: isCreatingSale } = useApiMutation<
@@ -412,7 +422,14 @@ export default function PuntoVenta() {
 
   const { data: tiposPresentacionesResponse } = useApiQuery<
     PaginatedResponse<TipoPresentacion>
-  >(["empaques"], "tipo-presentacion");
+  >(["empaques"], "tipo-presentacion", undefined, {
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    retry: 1,
+    refetchInterval: 10_000,
+  });
 
   const { data: cats } = useApiQuery<CategoriaWithCount[]>(
     CATS_LIST_QK,
@@ -420,7 +437,11 @@ export default function PuntoVenta() {
     undefined,
     {
       staleTime: 0,
-      refetchOnMount: "always",
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      retry: 1,
+      refetchInterval: 10_000,
     }
   );
   const categorias = Array.isArray(cats) ? cats : [];

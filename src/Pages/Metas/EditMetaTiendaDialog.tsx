@@ -1,4 +1,3 @@
-import { useStore } from "@/components/Context/ContextSucursal";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -27,15 +26,16 @@ interface EditMetaTiendaDialogProps {
   open: boolean;
   onClose: () => void;
   metaTienda: MetaTienda | null;
+  isSuperAdmin: boolean;
 }
 
 export function EditMetaTiendaDialog({
   open,
   onClose,
   metaTienda,
+  isSuperAdmin,
 }: EditMetaTiendaDialogProps) {
   const [formData, setFormData] = useState<MetaTienda | null>(null);
-  const userRol = useStore((state) => state.userRol);
 
   const updateMeta = useUpdateMetaTienda();
 
@@ -114,7 +114,7 @@ export function EditMetaTiendaDialog({
             />
           </div>
 
-          {userRol === "ADMIN" && (
+          {isSuperAdmin && (
             <div className="space-y-1">
               <label className="text-sm font-medium">Monto actual</label>
               <Input

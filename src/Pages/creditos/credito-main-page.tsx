@@ -10,7 +10,7 @@ import type {
   NormalizedCredito,
 } from "./interfaces/CreditoResponse";
 import * as React from "react";
-import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import CreditTable from "./components/table-creditos/header";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { useStore } from "@/components/Context/ContextSucursal";
@@ -23,15 +23,11 @@ function CreditoMainPageManage() {
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(20);
   const [search, setSearch] = React.useState("");
-
   const queryClient = useQueryClient();
 
-  // guardamos el crédito a eliminar (para mostrar datos en el modal)
   const [creditoToDelete, setCreditoToDelete] =
     React.useState<NormalizedCredito | null>(null);
 
-  // TODO: ajusta esta línea a tu sistema real de auth/roles.
-  // Ejemplos: useAuthStore.getState().isAdmin || currentUser.roles.includes('ADMIN')
   const isAdmin: boolean = userRol === "ADMIN" ? true : false; // <— cámbialo por tu lógica real
 
   const { data: creditosResponse, isLoading } = useApiQuery<CreditListResponse>(
@@ -45,9 +41,11 @@ function CreditoMainPageManage() {
       },
     },
     {
-      refetchOnMount: "always",
       staleTime: 0,
-      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: "always",
+      refetchOnMount: "always",
+      refetchOnReconnect: "always",
+      retry: 1,
     }
   );
 
@@ -63,7 +61,6 @@ function CreditoMainPageManage() {
 
   const handleConfirmDelete = async () => {
     try {
-      // tu hook ya usa selectedCreditoId en el path: credito/delete-credito/${selectedCreditoId}
       toast.promise(deleteCredito(undefined as any), {
         success: "Registro eliminado",
         loading: "Eliminando registro...",
@@ -72,11 +69,9 @@ function CreditoMainPageManage() {
       setOpenDeleteCredito(false);
       setCreditoToDelete(null);
 
-      // revalidar/refetch
       await queryClient.invalidateQueries({ queryKey: CREDITS_QUERY_KEY });
     } catch (err) {
       console.error("Error al eliminar crédito:", err);
-      // opcional: muestra un toast de error
     }
   };
 

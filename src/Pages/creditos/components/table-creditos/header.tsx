@@ -13,19 +13,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence, motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Wallet } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { NormalizedCredito } from "../../interfaces/CreditoResponse";
 import { creditColumns } from "./colums";
+import { Card, CardContent } from "@/components/ui/card";
 
-// ====== Props ======
 interface Props {
   data: NormalizedCredito[];
   isLoading: boolean;
-
   // filtros / búsqueda (se manejan en el padre para SSR)
   search: string;
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-
   // paginación (Server-Side)
   page: number;
   limit: number;
@@ -48,6 +54,63 @@ interface Props {
 
   /** Abrir diálogo de confirmación desde la fila seleccionada. */
   onRequestDelete?: (c: NormalizedCredito) => void;
+}
+
+interface CreditStats {
+  totalCreditos: number;
+  creditosActivos: number;
+  creditosCerrados: number;
+  creditosVencidos: number;
+  montoTotal: number;
+  montoPagado: number;
+  montoSaldo: number;
+}
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  subtitle,
+  trend,
+  isLoading,
+}: {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  subtitle?: string;
+  trend?: "up" | "down" | "neutral";
+  isLoading: boolean;
+}) {
+  const getTrendColor = () => {
+    if (trend === "up") return "text-green-600";
+    if (trend === "down") return "text-red-600";
+    return "text-muted-foreground";
+  };
+
+  return (
+    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1 flex-1">
+            <p className="text-sm text-muted-foreground font-medium">{title}</p>
+            {isLoading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              <p className="text-lg font-bold">{value}</p>
+            )}
+            {subtitle && (
+              <p className={`text-xs ${getTrendColor()}`}>{subtitle}</p>
+            )}
+          </div>
+          <div
+            className={`h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center ${getTrendColor()}`}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 /** Barra de paginación compacta */
@@ -235,6 +298,48 @@ export default function CreditTable({
     )
   );
 
+  const stats = React.useMemo<CreditStats>(() => {
+    if (!data.length) {
+      return {
+        totalCreditos: 0,
+        creditosActivos: 0,
+        creditosCerrados: 0,
+        creditosVencidos: 0,
+        montoTotal: 0,
+        montoPagado: 0,
+        montoSaldo: 0,
+      };
+    }
+
+    return data.reduce(
+      (acc, credito) => {
+        const venta = credito.montos.venta ?? 0;
+        const pagado = credito.montos.totalPagado ?? 0;
+        const saldo = venta - pagado;
+
+        acc.totalCreditos++;
+        if (credito.estado === "ACTIVA") acc.creditosActivos++;
+        if (credito.estado === "COMPLETADA") acc.creditosCerrados++;
+        if (credito.estado === "EN_MORA") acc.creditosVencidos++;
+
+        acc.montoTotal += venta;
+        acc.montoPagado += pagado;
+        acc.montoSaldo += saldo;
+
+        return acc;
+      },
+      {
+        totalCreditos: 0,
+        creditosActivos: 0,
+        creditosCerrados: 0,
+        creditosVencidos: 0,
+        montoTotal: 0,
+        montoPagado: 0,
+        montoSaldo: 0,
+      }
+    );
+  }, [data]);
+
   // ====== Skeleton ======
   const renderSkeleton = (rows = 6) => (
     <tbody>
@@ -274,6 +379,67 @@ export default function CreditTable({
           className="h-8"
         />
         {/* Espacio para más filtros (estado, sucursal, fechas…) */}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total de Créditos"
+          value={stats.totalCreditos}
+          icon={Wallet}
+          subtitle={`${stats.creditosActivos} activos`}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Créditos Activos"
+          value={stats.creditosActivos}
+          icon={TrendingUp}
+          subtitle="En proceso"
+          trend="up"
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Créditos Cerrados"
+          value={stats.creditosCerrados}
+          icon={CheckCircle2}
+          subtitle="Finalizados"
+          trend="neutral"
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Créditos En Mora"
+          value={stats.creditosVencidos}
+          icon={AlertCircle}
+          trend="down"
+          isLoading={isLoading}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard
+          title="Monto Total en Créditos"
+          value={`Q${stats.montoTotal.toFixed(2)}`}
+          icon={DollarSign}
+          subtitle="Valor total de créditos"
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Total Pagado"
+          value={`Q${stats.montoPagado.toFixed(2)}`}
+          icon={CheckCircle2}
+          subtitle={`${(
+            (stats.montoPagado / stats.montoTotal) * 100 || 0
+          ).toFixed(1)}% recuperado`}
+          trend="up"
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Saldo Pendiente"
+          value={`Q${stats.montoSaldo.toFixed(2)}`}
+          icon={Clock}
+          subtitle="Por cobrar"
+          trend="down"
+          isLoading={isLoading}
+        />
       </div>
 
       {/* ===== DESKTOP ===== */}

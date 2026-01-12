@@ -79,7 +79,7 @@ export default function CreditoForm({
     engancheUI,
     principalUI,
     sumCuotasSinEnganche,
-    isVendedor,
+    // isVendedor,
     editingCuotas,
     setEditingCuotas,
     setField,
@@ -323,7 +323,6 @@ export default function CreditoForm({
                   </span>
                 </div>
                 <Switch
-                  disabled={isVendedor}
                   checked={editingCuotas}
                   onCheckedChange={setEditingCuotas}
                 />
