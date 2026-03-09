@@ -32,38 +32,27 @@ import { TipoComprobante } from "./interfaces";
 import { formattMonedaGT } from "@/utils/formattMoneda";
 import { ComprobanteSelector } from "./Components/ComprobanteSelector";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
-
 import { useStore } from "@/components/Context/ContextSucursal";
-import {
-  useApiQuery,
-  useApiMutation,
-} from "@/hooks/genericoCall/genericoCallHook";
-
 import type { NewQueryDTO } from "./interfaces/interfaces";
-import {
-  ProductoData,
-  ProductosResponse,
-} from "./interfaces/newProductsPOSResponse";
+import { ProductoData } from "./interfaces/newProductsPOSResponse";
 import TablePOS from "./table/header";
 import { MetodoPagoMainPOS } from "./interfaces/methodPayment";
 import CreditoForm from "./credito-props-components/credito-form-component";
 import { FormCreditoState } from "./credito-props-components/credito-venta.interfaces";
-import { PaginatedResponse } from "../tipos-presentaciones/Interfaces/tiposPresentaciones.interfaces";
-import { TipoPresentacion } from "../newCreateProduct/interfaces/DomainProdPressTypes";
-import {
-  CategoriaWithCount,
-  CATS_LIST_QK,
-} from "../Categorias/CategoriasMainPage";
-
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import localizedFormat from "dayjs/plugin/localizedFormat";
+import { NewQueryPOS, useFetchVentas } from "@/hooks/use-ventas/use-ventas";
+import { useClientes } from "@/hooks/use-clientes/use-clientes";
+import { useCreateVenta } from "@/hooks/use-create-venta/use-create-venta";
+import { useGetCategorias } from "@/hooks/use-categorias/use-categorias";
+import { useTiposPresentaciones } from "@/hooks/use-tipos-presentaciones/use-tipos-presentaciones";
+import { useCreateCreditoRequest } from "@/hooks/use-authorization-credito/use-authorization";
+import { useCreatePriceRequest } from "@/hooks/use-create-price-request/use-create-price-request";
+import { formattFecha } from "../Utils/Utils";
+import { formatMonedaGT } from "../Compras/compras.utils";
 dayjs.extend(localizedFormat);
 dayjs.locale("es");
-
-function formatearFechaUTC(fecha: string) {
-  return dayjs(fecha).format("DD/MM/YYYY hh:mm A");
-}
 
 // =================== Tipos (compatibilidad con tus componentes actuales) ===================
 enum RolPrecio {
@@ -78,13 +67,13 @@ enum RolPrecio {
 type Stock = {
   id: number;
   cantidad: number;
-  fechaIngreso: string; // ISO
-  fechaVencimiento: string; // ISO
+  fechaIngreso: string;
+  fechaVencimiento: string;
 };
 
 export type Precios = {
   id: number;
-  precio: number; // <- importante: number (parse de string del backend)
+  precio: number;
   rol: RolPrecio;
 };
 
@@ -97,7 +86,7 @@ type SourceType = "producto" | "presentacion";
 
 type ProductoPOS = {
   id: number;
-  source: SourceType; // 👈 NUEVO
+  source: SourceType;
   nombre: string;
   descripcion: string;
   precioVenta: number;
@@ -121,18 +110,6 @@ interface CartItem {
   precios: Precios[];
   stock: { cantidad: number }[];
 }
-
-type Client = {
-  id: number;
-  nombre: string;
-  apellidos: string;
-  telefono: string;
-  dpi: string;
-  nit: string;
-  iPInternet: string;
-  direccion: string;
-  actualizadoEn: Date;
-};
 
 interface Venta {
   id: number;
@@ -177,7 +154,7 @@ export default function PuntoVenta() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<MetodoPagoMainPOS>(
-    MetodoPagoMainPOS.EFECTIVO
+    MetodoPagoMainPOS.EFECTIVO,
   );
   const [tipoComprobante, setTipoComprobante] =
     useState<TipoComprobante | null>(TipoComprobante.RECIBO);
@@ -186,7 +163,7 @@ export default function PuntoVenta() {
   const [openSection, setOpenSection] = useState(false);
   const [ventaResponse, setventaResponse] = useState<Venta | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
-    null
+    null,
   );
   const [precioReques, setPrecioRequest] = useState<number | null>(null);
   const [openReques, setOpenRequest] = useState(false);
@@ -194,7 +171,7 @@ export default function PuntoVenta() {
   const [imagesProduct, setImagesProduct] = useState<string[]>([]);
   const [isDisableButton, setIsDisableButton] = useState(false);
   const [selectedCustomerID, setSelectedCustomerID] = useState<Customer | null>(
-    null
+    null,
   );
   const [activeTab, setActiveTab] = useState("existing");
   // Datos del cliente ad-hoc (venta rápida)
@@ -212,7 +189,7 @@ export default function PuntoVenta() {
   const totalCarrito = useMemo(
     () =>
       cart.reduce((acc, prod) => acc + prod.selectedPrice * prod.quantity, 0),
-    [cart]
+    [cart],
   );
   const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -262,7 +239,7 @@ export default function PuntoVenta() {
           i.source === "presentacion" ? i.nombre : undefined,
         codigoBarrasSnapshot: undefined,
       })),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -323,7 +300,6 @@ export default function PuntoVenta() {
   }, [sucursalId, limit, page]);
 
   // =================== Queries via wrapper ===================
-  type NewQueryPOS = NewQueryDTO & { q?: string };
 
   // 3) Memo de los filtros que viajan a la API (NO mutar aquí)
   const apiParams = React.useMemo<NewQueryPOS>(() => {
@@ -355,6 +331,7 @@ export default function PuntoVenta() {
 
   // Productos para POS (nuevo contrato del servidor)
   // 4) Usa SIEMPRE el memo en key y params
+
   const {
     data: productsResponse = {
       data: [],
@@ -370,80 +347,31 @@ export default function PuntoVenta() {
     isFetching: isLoadingProducts,
     isError: isErrorProducts,
     error: errorProducts,
-  } = useApiQuery<ProductosResponse>(
-    ["products-pos-response", apiParams],
-    "products/get-products-presentations-for-pos",
-    { params: apiParams },
-    {
-      staleTime: 0,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
-      refetchOnReconnect: true,
-      retry: 1,
-      refetchInterval: 10_000,
-    }
-  );
+  } = useFetchVentas(apiParams);
 
   // Clientes
+
   const {
     data: customersResponse,
     isError: isErrorCustomers,
     error: errorCustomers,
-  } = useApiQuery<Client[]>(
-    ["clients-all"],
-    "client/get-all-customers",
-    undefined,
-    {
-      staleTime: 0,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
-      refetchOnReconnect: true,
-      retry: 1,
-      refetchInterval: 10_000,
-    }
-  );
+  } = useClientes();
 
-  const { mutateAsync: createSale, isPending: isCreatingSale } = useApiMutation<
-    any,
-    any
-  >("post", "venta");
+  const { mutateAsync: createSale, isPending: isCreatingSale } =
+    useCreateVenta();
 
   const { mutateAsync: createPriceRequest, isPending: isCreatingPriceRequest } =
-    useApiMutation<any, any>("post", "price-request");
+    useCreatePriceRequest();
 
-  //esperar respuesta del admin? como?
   const {
     mutateAsync: createCreditRequest,
     isPending: isPendingCreditRequest,
-  } = useApiMutation<any, any>(
-    "post",
-    "credito-authorization/create-authorization"
-  );
+  } = useCreateCreditoRequest();
 
-  const { data: tiposPresentacionesResponse } = useApiQuery<
-    PaginatedResponse<TipoPresentacion>
-  >(["empaques"], "tipo-presentacion", undefined, {
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchOnReconnect: true,
-    retry: 1,
-    refetchInterval: 10_000,
-  });
+  const { data: tiposPresentacionesResponse } = useTiposPresentaciones();
 
-  const { data: cats } = useApiQuery<CategoriaWithCount[]>(
-    CATS_LIST_QK,
-    "/categoria/all-cats-with-counts",
-    undefined,
-    {
-      staleTime: 0,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
-      refetchOnReconnect: true,
-      retry: 1,
-      refetchInterval: 10_000,
-    }
-  );
+  const { data: cats } = useGetCategorias();
+
   const categorias = Array.isArray(cats) ? cats : [];
   const tiposPresentacion = tiposPresentacionesResponse?.data ?? [];
 
@@ -496,8 +424,8 @@ export default function PuntoVenta() {
     if (existingItem) {
       setCart((prev) =>
         prev.map((item) =>
-          item.uid === uid ? { ...item, quantity: item.quantity + 1 } : item
-        )
+          item.uid === uid ? { ...item, quantity: item.quantity + 1 } : item,
+        ),
       );
       return;
     }
@@ -568,7 +496,7 @@ export default function PuntoVenta() {
           c.nit ? `NIT: ${c.nit}` : "NIT: N/A"
         } ${c.iPInternet ? `IP: ${c.iPInternet}` : ""}`,
       })),
-    [customersResponse]
+    [customersResponse],
   );
 
   // =================== Validaciones & helpers ===================
@@ -596,7 +524,7 @@ export default function PuntoVenta() {
         solicitadoPorId: userId,
       });
       toast.success(
-        "Solicitud enviada, esperando respuesta del administrador..."
+        "Solicitud enviada, esperando respuesta del administrador...",
       );
       setPrecioRequest(null);
       setSelectedProductId("");
@@ -625,21 +553,6 @@ export default function PuntoVenta() {
     setIsDisableButton(true);
 
     if (!selectedCustomerID?.id) {
-      // const cliente = {
-      //   nombre: nombre?.trim(),
-      //   apellidos: apellidos?.trim(),
-      //   direccion: direccion?.trim(),
-      //   dpi: dpi?.trim(),
-      //   nit: nit?.trim(),
-      // };
-      // if (cliente.nombre) {
-      //   const res = validateDpiNitEither(cliente.dpi, cliente.nit);
-      //   if (!res.ok) {
-      //     toast.warning(res.msg || "DPI o NIT no válidos");
-      //     setIsDisableButton(false);
-      //     return;
-      //   }
-      // }
     }
 
     const saleData = {
@@ -658,7 +571,6 @@ export default function PuntoVenta() {
       tipoComprobante: tipoComprobante,
       referenciaPago: referenciaPago,
       monto: totalCarrito,
-      // cliente “rápido”
       nombre: nombre.trim(),
       apellidos: apellidos.trim(),
       telefono: telefono.trim(),
@@ -669,8 +581,6 @@ export default function PuntoVenta() {
       imei: imei.trim(),
     };
 
-    console.log("EL payload es: ", saleData);
-
     const isCustomerInfoProvided = !!saleData.nombre && !!saleData.telefono;
 
     if (
@@ -679,7 +589,7 @@ export default function PuntoVenta() {
       !isCustomerInfoProvided
     ) {
       toast.warning(
-        "Para ventas mayores a 1000 es necesario ingresar o seleccionar un cliente"
+        "Para ventas mayores a 1000 es necesario ingresar o seleccionar un cliente",
       );
       setIsDisableButton(false);
       return;
@@ -722,14 +632,14 @@ export default function PuntoVenta() {
 
   const updateQuantityByUid = (uid: string, qty: number) => {
     setCart((prev) =>
-      prev.map((i) => (i.uid === uid ? { ...i, quantity: qty } : i))
+      prev.map((i) => (i.uid === uid ? { ...i, quantity: qty } : i)),
     );
   };
 
   const updatePriceByUid = (
     uid: string,
     newPrice: number,
-    newRole: RolPrecio
+    newRole: RolPrecio,
   ) => {
     setCart((prev) =>
       prev.map((i) =>
@@ -740,11 +650,11 @@ export default function PuntoVenta() {
               selectedPriceRole: newRole,
               selectedPriceId:
                 i.precios.find(
-                  (p) => p.precio === newPrice && p.rol === newRole
+                  (p) => p.precio === newPrice && p.rol === newRole,
                 )?.id ?? i.selectedPriceId,
             }
-          : i
-      )
+          : i,
+      ),
     );
   };
 
@@ -754,28 +664,16 @@ export default function PuntoVenta() {
 
   const isCreditoVenta = paymentMethod === MetodoPagoMainPOS.CREDITO;
 
-  // helper: uid consistente con la tabla
-
   const getRemainingForRow = React.useCallback(
     (p: ProductoData) => {
       const source = (p.__source as SourceType) ?? "producto";
       const uid = makeUid(source, p.id);
       const totalStock = (p.stocks ?? []).reduce((a, s) => a + s.cantidad, 0);
       const reserved = cart.find((i) => i.uid === uid)?.quantity ?? 0;
-      // futuro: si tienes stock en tiempo real por WS, úsalo aquí:
-      // const live = liveStockByUid[uid] ?? totalStock;
       return Math.max(0, totalStock - reserved);
     },
-    [cart]
+    [cart],
   );
-
-  console.log("Los registro de productos son: ", productos);
-  console.log("El carrito es: ", cart);
-  console.log("el resultado del server es: ", productsResponse);
-  console.log("el cliente seleccionado es: ", selectedCustomerID);
-  console.log("el creditoForm es: ", creditoForm);
-  console.log("El query es: ", queryOptions);
-  console.log("los tipos de presentacion son: ", tiposPresentacion);
 
   return (
     <div className="container">
@@ -850,14 +748,7 @@ export default function PuntoVenta() {
             onUpdatePrice={updatePriceByUid}
             onRemoveFromCart={removeFromCartByUid}
             onCompleteSale={() => setIsDialogOpen(true)}
-            formatCurrency={(n) =>
-              new Intl.NumberFormat("es-GT", {
-                style: "currency",
-                currency: "GTQ",
-              })
-                .format(n)
-                .replace("GTQ", "Q")
-            }
+            formatCurrency={(n) => formatMonedaGT(n)}
           />
         </div>
       </div>
@@ -908,11 +799,11 @@ export default function PuntoVenta() {
                           value: selectedProductId,
                           label: `${
                             productos.find(
-                              (p) => String(p.id) === selectedProductId
+                              (p) => String(p.id) === selectedProductId,
                             )?.nombre
                           } (${
                             productos.find(
-                              (p) => String(p.id) === selectedProductId
+                              (p) => String(p.id) === selectedProductId,
                             )?.codigoProducto
                           })`,
                         }
@@ -933,7 +824,7 @@ export default function PuntoVenta() {
                   value={precioReques ?? ""}
                   onChange={(e) =>
                     setPrecioRequest(
-                      e.target.value ? Number(e.target.value) : null
+                      e.target.value ? Number(e.target.value) : null,
                     )
                   }
                 />
@@ -1019,7 +910,7 @@ export default function PuntoVenta() {
                     Fecha y Hora:
                   </span>
                   <span className="font-semibold text-gray-900 text-sm  dark:text-white ">
-                    {formatearFechaUTC(ventaResponse.fechaVenta)}
+                    {formattFecha(ventaResponse.fechaVenta)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">

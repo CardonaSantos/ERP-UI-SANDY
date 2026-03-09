@@ -270,12 +270,12 @@ export default function TablePOS({
   const desktopBodyMaxH = Math.min(
     maxDesktopHeightPx ?? computedBodyMaxH,
     // no exceder el viewport en escritorio
-    Math.max(320, Math.round(0.72 * window.innerHeight || computedBodyMaxH))
+    Math.max(320, Math.round(0.72 * window.innerHeight || computedBodyMaxH)),
   );
 
   const mobileBodyMaxH = Math.min(
     maxMobileHeightPx ?? computedBodyMaxH,
-    Math.max(280, Math.round(0.65 * window.innerHeight || computedBodyMaxH))
+    Math.max(280, Math.round(0.65 * window.innerHeight || computedBodyMaxH)),
   );
 
   /** --------- UI Helpers --------- */
@@ -306,14 +306,14 @@ export default function TablePOS({
   const selectedTiposEmpaque = React.useMemo(
     () =>
       tiposPresentacion.filter((tp) =>
-        queryOptions.tipoEmpaque.includes(tp.id)
+        queryOptions.tipoEmpaque.includes(tp.id),
       ),
-    [tiposPresentacion, queryOptions.tipoEmpaque]
+    [tiposPresentacion, queryOptions.tipoEmpaque],
   );
 
   const selectedCategorias = React.useMemo(
     () => categorias.filter((cat) => queryOptions.cats.includes(cat.id)),
-    [categorias, queryOptions.cats]
+    [categorias, queryOptions.cats],
   );
 
   const handleTipoEmpaqueChange = React.useCallback(
@@ -323,7 +323,7 @@ export default function TablePOS({
         tipoEmpaque: arr.map((t) => t.id),
       }));
     },
-    [setQueryOptions]
+    [setQueryOptions],
   );
 
   const handleSelectCategoria = React.useCallback(
@@ -333,7 +333,7 @@ export default function TablePOS({
         cats: arr.map((cat) => cat.id),
       }));
     },
-    [setQueryOptions]
+    [setQueryOptions],
   );
 
   return (
@@ -353,7 +353,7 @@ export default function TablePOS({
             placeholder="Buscar por nombre o código…"
             value={searchValue}
             onChange={handleSearchItemsInput}
-            className="h-8 pl-8 pr-24" // 👈 pl para icono, pr para botón
+            className="h-8 pl-8 pr-24"
           />
         </div>
 
@@ -370,8 +370,8 @@ export default function TablePOS({
             placeholder="Presentaciones"
             selectProps={{
               isSearchable: true,
-              menuPortalTarget: document.body, // 👈 fuera del stacking del table
-              menuPosition: "fixed", // 👈 estable en contenedores con overflow
+              menuPortalTarget: document.body,
+              menuPosition: "fixed",
               menuShouldScrollIntoView: false, // opcional
               styles: {
                 menuPortal: (base) => ({ ...base, zIndex: 9999 }),
@@ -397,8 +397,8 @@ export default function TablePOS({
             placeholder="Categorías"
             selectProps={{
               isSearchable: true,
-              menuPortalTarget: document.body, // 👈 fuera del stacking del table
-              menuPosition: "fixed", // 👈 estable en contenedores con overflow
+              menuPortalTarget: document.body,
+              menuPosition: "fixed",
               menuShouldScrollIntoView: false, // opcional
               styles: {
                 menuPortal: (base) => ({ ...base, zIndex: 9999 }),
@@ -454,7 +454,7 @@ export default function TablePOS({
                         <div className="flex items-center gap-1">
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                           {sort === "asc" && <span>▲</span>}
                           {sort === "desc" && <span>▼</span>}
@@ -487,7 +487,7 @@ export default function TablePOS({
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </td>
                       ))}

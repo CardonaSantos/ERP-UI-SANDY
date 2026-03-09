@@ -41,7 +41,7 @@ export type ReusableSelectProps<T> = SingleProps<T> | MultiProps<T>;
 
 function ReusableSelectInner<T>(
   props: ReusableSelectProps<T>,
-  ref: React.Ref<SelectInstance<OptionOf<T>, any, GroupBase<OptionOf<T>>>>
+  ref: React.Ref<SelectInstance<OptionOf<T>, any, GroupBase<OptionOf<T>>>>,
 ) {
   const {
     items,
@@ -70,12 +70,12 @@ function ReusableSelectInner<T>(
         .filter(Boolean) as OptionOf<T>[];
     } else {
       const v = props.value ?? null;
-      return v ? byKey.get(getValue(v)) ?? null : null;
+      return v ? (byKey.get(getValue(v)) ?? null) : null;
     }
   }, [options, props, getValue]);
 
   const handleChange = (
-    val: SingleValue<OptionOf<T>> | MultiValue<OptionOf<T>>
+    val: SingleValue<OptionOf<T>> | MultiValue<OptionOf<T>>,
   ) => {
     if ("isMulti" in props && props.isMulti) {
       const arr = (val as MultiValue<OptionOf<T>>)?.map((v) => v.raw) ?? [];
@@ -97,6 +97,7 @@ function ReusableSelectInner<T>(
         onChange={handleChange as (v: MultiValue<OptionOf<T>>) => void}
         isClearable={isClearable}
         placeholder={placeholder}
+        className="text-black text-sm"
         getOptionValue={(opt) => String(opt.value)}
         {...(props.selectProps as PassThroughProps<OptionOf<T>, true>)}
       />
@@ -112,6 +113,7 @@ function ReusableSelectInner<T>(
       onChange={handleChange as (v: SingleValue<OptionOf<T>>) => void}
       isClearable={isClearable}
       placeholder={placeholder}
+      className="text-black text-sm"
       getOptionValue={(opt) => String(opt.value)}
       {...(props.selectProps as PassThroughProps<OptionOf<T>, false>)}
     />
@@ -121,10 +123,10 @@ function ReusableSelectInner<T>(
 export const ReusableSelect = forwardRef(ReusableSelectInner) as (<T>( // Sobrecargas para mejorar intellisense del ref y props según variante
   p: SingleProps<T> & {
     ref?: React.Ref<SelectInstance<OptionOf<T>, false>>;
-  }
+  },
 ) => ReturnType<typeof ReusableSelectInner>) &
   (<T>(
     p: MultiProps<T> & {
       ref?: React.Ref<SelectInstance<OptionOf<T>, true>>;
-    }
+    },
   ) => ReturnType<typeof ReusableSelectInner>);

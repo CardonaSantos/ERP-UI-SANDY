@@ -1,4 +1,3 @@
-// pages/ventas/HistorialVentasMain.tsx
 import { useDeferredValue, useMemo, useState } from "react";
 import { useStore } from "@/components/Context/ContextSucursal";
 import { toast } from "sonner";
@@ -7,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from "date-fns/locale";
@@ -32,6 +37,12 @@ import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { ventasHistorialKeys } from "./Keys/query";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
+import {
+  downloadFile,
+  useReportUtilidad,
+  useReportVentas,
+  UtilidadReportQuery,
+} from "@/hooks/use-reports/use-report-excel";
 
 registerLocale("es", es);
 
@@ -175,9 +186,11 @@ export default function HistorialVentasMain() {
       // userId,
       comprobantes,
       metodosPago,
-    ]
+    ],
   );
 
+  const useCreateReporteUtilidad = useReportUtilidad();
+  const useCreateReporteVentas = useReportVentas();
   // ---------- Fetch con tu wrapper ----------
   const {
     data: ventasPage,
@@ -194,7 +207,7 @@ export default function HistorialVentasMain() {
       refetchOnMount: "always", // siempre refetch al montar
       refetchOnReconnect: true, // refetch al volver conexión
       refetchOnWindowFocus: true, // refetch al volver a la pestaña
-    }
+    },
   );
 
   // ---------- Mutación para eliminar venta ----------
@@ -235,7 +248,7 @@ export default function HistorialVentasMain() {
 
   const onSortChange = (
     by: PaginationMeta["sortBy"],
-    dir: PaginationMeta["sortDir"]
+    dir: PaginationMeta["sortDir"],
   ) => {
     setSortBy(by as any);
     setSortDir(dir);
@@ -288,6 +301,13 @@ export default function HistorialVentasMain() {
     });
   };
 
+  const totalVentas = useMemo(() => {
+    const total =
+      ventasPage?.data.reduce((acc, venta) => acc + venta.total, 0) ?? 0;
+
+    return formattMonedaGT(total);
+  }, [ventasPage]);
+
   // ---------- UI ----------
   if (isError) {
     return (
@@ -302,6 +322,50 @@ export default function HistorialVentasMain() {
       <div className="p-6 text-center text-muted-foreground">No hay datos.</div>
     );
   }
+  function handleGenerarReporte(): void {
+    const dto: UtilidadReportQuery = {
+      fechaFin: fechaHasta,
+      fechaInicio: fechaDesde,
+      comprobantes: comprobantes,
+      metodosPago: metodosPago,
+      montoMax: montoMax,
+      montoMin: montoMin,
+    };
+
+    useCreateReporteVentas.mutateAsync(dto, {
+      onSuccess: (data: any) => {
+        downloadFile(data, `Historial_Ventas_${Date.now()}.xlsx`);
+        toast.success("Reporte de utilidad descargado");
+      },
+      onError: (error) => {
+        toast.error("Error al generar reporte");
+        toast.error(getApiErrorMessageAxios(error));
+      },
+    });
+  }
+
+  function handleGenerarReporteUtilidad() {
+    const dto: UtilidadReportQuery = {
+      fechaFin: fechaHasta,
+      fechaInicio: fechaDesde,
+      comprobantes: comprobantes,
+      metodosPago: metodosPago,
+      montoMax: montoMax,
+      montoMin: montoMin,
+    };
+
+    useCreateReporteUtilidad.mutateAsync(dto, {
+      onSuccess: (data: any) => {
+        downloadFile(data, `Historial_Pagos_${Date.now()}.xlsx`);
+        toast.success("Reporte de utilidad descargado");
+      },
+      onError: (error) => {
+        toast.error("Error al generar reporte");
+        toast.error(getApiErrorMessageAxios(error));
+      },
+    });
+  }
+
   return (
     <div className="max-w-7xl container mx-auto">
       {/* Header */}
@@ -314,7 +378,8 @@ export default function HistorialVentasMain() {
 
       {/* Filtros */}
       <Card className="mb-4">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
+          {/* Fila 1: Texto + Fechas */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div className="md:col-span-2">
               <label className="text-xs text-muted-foreground mb-1 block">
@@ -322,14 +387,10 @@ export default function HistorialVentasMain() {
               </label>
               <Input
                 value={texto}
-                onChange={(e) => {
-                  setTexto(e.target.value);
-                  // setPage(1);
-                }}
+                onChange={(e) => setTexto(e.target.value)}
                 placeholder="Buscar cliente, referencia, código, etc."
               />
             </div>
-
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
                 Desde
@@ -346,7 +407,6 @@ export default function HistorialVentasMain() {
                 className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700"
               />
             </div>
-
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
                 Hasta
@@ -365,7 +425,8 @@ export default function HistorialVentasMain() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+          {/* Fila 2: Montos + Checks */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
                 Monto mínimo
@@ -394,7 +455,6 @@ export default function HistorialVentasMain() {
                 placeholder="9999.00"
               />
             </div>
-
             <MultiChecks
               label="Método de pago"
               options={[
@@ -410,7 +470,6 @@ export default function HistorialVentasMain() {
                 setPage(1);
               }}
             />
-
             <MultiChecks
               label="Comprobante"
               options={[
@@ -425,9 +484,11 @@ export default function HistorialVentasMain() {
             />
           </div>
 
-          <div className="mt-3 flex items-center gap-2">
+          {/* Fila 3: Acciones */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
+            {/* Limpiar */}
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onClick={() => {
                 setTexto("");
@@ -442,27 +503,57 @@ export default function HistorialVentasMain() {
                 setPage(1);
               }}
             >
-              Limpiar filtros
+              <X className="h-3.5 w-3.5 mr-1" />
+              Limpiar
             </Button>
 
+            {/* Total inline */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50 border border-dashed border-border">
+              <span className="text-xs ">Total:</span>
+              <span className="text-sm font-semibold ">
+                {totalVentas ?? "--.--"}
+              </span>
+            </div>
+
+            {/* Reportes + Límite → derecha */}
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Límite</span>
-              <select
-                className="h-8 rounded-md border bg-background px-2 text-sm"
-                value={limit}
-                onChange={(e) => onChangeLimit(Number(e.target.value))}
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={handleGenerarReporte}
               >
-                {[10, 20, 25, 50, 100].map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
+                <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
+                Ventas
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleGenerarReporteUtilidad}
+              >
+                <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
+                Utilidad
+              </Button>
+
+              <div className="flex items-center gap-1.5 border-l pl-2">
+                <span className="text-xs text-muted-foreground">Límite</span>
+                <select
+                  className="h-8 rounded-md border bg-background px-2 text-sm"
+                  value={limit}
+                  onChange={(e) => onChangeLimit(Number(e.target.value))}
+                >
+                  {[10, 20, 25, 50, 100].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
       {/* Selección actual (para eliminar) */}
       {ventaEliminar.venta && (
         <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
