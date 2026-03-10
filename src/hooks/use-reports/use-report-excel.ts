@@ -2,15 +2,10 @@ import { useApiMutation } from "../genericoCall/genericoCallHook";
 
 export interface UtilidadReportQuery {
   fechaInicio: Date | null;
-
   fechaFin: Date | null;
-
-  comprobante?: string[];
-
-  metodoPago?: string[];
-
+  comprobantes?: string[];  // era comprobante
+  metodosPago?: string[];   // era metodoPago
   montoMin?: string;
-
   montoMax?: string;
 }
 

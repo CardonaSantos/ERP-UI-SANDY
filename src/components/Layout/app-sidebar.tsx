@@ -36,6 +36,7 @@ import {
   HandCoins,
   Landmark,
   PiggyBank,
+  Text,
 } from "lucide-react";
 
 import {
@@ -103,6 +104,12 @@ const menuItemsAdmin = [
   { icon: Clock, label: "Historial de Ventas", href: "/historial/ventas" },
   // === Créditos ===
   { icon: CreditCard, label: "Créditos", href: "/creditos" },
+
+  {
+    icon: Text,
+    label: "Plantillas legales",
+    href: "/plantillas-legales",
+  },
 
   // === Inventario y Stock ===
   {

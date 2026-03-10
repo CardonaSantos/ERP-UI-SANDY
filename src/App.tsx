@@ -85,6 +85,13 @@ import ProductEditorContainer from "./Pages/newCreateProduct/ProductEditorContai
 import TiposPresentaciones from "./Pages/tipos-presentaciones/tipos-presentaciones-main-page";
 import ProveedoresPage from "./Pages/Provider/AgregarProveedor";
 import StockEditing from "./Pages/InventarioYStock/EditStock/EditingStock";
+import {
+  PlantillaLegalForm,
+  PlantillaLegalFormEdit,
+} from "./Pages/plantillas-legales-credito/components/plantilla-legal-form";
+import PlantillasLegales from "./Pages/plantillas-legales-credito/page";
+import ContratoImprimible from "./Pages/plantillas-legales-credito/components/render-plantilla";
+import ComprobanteCuota from "./Pages/creditos/components/comprobante-cuota";
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -550,6 +557,24 @@ function App() {
             />
 
             <Route
+              path="/creditos/:ventaCuotaId/cuota/:cuotaId/comprobante"
+              element={
+                <ProtectedRoute>
+                  <ComprobanteCuota />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/creditos/:ventaCuotaId/contrato/:plantillaId"
+              element={
+                <ProtectedRoute>
+                  <ContratoImprimible />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/imprimir/contrato/:recordId/:plantillaId"
               element={
                 <ProtectedRoute>
@@ -720,6 +745,32 @@ function App() {
               }
             />
 
+            <Route
+              path="/plantillas-legales"
+              element={
+                <ProtectRouteAdmin>
+                  <PlantillasLegales />
+                </ProtectRouteAdmin>
+              }
+            />
+
+            <Route
+              path="/plantillas-legales/nueva"
+              element={
+                <ProtectRouteAdmin>
+                  <PlantillaLegalForm />
+                </ProtectRouteAdmin>
+              }
+            />
+
+            <Route
+              path="/plantillas-legales/:id/editar"
+              element={
+                <ProtectRouteAdmin>
+                  <PlantillaLegalFormEdit />
+                </ProtectRouteAdmin>
+              }
+            />
             {/* RUTAS PARA EL CRM */}
           </Route>
         </Routes>

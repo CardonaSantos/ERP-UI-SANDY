@@ -6,7 +6,7 @@
 "use client";
 import * as React from "react";
 import { useCallback, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -20,6 +20,8 @@ import {
   XCircle,
   Clock,
   Banknote,
+  Printer,
+  Receipt,
 } from "lucide-react";
 
 // UI (shadcn/ui)
@@ -50,6 +52,7 @@ import type {
   NormalizedCredito,
   NormCuota,
 } from "../interfaces/CreditoResponse";
+import { usePlantillasLegales } from "@/hooks/use-plantillas-legales/use-plantillas-legales";
 
 // ============================================================================
 // Helpers
@@ -130,12 +133,15 @@ export default function CreditoDetails() {
   const { id } = useParams();
   const userId = useStore((s) => s.userId) ?? 0;
   const secureId = id ? parseInt(id) : 1;
+  const navigate = useNavigate();
+
   const CREDIT_REGIST_QK = useMemo(
     () => ["credito-details-qk", secureId],
-    [secureId]
+    [secureId],
   );
   const queryClient = useQueryClient();
-
+  const [plantillaSeleccionada, setPlantillaSeleccionada] =
+    React.useState<string>("");
   // ------------------------------------------
   // Query principal
   // ------------------------------------------
@@ -147,7 +153,7 @@ export default function CreditoDetails() {
     CREDIT_REGIST_QK,
     `credito/credito-details/${secureId}`,
     { params: {} },
-    { refetchOnMount: "always", staleTime: 0 }
+    { refetchOnMount: "always", staleTime: 0 },
   );
 
   // ------------------------------------------
@@ -158,26 +164,26 @@ export default function CreditoDetails() {
     ["proveedores"],
     "/proveedor",
     undefined,
-    { staleTime: 5 * 60_000, refetchOnWindowFocus: false }
+    { staleTime: 5 * 60_000, refetchOnWindowFocus: false },
   );
   const cuentasQ = useApiQuery<Array<{ id: number; nombre: string }>>(
     ["cuentas-bancarias", "simple-select"],
     "cuentas-bancarias/get-simple-select",
     undefined,
-    { staleTime: 5 * 60_000, refetchOnWindowFocus: false }
+    { staleTime: 5 * 60_000, refetchOnWindowFocus: false },
   );
   const cajasQ = useApiQuery<CajaConSaldo[]>(
     ["cajas-disponibles", sucursalId],
     `/caja/cajas-disponibles/${sucursalId}`,
     undefined,
-    { enabled: !!sucursalId, staleTime: 30_000, refetchOnWindowFocus: false }
+    { enabled: !!sucursalId, staleTime: 30_000, refetchOnWindowFocus: false },
   );
 
   // ------------------------------------------
   // Estado: Pago de cuota
   // ------------------------------------------
   const [selectedCuota, setSelectedCuota] = React.useState<NormCuota | null>(
-    null
+    null,
   );
   const [payAmount, setPayAmount] = React.useState<number>(0);
   const [dist, setDist] = React.useState({ mora: 0, interes: 0, capital: 0 });
@@ -205,7 +211,7 @@ export default function CreditoDetails() {
     React.useState("");
   const [cajaSelected, setCajaSelected] = React.useState<string | null>(null);
   const [fechaPago, setFechaPago] = React.useState<string>(() =>
-    new Date().toISOString().slice(0, 16)
+    new Date().toISOString().slice(0, 16),
   );
   const [referenciaPago, setReferenciaPago] = React.useState<string>("");
 
@@ -217,7 +223,7 @@ export default function CreditoDetails() {
   // ------------------------------------------
   const [openDeletePago, setOpenDeletePago] = React.useState(false);
   const [selectedPago, setSelectedPago] = React.useState<NormAbonoLite | null>(
-    null
+    null,
   );
   const [deleteMotivo, setDeleteMotivo] = React.useState<string>("");
 
@@ -289,14 +295,14 @@ export default function CreditoDetails() {
       setDist(recomputeDist(c, defecto));
       setOpenFormDialog(true);
     },
-    [recomputeDist]
+    [recomputeDist],
   );
 
   const handleConfirmPago = useCallback(() => {
     if (!credito || !selectedCuota || !canPagar) return;
 
     const suma = Number(
-      (dist.mora || 0) + (dist.interes || 0) + (dist.capital || 0)
+      (dist.mora || 0) + (dist.interes || 0) + (dist.capital || 0),
     );
     const payload: CreateAbonoCreditoDTO = {
       ventaCuotaId: credito.id,
@@ -356,6 +362,9 @@ export default function CreditoDetails() {
       error: (e) => getApiErrorMessageAxios(e),
     });
   }, [selectedPago, credito, userId, deleteMotivo, deleteAbono]);
+
+  const { data: rawPlantillas } = usePlantillasLegales();
+  const plantillas = rawPlantillas ? rawPlantillas : [];
 
   // ------------------------------------------
   // Syncs
@@ -425,6 +434,40 @@ export default function CreditoDetails() {
                 {estadoIcon[credito.estado]} {credito.estado}
               </Badge>
             </CardTitle>
+
+            {/* ← AQUÍ: selector de plantilla + botón imprimir */}
+            <div className="flex items-center gap-2 pt-1">
+              <select
+                className="flex-1 h-7 rounded-md border bg-background px-2 text-xs text-foreground"
+                value={plantillaSeleccionada}
+                onChange={(e) => setPlantillaSeleccionada(e.target.value)}
+              >
+                <option value="">Seleccionar plantilla...</option>
+                {plantillas
+                  .filter((p) => p.activa)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} · {p.version}
+                    </option>
+                  ))}
+              </select>
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 shrink-0"
+                disabled={!plantillaSeleccionada}
+                onClick={() =>
+                  window.open(
+                    `/creditos/${credito.id}/contrato/${plantillaSeleccionada}`,
+                    "_blank",
+                  )
+                }
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Imprimir
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="text-sm grid grid-cols-3 gap-2">
             <div>
@@ -572,7 +615,7 @@ export default function CreditoDetails() {
                   key={c.id}
                   className="bg-card p-2 flex flex-wrap items-center gap-2"
                 >
-                  <div className="font-medium">Cuota {c.numero}</div>
+                  <div className="font-medium text-sm">Cuota {c.numero}</div>
                   <Badge className="h-5 px-1.5 text-[10px]">
                     {fmt(c.fechaVencimientoISO)}
                   </Badge>
@@ -580,12 +623,32 @@ export default function CreditoDetails() {
                   <span className="text-sm ml-auto">
                     Monto: <b>{Q(c.monto)}</b>
                   </span>
+
+                  {/* Comprobante — solo si está pagada */}
+                  {isPayed && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs gap-1"
+                      onClick={() =>
+                        navigate(
+                          `/creditos/${credito.id}/cuota/${c.id}/comprobante`,
+                        )
+                      }
+                    >
+                      <Receipt className="h-3.5 w-3.5" />
+                      Comprobante
+                    </Button>
+                  )}
+
                   <Button
                     disabled={isPayed}
                     size="sm"
+                    className="h-7 px-2 text-xs"
                     onClick={() => openPagoFor(c)}
                   >
-                    <Banknote className="h-4 w-4 mr-1" /> Registrar pago
+                    <Banknote className="h-3.5 w-3.5 mr-1" />
+                    Registrar pago
                   </Button>
                 </div>
               );
@@ -690,7 +753,7 @@ export default function CreditoDetails() {
         description={
           selectedCuota
             ? `Cuota #${selectedCuota.numero} · Saldo: ${Q(
-                selectedCuota.saldoPendiente
+                selectedCuota.saldoPendiente,
               )}`
             : "Complete la información de movimiento financiero antes de confirmar."
         }
@@ -848,7 +911,7 @@ export default function CreditoDetails() {
                   const capPend = Number(selectedCuota.capitalPendiente ?? 0);
                   const maxCap = Math.min(
                     capPend,
-                    Math.max(0, payAmount - (dist.mora + dist.interes))
+                    Math.max(0, payAmount - (dist.mora + dist.interes)),
                   );
                   let v = Number(e.target.value) || 0;
                   v = Math.max(0, Math.min(v, maxCap));
@@ -869,7 +932,7 @@ export default function CreditoDetails() {
               <span className="text-muted-foreground">Suma desglose:</span>{" "}
               <b>
                 {Q(
-                  (dist.mora || 0) + (dist.interes || 0) + (dist.capital || 0)
+                  (dist.mora || 0) + (dist.interes || 0) + (dist.capital || 0),
                 )}
               </b>
             </p>
@@ -934,7 +997,7 @@ export default function CreditoDetails() {
         description={
           selectedPago
             ? `Se eliminará el abono de ${formattMonedaGT(
-                selectedPago.montoTotal
+                selectedPago.montoTotal,
               )} realizado el ${fdt(selectedPago.fechaISO)}.`
             : ""
         }
