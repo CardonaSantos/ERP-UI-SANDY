@@ -92,6 +92,7 @@ import {
 import PlantillasLegales from "./Pages/plantillas-legales-credito/page";
 import ContratoImprimible from "./Pages/plantillas-legales-credito/components/render-plantilla";
 import ComprobanteCuota from "./Pages/creditos/components/comprobante-cuota";
+import CotizadorMainPage from "./Pages/cotizador/page";
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -159,6 +160,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PuntoVenta />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/cotizador"
+              element={
+                <ProtectedRoute>
+                  <CotizadorMainPage />
                 </ProtectedRoute>
               }
             />

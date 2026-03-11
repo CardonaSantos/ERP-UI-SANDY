@@ -101,6 +101,17 @@ const menuItemsAdmin = [
 
   // === Ventas ===
   { icon: ShoppingCart, label: "Punto de Venta", href: "/punto-venta" },
+
+  {
+    icon: Package,
+    label: "Venta y Cotizador",
+    submenu: [
+      { icon: ShoppingCart, label: "Punto de Venta", href: "/punto-venta" },
+
+      { icon: Boxes, label: "Cotizador de Productos", href: "/cotizador" },
+    ],
+  },
+
   { icon: Clock, label: "Historial de Ventas", href: "/historial/ventas" },
   // === Créditos ===
   { icon: CreditCard, label: "Créditos", href: "/creditos" },

@@ -51,6 +51,7 @@ import { useCreateCreditoRequest } from "@/hooks/use-authorization-credito/use-a
 import { useCreatePriceRequest } from "@/hooks/use-create-price-request/use-create-price-request";
 import { formattFecha } from "../Utils/Utils";
 import { formatMonedaGT } from "../Compras/compras.utils";
+import { PageTransition } from "@/components/Transition/layout-transition";
 dayjs.extend(localizedFormat);
 dayjs.locale("es");
 
@@ -98,7 +99,7 @@ type ProductoPOS = {
   imagenesProducto: imagenesProducto[];
 };
 
-interface CartItem {
+export interface CartItem {
   uid: string;
   id: number;
   source: SourceType;
@@ -676,7 +677,7 @@ export default function PuntoVenta() {
   );
 
   return (
-    <div className="container">
+    <PageTransition fallbackBackTo="/" titleHeader="Punto Venta">
       <div
         className="
   grid grid-cols-1 gap-4 items-start
@@ -1072,6 +1073,6 @@ export default function PuntoVenta() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageTransition>
   );
 }

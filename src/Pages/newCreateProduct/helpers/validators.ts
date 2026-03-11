@@ -1,6 +1,5 @@
 import { ProductCreateDTO } from "../interfaces/DomainProdPressTypes";
 
-// === helpers de validación ===
 type Modo = "product" | "presentation";
 type ValidationResult = { ok: true } | { ok: false; errors: string[] };
 
@@ -10,12 +9,15 @@ const gt0 = (n: unknown) => {
 };
 
 const hasPrices = (
-  arr?: { precio: unknown; rol?: unknown; orden?: unknown }[]
+  arr?: { precio: unknown; rol?: unknown; orden?: unknown }[],
 ) =>
   Array.isArray(arr) &&
   arr.length > 0 &&
   arr.every(
-    (p) => gt0(p.precio) && (p.rol ?? "") !== "" && Number(p.orden ?? 1) > 0
+    (p) =>
+      gt0(p.precio) &&
+      (p.rol ?? "") !== "" &&
+      Number.isFinite(Number(p.orden ?? 0)),
   );
 
 const uniqueRolOrden = (arr: { rol: string; orden: number }[]) => {
@@ -29,7 +31,7 @@ const uniqueRolOrden = (arr: { rol: string; orden: number }[]) => {
 };
 
 const singleDefaultPresentation = (
-  presentations: ProductCreateDTO["presentations"]
+  presentations: ProductCreateDTO["presentations"],
 ) => {
   const count = (presentations ?? []).filter((p) => !!p.esDefault).length;
   return count <= 1;
@@ -37,7 +39,7 @@ const singleDefaultPresentation = (
 
 export function validateBeforeSubmit(
   form: ProductCreateDTO,
-  mode: Modo
+  mode: Modo,
 ): ValidationResult {
   const errors: string[] = [];
 
@@ -57,26 +59,24 @@ export function validateBeforeSubmit(
   }
 
   // Reglas de precios:
-  // - PRODUCTO: debe existir al menos un precio a nivel producto
-  //             o bien (si usa presentaciones) que al menos 1 presentación tenga precios.
   if (mode === "product") {
     const productHasPrices = hasPrices(form.prices);
     const anyPresentationHasPrices = (form.presentations ?? []).some((p) =>
-      hasPrices(p.precios)
+      hasPrices(p.precios),
     );
     if (!productHasPrices && !anyPresentationHasPrices) {
       errors.push(
-        "Debes definir al menos un precio: a nivel de producto o en alguna presentación."
+        "Debes definir al menos un precio: a nivel de producto o en alguna presentación.",
       );
     }
     if (
       form.prices?.length &&
       !uniqueRolOrden(
-        form.prices.map((p) => ({ rol: p.rol, orden: Number(p.orden ?? 1) }))
+        form.prices.map((p) => ({ rol: p.rol, orden: Number(p.orden ?? 0) })),
       )
     ) {
       errors.push(
-        "Precios de producto: no puede repetirse la combinación (rol, orden)."
+        "Precios de producto: no puede repetirse la combinación (rol, orden).",
       );
     }
   }
@@ -87,13 +87,13 @@ export function validateBeforeSubmit(
       errors.push("Debes agregar al menos una presentación.");
     }
     const allHavePrices = (form.presentations ?? []).every((p) =>
-      hasPrices(p.precios)
+      hasPrices(p.precios),
     );
     if (!allHavePrices)
       errors.push("Cada presentación debe tener al menos un precio válido.");
     // (Opcional) exigir tipoPresentacionId en cada presentación
     const missingTipo = (form.presentations ?? []).some(
-      (p) => p.tipoPresentacionId == null
+      (p) => p.tipoPresentacionId == null,
     );
     if (missingTipo)
       errors.push("Cada presentación debe tener un tipo de presentación.");
@@ -102,7 +102,7 @@ export function validateBeforeSubmit(
   // Presentaciones: sólo una por defecto
   if (!singleDefaultPresentation(form.presentations)) {
     errors.push(
-      "Sólo puede haber una presentación marcada como predeterminada."
+      "Sólo puede haber una presentación marcada como predeterminada.",
     );
   }
 
@@ -110,13 +110,13 @@ export function validateBeforeSubmit(
   for (const pres of form.presentations ?? []) {
     if (pres.precios?.length) {
       const ok = uniqueRolOrden(
-        pres.precios.map((x) => ({ rol: x.rol, orden: Number(x.orden ?? 1) }))
+        pres.precios.map((x) => ({ rol: x.rol, orden: Number(x.orden ?? 1) })),
       );
       if (!ok) {
         errors.push(
           `Presentación "${
             pres.nombre ?? pres.id
-          }": no puede repetirse la combinación (rol, orden).`
+          }": no puede repetirse la combinación (rol, orden).`,
         );
       }
     }

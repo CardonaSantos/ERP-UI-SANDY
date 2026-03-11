@@ -1,3 +1,5 @@
+import { imagenesProducto } from "@/Pages/POS/PuntoVenta";
+
 enum RolPrecio {
   PUBLICO = "PUBLICO",
   MAYORISTA = "MAYORISTA",
@@ -18,11 +20,6 @@ export type Precios = {
   id: number;
   precio: number;
   rol: RolPrecio;
-};
-
-export type imagenesProducto = {
-  id: number;
-  url: string;
 };
 
 type Producto = {

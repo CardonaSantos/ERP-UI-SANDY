@@ -1,3 +1,5 @@
+import { TipoComprobante } from "@/Pages/POS/interfaces";
+
 export interface MetodoPago {
   id: number;
   ventaId: number;
@@ -48,10 +50,6 @@ export interface Departamento {
 export interface Municipio {
   id: number;
   nombre: string;
-}
-export enum TipoComprobante {
-  FACTURA = "FACTURA",
-  RECIBO = "RECIBO",
 }
 
 export enum EstadoDetalleVenta {

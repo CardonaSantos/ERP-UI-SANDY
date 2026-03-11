@@ -14,12 +14,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SortingState } from "@tanstack/react-table";
 import React from "react";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import { Label } from "@/components/ui/label";
 import { ReusableSelect } from "@/utils/components/ReactSelectComponent/ReusableSelect";
 import { TipoPresentacion } from "@/Pages/newCreateProduct/interfaces/DomainProdPressTypes";
 import { CategoriaWithCount } from "@/Pages/Categorias/CategoriasMainPage";
 import { Search } from "lucide-react";
+import { imagenesProducto } from "../PuntoVenta";
 
 enum RolPrecio {
   PUBLICO = "PUBLICO",
@@ -41,11 +41,6 @@ export type Precios = {
   id: number;
   precio: number;
   rol: RolPrecio;
-};
-
-export type imagenesProducto = {
-  id: number;
-  url: string;
 };
 
 type SourceType = "producto" | "presentacion";
@@ -339,7 +334,6 @@ export default function TablePOS({
   return (
     <div className="w-full">
       {/* Search */}
-      <PageHeader title="POS" fallbackBackTo="/" sticky={false} />
 
       <div className="mb-3 grid grid-cols-1 sm:grid-cols-[minmax(220px,1fr)_minmax(260px,1fr)] gap-3 items-end">
         <div className="relative">

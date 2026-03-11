@@ -83,7 +83,7 @@ export default function ProductEditorContainer({
     QK.CATEGORIES,
     "categoria",
     undefined,
-    { ...QUERY_OPTIONS }
+    { ...QUERY_OPTIONS },
   );
 
   const { data: packData } = useApiQuery<PaginatedResponse<TipoPresentacion>>(
@@ -92,7 +92,7 @@ export default function ProductEditorContainer({
     undefined,
     {
       ...QUERY_OPTIONS,
-    }
+    },
   );
 
   const categories = catsData ?? [];
@@ -118,7 +118,7 @@ export default function ProductEditorContainer({
   // Estado de formulario
   const [formState, setFormState] = useState<ProductCreateDTO>(initialProduct);
   const [originalDetail, setOriginalDetail] = useState<ProductDetailDTO | null>(
-    null
+    null,
   );
 
   // Un solo efecto para mapear y guardar original
@@ -137,14 +137,14 @@ export default function ProductEditorContainer({
   // Update genérico
   const updateField = <K extends keyof ProductCreateDTO>(
     key: K,
-    value: ProductCreateDTO[K]
+    value: ProductCreateDTO[K],
   ) => setFormState((prev) => ({ ...prev, [key]: value }));
 
   // Mutación create/update
   const submitBase = mode === "product" ? "/products" : "/presentations";
   const mutation = useApiMutation<unknown, FormData>(
     isEditing ? "patch" : "post",
-    isEditing ? `${submitBase}/${id}` : submitBase
+    isEditing ? `${submitBase}/${id}` : submitBase,
   );
 
   // Helper de invalidación centralizada
@@ -155,6 +155,7 @@ export default function ProductEditorContainer({
   };
 
   const handleSubmit = async () => {
+    console.log("prices:", JSON.stringify(formState.prices, null, 2));
     const v = validateBeforeSubmit(formState, mode);
     if (!v.ok) {
       v.errors.forEach((msg) => toast.error(msg));
@@ -171,7 +172,7 @@ export default function ProductEditorContainer({
         formData,
         isEditing
           ? `${mode === "product" ? "PATCH /products" : "PATCH /presentations"}`
-          : `${mode === "product" ? "POST /products" : "POST /presentations"}`
+          : `${mode === "product" ? "POST /products" : "POST /presentations"}`,
       );
 
       await toast.promise(mutation.mutateAsync(formData), {
@@ -291,7 +292,7 @@ export function mapProductDto(dto: ProductDetailDTO): ProductCreateDTO {
         p.tipoPresentacionId ?? p.tipoPresentacion?.id ?? null,
       tipoPresentacion: p.tipoPresentacion ?? null,
       costoReferencialPresentacion: String(
-        p.costoReferencialPresentacion ?? "0"
+        p.costoReferencialPresentacion ?? "0",
       ),
       descripcion: p.descripcion ?? "",
       // 🔹 ya viene listo y null-safe desde el server
@@ -310,7 +311,7 @@ export function mapProductDto(dto: ProductDetailDTO): ProductCreateDTO {
 }
 
 export function mapPresentationDto(
-  dto: PresentationDetailDTO
+  dto: PresentationDetailDTO,
 ): ProductCreateDTO {
   return {
     basicInfo: {
