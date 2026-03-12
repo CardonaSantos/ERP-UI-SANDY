@@ -104,6 +104,8 @@ type CreateAbonoCreditoDTO = {
   montoTotal?: number;
   fechaAbono?: Date | string;
   detalles: CreateAbonoCuotaDTO[];
+  registroCajaId: number | null;
+  observaciones?: string;
 };
 
 // Abono minimal para selección en la UI
@@ -275,7 +277,6 @@ export default function CreditoDetails() {
   // Handlers
   // ------------------------------------------
   const recomputeDist = useCallback((c: NormCuota, total: number) => {
-    // Regla: MORA -> INTERÉS -> CAPITAL
     let rest = total;
     const payMora = Math.min(c.moraPendiente, rest);
     rest -= payMora;
@@ -301,9 +302,7 @@ export default function CreditoDetails() {
   const handleConfirmPago = useCallback(() => {
     if (!credito || !selectedCuota || !canPagar) return;
 
-    const suma = Number(
-      (dist.mora || 0) + (dist.interes || 0) + (dist.capital || 0),
-    );
+    const suma = (dist.mora || 0) + (dist.interes || 0) + (dist.capital || 0);
     const payload: CreateAbonoCreditoDTO = {
       ventaCuotaId: credito.id,
       sucursalId: credito.sucursal.id,
@@ -312,6 +311,8 @@ export default function CreditoDetails() {
       referenciaPago: referenciaPago || undefined,
       montoTotal: suma,
       fechaAbono: fechaPago ? new Date(fechaPago) : new Date(),
+      registroCajaId: cajaSelected ? Number(cajaSelected) : null,
+      observaciones: observaciones,
       detalles: [
         {
           cuotaId: selectedCuota.id,
@@ -338,6 +339,8 @@ export default function CreditoDetails() {
     fechaPago,
     userId,
     createAbono,
+    cajaSelected,
+    observaciones,
   ]);
 
   const handleOpenDelete = useCallback((abono: NormAbonoLite) => {
@@ -410,6 +413,8 @@ export default function CreditoDetails() {
   // ------------------------------------------
   // Render
   // ------------------------------------------
+  console.log("La caja seleccionada es: ", cajaSelected);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}

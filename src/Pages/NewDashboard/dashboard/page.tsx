@@ -133,7 +133,7 @@ export default function DashboardPageMain() {
     string | undefined
   >(undefined);
   const [metodoPagoSel, setMetodoPagoSel] = useState<MetodoPagoMainPOS | "">(
-    ""
+    "",
   );
   const [cuentaBancariaSelected, setCuentaBancariaSelected] =
     useState<string>("");
@@ -146,7 +146,7 @@ export default function DashboardPageMain() {
   // Autorizaciones (UI)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAuth, setSelectedAuth] = useState<NormalizedSolicitud | null>(
-    null
+    null,
   );
 
   // Expansión en tarjetas
@@ -199,49 +199,49 @@ export default function DashboardPageMain() {
     ["proveedores"],
     "/proveedor",
     undefined,
-    { staleTime: 5 * 60_000, refetchOnWindowFocus: false }
+    { staleTime: 5 * 60_000, refetchOnWindowFocus: false },
   );
 
   const cuentasQ = useApiQuery<Array<{ id: number; nombre: string }>>(
     ["cuentas-bancarias", "simple-select"],
     "cuentas-bancarias/get-simple-select",
     undefined,
-    { staleTime: 5 * 60_000, refetchOnWindowFocus: false }
+    { staleTime: 5 * 60_000, refetchOnWindowFocus: false },
   );
 
   const cajasQ = useApiQuery<CajaConSaldo[]>(
     ["cajas-disponibles", sucursalId],
     `/caja/cajas-disponibles/${sucursalId}`,
     undefined,
-    { enabled: !!sucursalId, staleTime: 30_000, refetchOnWindowFocus: false }
+    { enabled: !!sucursalId, staleTime: 30_000, refetchOnWindowFocus: false },
   );
 
   const { data: authorizations } = useApiQuery<CreditAuthorizationListResponse>(
     AUTH_QK(AUTH_FILTERS),
     "credito-authorization",
     { params: AUTH_FILTERS },
-    { refetchOnMount: "always", staleTime: 0 }
+    { refetchOnMount: "always", staleTime: 0 },
   );
 
   const { data: creditsRecords } = useApiQuery<SimpleCredit[]>(
     CREDIT_QK,
     "credito/simple-credit-dashboard",
     undefined,
-    { refetchOnMount: "always", staleTime: 0 }
+    { refetchOnMount: "always", staleTime: 0 },
   );
 
   const { data: priceRequests } = useApiQuery<Solicitud[]>(
     PRICE_REQUESTS_QK(sucursalId),
     "price-request",
     undefined,
-    { enabled: !!sucursalId, staleTime: 15_000, refetchOnWindowFocus: false }
+    { enabled: !!sucursalId, staleTime: 15_000, refetchOnWindowFocus: false },
   );
 
   const { data: transferRequests } = useApiQuery<SolicitudTransferencia[]>(
     TRANSFER_REQUESTS_QK(sucursalId),
     "solicitud-transferencia-producto",
     undefined,
-    { enabled: !!sucursalId, staleTime: 15_000, refetchOnWindowFocus: false }
+    { enabled: !!sucursalId, staleTime: 15_000, refetchOnWindowFocus: false },
   );
 
   // Mutations (useApiMutation)
@@ -263,7 +263,7 @@ export default function DashboardPageMain() {
           setOpenReject(false);
           setMotivoRechazo("");
         },
-      }
+      },
     );
 
   // Data sanitizada / derivada
@@ -307,7 +307,7 @@ export default function DashboardPageMain() {
                 year: "numeric",
                 month: "short",
                 day: "2-digit",
-              }
+              },
             )
           : "N/A"
       }`
@@ -328,7 +328,7 @@ export default function DashboardPageMain() {
         axios.get(`${API_URL}/analytics/get-ventas/semana/${sucursalId}`),
         axios.get(`${API_URL}/analytics/venta-dia/${sucursalId}`),
         axios.get(
-          `${API_URL}/analytics/get-ventas/semanal-chart/${sucursalId}`
+          `${API_URL}/analytics/get-ventas/semanal-chart/${sucursalId}`,
         ),
         axios.get(`${API_URL}/analytics/get-productos-mas-vendidos/`),
         axios.get(`${API_URL}/analytics/get-ventas-recientes/`),
@@ -361,7 +361,7 @@ export default function DashboardPageMain() {
   const getWarranties = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/warranty/get-regists-warranties`
+        `${API_URL}/warranty/get-regists-warranties`,
       );
       if (response.status === 200) {
         setWarranties(response.data);
@@ -375,7 +375,7 @@ export default function DashboardPageMain() {
   const getReparacionesRegis = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/repair/get-regist-open-repair`
+        `${API_URL}/repair/get-regist-open-repair`,
       );
       if (response.status === 200) {
         setReparaciones(response.data);
@@ -419,9 +419,9 @@ export default function DashboardPageMain() {
       queryClient.setQueriesData<ListResp<NormalizedSolicitud>>(
         { queryKey: [AUTH_BASE_KEY] },
         (prev?: ListResp<NormalizedSolicitud>) =>
-          upsertIntoList(prev, payload, { prepend: true })
+          upsertIntoList(prev, payload, { prepend: true }),
       );
-    }
+    },
   );
 
   // Handlers (acciones de UI)
@@ -453,7 +453,7 @@ export default function DashboardPageMain() {
   const handleAceptRequest = async (idSolicitud: number) => {
     try {
       await axios.patch(
-        `${API_URL}/price-request/acept-request-price/${idSolicitud}/${userID}`
+        `${API_URL}/price-request/acept-request-price/${idSolicitud}/${userID}`,
       );
       toast.success("Petición aceptada, precio concedido");
     } catch (error) {
@@ -469,7 +469,7 @@ export default function DashboardPageMain() {
   const handleRejectRequest = async (idSolicitud: number) => {
     try {
       await axios.patch(
-        `${API_URL}/price-request/reject-request-price/${idSolicitud}/${userID}`
+        `${API_URL}/price-request/reject-request-price/${idSolicitud}/${userID}`,
       );
       toast.warning("Petición rechazada");
     } catch (error) {
@@ -483,7 +483,7 @@ export default function DashboardPageMain() {
   };
 
   const handleAceptarTransferencia = async (
-    idSolicitudTransferencia: number
+    idSolicitudTransferencia: number,
   ) => {
     try {
       await axios.post(`${API_URL}/solicitud-transferencia-producto/aceptar`, {
@@ -502,11 +502,11 @@ export default function DashboardPageMain() {
   };
 
   const handleRejectTransferencia = async (
-    idSolicitudTransferencia: number
+    idSolicitudTransferencia: number,
   ) => {
     try {
       const response = await axios.delete(
-        `${API_URL}/solicitud-transferencia-producto/rechazar/${idSolicitudTransferencia}/${userID}`
+        `${API_URL}/solicitud-transferencia-producto/rechazar/${idSolicitudTransferencia}/${userID}`,
       );
       if (response.status === 200) {
         toast.warning("Solicitud de transferencia rechazada");
@@ -529,7 +529,7 @@ export default function DashboardPageMain() {
           comentario,
           descripcionProblema,
           estado,
-        }
+        },
       );
       if (response.status === 200) {
         toast.success("Registro actualizado correctamente");
@@ -561,7 +561,7 @@ export default function DashboardPageMain() {
     try {
       const response = await axios.post(
         `${API_URL}/warranty/create-regist-warranty`,
-        dtoFinishW
+        dtoFinishW,
       );
       if (response.status === 201) {
         toast.success("Registro Finalizado");
@@ -696,6 +696,7 @@ export default function DashboardPageMain() {
         setCajaSelected={setCajaSelected}
         // proveedor no aplica en este flujo
         requireProveedor={false}
+        flow="IN"
         showProveedor={false}
         onContinue={handleAcceptCredit}
         continueLabel="Recepcionar y crear crédito"

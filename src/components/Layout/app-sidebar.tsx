@@ -100,7 +100,6 @@ const menuItemsAdmin = [
   { icon: Home, label: "Inicio", href: "/" },
 
   // === Ventas ===
-  { icon: ShoppingCart, label: "Punto de Venta", href: "/punto-venta" },
 
   {
     icon: Package,
