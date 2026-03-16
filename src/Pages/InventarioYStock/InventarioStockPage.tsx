@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import DesvanecerHaciaArriba from "@/Crm/Motion/DashboardAnimations";
 import { ProductCreate } from "./interfaces.interface";
 import { useStore } from "@/components/Context/ContextSucursal";
 import { SimpleProvider } from "@/Types/Proveedor/SimpleProveedor";
@@ -14,6 +12,7 @@ import {
 } from "../Categorias/CategoriasMainPage";
 import { PaginatedResponse } from "../tipos-presentaciones/Interfaces/tiposPresentaciones.interfaces";
 import { TipoPresentacion } from "../newCreateProduct/interfaces/DomainProdPressTypes";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 function InventarioStockPage() {
   const recibidoPorId = useStore((s) => s.userId) ?? 0;
@@ -93,7 +92,7 @@ function InventarioStockPage() {
         data: [],
         meta: { totalCount: 0, totalPages: 0, page: 1, limit: 10 },
       },
-    }
+    },
   );
 
   const { data: cats } = useApiQuery<CategoriaWithCount[]>(
@@ -103,7 +102,7 @@ function InventarioStockPage() {
     {
       staleTime: 0,
       refetchOnMount: "always",
-    }
+    },
   );
 
   const { data: provs = [], refetch: reFetchProvs } = useApiQuery<
@@ -114,7 +113,7 @@ function InventarioStockPage() {
     {},
     {
       initialData: [],
-    }
+    },
   );
 
   const { data: tiposPresentacionesResponse } = useApiQuery<
@@ -137,7 +136,7 @@ function InventarioStockPage() {
   console.log("los tiposPresentacion: ", tiposPresentacion);
 
   return (
-    <motion.div {...DesvanecerHaciaArriba} className="w-full px-4">
+    <PageTransition fallbackBackTo="/" titleHeader="Inventario General">
       <Inventario
         rolUser={rolUser}
         handleSelecTiposEmpaque={handleSelecTiposEmpaque}
@@ -163,7 +162,7 @@ function InventarioStockPage() {
         //Para cropear imagenes el resultado
         isloadingInventario={isloadingInventario}
       />
-    </motion.div>
+    </PageTransition>
   );
 }
 

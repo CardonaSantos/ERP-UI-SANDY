@@ -62,15 +62,13 @@ import {
   X,
   BadgeHelp,
 } from "lucide-react";
-
-// helpers / hooks
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { getApiErrorMessageAxios } from "@/Pages/Utils/UtilsErrorApi";
 import {
   useApiMutation,
   useApiQuery,
 } from "@/hooks/genericoCall/genericoCallHook";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 // ================= Types =================
 interface ClienteResponse {
@@ -96,8 +94,9 @@ interface FormData {
   observaciones?: string;
 }
 
-interface FormDataEdit
-  extends Required<Pick<ClienteResponse, "id" | "nombre">> {
+interface FormDataEdit extends Required<
+  Pick<ClienteResponse, "id" | "nombre">
+> {
   apellidos?: string;
   telefono?: string;
   direccion?: string;
@@ -248,7 +247,7 @@ export default function ClientesPageRefactor() {
     ["clientes"],
     "/client/get-all-customers",
     undefined,
-    { staleTime: 60_000 }
+    { staleTime: 60_000 },
   );
 
   const crearCliente = useApiMutation<unknown, FormData, any>(
@@ -270,7 +269,7 @@ export default function ClientesPageRefactor() {
         });
       },
       onError: (err: any) => toast.error(getApiErrorMessageAxios(err)),
-    }
+    },
   );
 
   const actualizarCliente = useApiMutation<unknown, FormDataEdit, any>(
@@ -284,7 +283,7 @@ export default function ClientesPageRefactor() {
         setEditOpen(false);
       },
       onError: (err: any) => toast.error(getApiErrorMessageAxios(err)),
-    }
+    },
   );
 
   const eliminarCliente = useApiMutation<unknown, void, any>(
@@ -298,7 +297,7 @@ export default function ClientesPageRefactor() {
         setEditOpen(false);
       },
       onError: (err: any) => toast.error(getApiErrorMessageAxios(err)),
-    }
+    },
   );
 
   // ---------- derived data ----------
@@ -318,13 +317,13 @@ export default function ClientesPageRefactor() {
       ]
         .join(" ")
         .toLowerCase()
-        .includes(q)
+        .includes(q),
     );
 
     list.sort((a, b) =>
       orderBy === "more"
         ? b._count.compras - a._count.compras
-        : a._count.compras - b._count.compras
+        : a._count.compras - b._count.compras,
     );
 
     return list;
@@ -340,7 +339,7 @@ export default function ClientesPageRefactor() {
 
   // ---------- handlers ----------
   const onCreateChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -385,20 +384,14 @@ export default function ClientesPageRefactor() {
   };
 
   return (
-    <div className="container mx-auto px-3 sm:px-6">
-      <PageHeader
-        title="Clientes"
-        fallbackBackTo="/"
-        sticky={false}
-        subtitle="Crea y administra tus clientes"
-      />
-
-      <Tabs defaultValue="crear" className="w-full">
+    <PageTransition fallbackBackTo="/" titleHeader="Clientes">
+      <Tabs defaultValue="lista" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="lista">Clientes</TabsTrigger>
+
           <TabsTrigger value="crear" className="gap-2">
             <UserPlus className="h-4 w-4" /> Crear
           </TabsTrigger>
-          <TabsTrigger value="lista">Clientes</TabsTrigger>
         </TabsList>
 
         {/* Crear */}
@@ -699,7 +692,9 @@ export default function ClientesPageRefactor() {
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                       .filter(
                         (p) =>
-                          p === 1 || p === totalPages || Math.abs(p - page) <= 1
+                          p === 1 ||
+                          p === totalPages ||
+                          Math.abs(p - page) <= 1,
                       )
                       .map((p, idx, arr) => (
                         <PaginationItem key={p}>
@@ -806,6 +801,6 @@ export default function ClientesPageRefactor() {
           onClick: () => setOpenConfirmDelete(false),
         }}
       />
-    </div>
+    </PageTransition>
   );
 }

@@ -11,7 +11,8 @@ import type { PaginatedComprasResponse } from "./Interfaces/Interfaces1"; // <--
 import type { GetRegistrosComprasQuery } from "./API/interfaceQuery";
 import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
 import { keepPreviousData } from "@tanstack/react-query";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 // ⬇️ hook genérico
 
@@ -36,7 +37,7 @@ export function ComprasMainPage() {
         placeholderData: keepPreviousData, // 🧈 paginación suave sin “parpadeo”
         staleTime: 0,
         refetchOnWindowFocus: "always",
-      }
+      },
     );
 
   // Derivados seguros para no romper la UI
@@ -93,13 +94,7 @@ export function ComprasMainPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Módulo de compras"
-        sticky={false}
-        fallbackBackTo="/"
-        subtitle="Administre sus registros de compras"
-      />
+    <PageTransition fallbackBackTo="/" titleHeader="Compras">
       <ComprasTable
         data={items}
         page={page}
@@ -111,6 +106,6 @@ export function ComprasMainPage() {
         onChangePage={handleChangePage}
         onChangeLimit={handleChangeLimit}
       />
-    </div>
+    </PageTransition>
   );
 }

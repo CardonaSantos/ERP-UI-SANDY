@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   XCircle,
   ChevronRight,
-  LayoutTemplate,
   AlertTriangle,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,9 +32,8 @@ import {
 import { PlantillaLegalCredito } from "@/features/plantillas-legales";
 import { plantillaLegalQkeys } from "@/hooks/use-plantillas-legales/Qk";
 import { formattFechaWithMinutes } from "../Utils/Utils";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
-import { Link } from "react-router-dom";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const TIPO_LABEL: Record<string, string> = {
@@ -128,40 +126,7 @@ function PlantillasLegales() {
   }
 
   return (
-    <div className="mx-auto px-4 py-6 space-y-4">
-      <PageHeader
-        title="Plantillas Legales"
-        fallbackBackTo="/"
-        sticky={false}
-      />
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-md bg-primary/10">
-            <LayoutTemplate className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold leading-tight">
-              Plantillas legales
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Gestión de plantillas para contratos de crédito
-            </p>
-          </div>
-        </div>
-        <Link to={"/plantillas-legales/nueva"}>
-          <Button
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-            onClick={onNavigateCreate}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nueva plantilla
-          </Button>
-        </Link>
-      </div>
-
+    <PageTransition fallbackBackTo="/" titleHeader="Plantillas Legales">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
@@ -345,7 +310,7 @@ function PlantillasLegales() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageTransition>
   );
 }
 

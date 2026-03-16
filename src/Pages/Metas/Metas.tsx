@@ -76,7 +76,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import { EditMetaTiendaDialog } from "./EditMetaTiendaDialog";
 import { EditMetaCobroDialog } from "./EditMetaCobroDialog";
 import {
@@ -100,6 +99,7 @@ import {
   useMetasUsers,
 } from "@/hooks/metas-hook/useMetas";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 dayjs.extend(advancedFormat);
 dayjs.extend(dayOfYear);
@@ -155,7 +155,7 @@ function Metas() {
   const [metaTiendaSelected, setMetaTiendaSelected] =
     useState<MetaTienda | null>(null);
   const [metaCobroSelected, setMetaCobroSelected] = useState<MetaCobros | null>(
-    null
+    null,
   );
 
   const [openUpdateMetaTienda, setOpenUpdateMetaTienda] = useState(false);
@@ -175,12 +175,12 @@ function Metas() {
   /* depósitos dialog */
   const [openDepositosDialog, setOpenDepositosDialog] = useState(false);
   const [selectedMeta, setSelectedMeta] = useState<MetaCobros | undefined>(
-    undefined
+    undefined,
   );
 
   /* selectedDepo (usado en JSX para confirmar eliminación de depósito) */
   const [selectedDepo, setSelectedDepo] = useState<DepositoCobro | undefined>(
-    undefined
+    undefined,
   );
 
   /* auxiliar para eliminar depósitos (modal confirm) */
@@ -194,9 +194,9 @@ function Metas() {
         (m) =>
           m.tituloMeta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           m.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          m.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+          m.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
       ),
-    [metasTienda, searchTerm]
+    [metasTienda, searchTerm],
   );
 
   const filteredMetasCobros = useMemo(
@@ -205,9 +205,9 @@ function Metas() {
         (m) =>
           m.tituloMeta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           m.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          m.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+          m.sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
       ),
-    [metasCobros, searchTerm]
+    [metasCobros, searchTerm],
   );
 
   const optionsUsuarios = useMemo(
@@ -216,7 +216,7 @@ function Metas() {
         value: u.id,
         label: `${u.nombre} (${u.sucursal.nombre})`,
       })),
-    [usuarios]
+    [usuarios],
   );
 
   /* ========================= Helpers ========================= */
@@ -301,7 +301,7 @@ function Metas() {
           loading: "Eliminando meta...",
           success: "Meta eliminada",
           error: (e) => getApiErrorMessageAxios(e),
-        }
+        },
       );
     } catch (error) {
       console.log(error);
@@ -338,7 +338,7 @@ function Metas() {
           loading: "Eliminando meta...",
           success: "Meta eliminada",
           error: (e) => getApiErrorMessageAxios(e),
-        }
+        },
       );
     } catch (error) {
       console.log(error);
@@ -377,7 +377,7 @@ function Metas() {
           loading: "Eliminando depósito...",
           success: "Depósito eliminado",
           error: (e) => getApiErrorMessageAxios(e),
-        }
+        },
       );
     } catch (error) {
       console.log("Error: ", error);
@@ -404,11 +404,11 @@ function Metas() {
   const getPercentTiendaCobro = () => {
     const montoMeta = metasTiendaSummary.reduce(
       (acc, m) => acc + m.montoMeta,
-      0
+      0,
     );
     const montoActual = metasTiendaSummary.reduce(
       (acc, m) => acc + m.montoActual,
-      0
+      0,
     );
     return montoMeta > 0 ? (montoActual / montoMeta) * 100 : 0;
   };
@@ -426,24 +426,18 @@ function Metas() {
   const getPercentMetaCobro = () => {
     const montoMeta = metasCobrosSummary.reduce(
       (acc, m) => acc + m.montoMeta,
-      0
+      0,
     );
     const montoActual = metasCobrosSummary.reduce(
       (acc, m) => acc + m.montoActual,
-      0
+      0,
     );
     return montoMeta > 0 ? (montoActual / montoMeta) * 100 : 0;
   };
   const isSuperAdmin: boolean = userRol === "SUPER_ADMIN" ? true : false;
 
   return (
-    <div className="container mx-auto p-4">
-      <PageHeader
-        title="Metas"
-        subtitle="Administre sus metas de ventas y cobros"
-        sticky={false}
-        fallbackBackTo="/"
-      />
+    <PageTransition fallbackBackTo="/" titleHeader="Metas">
       <Tabs defaultValue="asignar" className="w-full">
         <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 ">
           <TabsTrigger value="asignar">
@@ -630,10 +624,10 @@ function Metas() {
                         getPercentTiendaCobro() >= 100
                           ? "[&>div]:bg-green-500"
                           : getPercentTiendaCobro() >= 75
-                          ? "[&>div]:bg-blue-500"
-                          : getPercentTiendaCobro() >= 50
-                          ? "[&>div]:bg-yellow-500"
-                          : "[&>div]:bg-red-500"
+                            ? "[&>div]:bg-blue-500"
+                            : getPercentTiendaCobro() >= 50
+                              ? "[&>div]:bg-yellow-500"
+                              : "[&>div]:bg-red-500",
                       )}
                     />
                   </div>
@@ -693,8 +687,8 @@ function Metas() {
                                   porcentaje >= 70
                                     ? "text-green-500"
                                     : porcentaje >= 40
-                                    ? "text-yellow-500"
-                                    : "text-red-500"
+                                      ? "text-yellow-500"
+                                      : "text-red-500"
                                 }`}
                               />
                               <span>{porcentaje.toFixed(0)}%</span>
@@ -709,8 +703,8 @@ function Metas() {
                                   calcularReferencia() >= 70
                                     ? "text-green-500"
                                     : calcularReferencia() >= 40
-                                    ? "text-yellow-500"
-                                    : "text-red-500"
+                                      ? "text-yellow-500"
+                                      : "text-red-500"
                                 }`}
                               />
                               <span>{calcularReferencia().toFixed(0)}%</span>
@@ -733,7 +727,7 @@ function Metas() {
                                 }
                               >
                                 {Math.abs(
-                                  porcentaje - calcularReferencia()
+                                  porcentaje - calcularReferencia(),
                                 ).toFixed(0)}
                                 %
                               </span>
@@ -875,10 +869,10 @@ function Metas() {
                         getPercentMetaCobro() >= 100
                           ? "[&>div]:bg-green-500"
                           : getPercentMetaCobro() >= 75
-                          ? "[&>div]:bg-blue-500"
-                          : getPercentMetaCobro() >= 50
-                          ? "[&>div]:bg-yellow-500"
-                          : "[&>div]:bg-red-500"
+                            ? "[&>div]:bg-blue-500"
+                            : getPercentMetaCobro() >= 50
+                              ? "[&>div]:bg-yellow-500"
+                              : "[&>div]:bg-red-500",
                       )}
                     />
                   </div>
@@ -950,8 +944,8 @@ function Metas() {
                                   porcentaje >= 70
                                     ? "text-green-500"
                                     : porcentaje >= 40
-                                    ? "text-yellow-500"
-                                    : "text-red-500"
+                                      ? "text-yellow-500"
+                                      : "text-red-500"
                                 }`}
                               />
                               <span>{porcentaje.toFixed(0)}%</span>
@@ -966,8 +960,8 @@ function Metas() {
                                   referencia >= 70
                                     ? "text-green-500"
                                     : referencia >= 40
-                                    ? "text-yellow-500"
-                                    : "text-red-500"
+                                      ? "text-yellow-500"
+                                      : "text-red-500"
                                 }`}
                               />
                               <span>{referencia.toFixed(0)}%</span>
@@ -1130,7 +1124,7 @@ function Metas() {
                                 <Calendar className="w-4 h-4 text-muted-foreground" />
                                 <span>
                                   {new Date(
-                                    deposito.fechaRegistro
+                                    deposito.fechaRegistro,
                                   ).toLocaleString()}
                                 </span>
                               </div>
@@ -1262,10 +1256,10 @@ function Metas() {
                     getPercentMetaCobro() >= 100
                       ? "[&>div]:bg-green-500"
                       : getPercentMetaCobro() >= 75
-                      ? "[&>div]:bg-blue-500"
-                      : getPercentMetaCobro() >= 50
-                      ? "[&>div]:bg-yellow-500"
-                      : "[&>div]:bg-red-500"
+                        ? "[&>div]:bg-blue-500"
+                        : getPercentMetaCobro() >= 50
+                          ? "[&>div]:bg-yellow-500"
+                          : "[&>div]:bg-red-500",
                   )}
                 />
               </div>
@@ -1331,10 +1325,10 @@ function Metas() {
                     getPercentTiendaCobro() >= 100
                       ? "[&>div]:bg-green-500"
                       : getPercentTiendaCobro() >= 75
-                      ? "[&>div]:bg-blue-500"
-                      : getPercentTiendaCobro() >= 50
-                      ? "[&>div]:bg-yellow-500"
-                      : "[&>div]:bg-red-500"
+                        ? "[&>div]:bg-blue-500"
+                        : getPercentTiendaCobro() >= 50
+                          ? "[&>div]:bg-yellow-500"
+                          : "[&>div]:bg-red-500",
                   )}
                 />
               </div>
@@ -1361,7 +1355,7 @@ function Metas() {
                     <TargetIcon className="mr-2 h-3 w-3 text-muted-foreground" />
                     <span className="text-base font-semibold">
                       {formatearMoneda(
-                        getMetasCobroTotal() + getMetasTiendaTotal()
+                        getMetasCobroTotal() + getMetasTiendaTotal(),
                       )}
                     </span>
                   </div>
@@ -1372,7 +1366,7 @@ function Metas() {
                     <ArrowUpIcon className="mr-2 h-3 w-3 text-green-500" />
                     <span className="text-base font-semibold">
                       {formatearMoneda(
-                        getMetasCobroAvance() + getMetasTiendaAvance()
+                        getMetasCobroAvance() + getMetasTiendaAvance(),
                       )}
                     </span>
                   </div>
@@ -1385,7 +1379,7 @@ function Metas() {
                     <ArrowDownIcon className="mr-2 h-3 w-3 text-red-500" />
                     <span className="text-base font-semibold">
                       {formatearMoneda(
-                        getMetasCobroRestante() + getMetasTiendaRestante()
+                        getMetasCobroRestante() + getMetasTiendaRestante(),
                       )}
                     </span>
                   </div>
@@ -1418,16 +1412,16 @@ function Metas() {
                       100
                       ? "[&>div]:bg-green-500"
                       : ((getMetasCobroAvance() + getMetasTiendaAvance()) /
-                          (getMetasCobroTotal() + getMetasTiendaTotal())) *
-                          100 >=
-                        75
-                      ? "[&>div]:bg-blue-500"
-                      : ((getMetasCobroAvance() + getMetasTiendaAvance()) /
-                          (getMetasCobroTotal() + getMetasTiendaTotal())) *
-                          100 >=
-                        50
-                      ? "[&>div]:bg-yellow-500"
-                      : "[&>div]:bg-red-500"
+                            (getMetasCobroTotal() + getMetasTiendaTotal())) *
+                            100 >=
+                          75
+                        ? "[&>div]:bg-blue-500"
+                        : ((getMetasCobroAvance() + getMetasTiendaAvance()) /
+                              (getMetasCobroTotal() + getMetasTiendaTotal())) *
+                              100 >=
+                            50
+                          ? "[&>div]:bg-yellow-500"
+                          : "[&>div]:bg-red-500",
                   )}
                 />
               </div>
@@ -1549,7 +1543,7 @@ function Metas() {
         onClose={() => setOpenUpdateMetaCobro(false)}
         metaCobro={metaCobroSelected}
       />
-    </div>
+    </PageTransition>
   );
 }
 

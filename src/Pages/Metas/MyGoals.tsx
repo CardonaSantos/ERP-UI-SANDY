@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formattFecha } from "../Utils/Utils";
 import { MetaDonut } from "./Charts/MetaDonut";
+import { PageTransition } from "@/components/Transition/layout-transition";
 dayjs.extend(utc);
 dayjs.extend(localizedFormat);
 dayjs.locale("es");
@@ -153,7 +154,7 @@ function MyGoals() {
   const fetchGoals = async () => {
     try {
       const response = await axios.get<MetasResponse>(
-        `${API_URL}/metas/get-all-my-goals/${userId}`
+        `${API_URL}/metas/get-all-my-goals/${userId}`,
       );
       setMetas(response.data);
     } catch (err) {
@@ -183,7 +184,7 @@ function MyGoals() {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setDepositForm((prev) => ({ ...prev, [name]: value }));
@@ -204,7 +205,7 @@ function MyGoals() {
           montoDepositado: Number.parseFloat(depositForm.montoDepositado),
           metaCobroId: selectedMetaId,
           descripcion: depositForm.descripcion,
-        }
+        },
       );
 
       if (response.status === 201) {
@@ -223,7 +224,7 @@ function MyGoals() {
 
     try {
       const response = await axios.delete(
-        `${API_URL}/metas/delete-one-payment/${selectedMeta?.id}/${selectedDepo?.id}`
+        `${API_URL}/metas/delete-one-payment/${selectedMeta?.id}/${selectedDepo?.id}`,
       );
       if (response.status === 200 || response.status === 201) {
         toast.success("Depósito eliminado correctamente");
@@ -247,15 +248,13 @@ function MyGoals() {
   console.log("Las metas son: ", metas);
 
   return (
-    <div className="container mx-auto">
-      <h1 className="text-2xl font-bold mb-2">Mis Metas</h1>
-
+    <PageTransition fallbackBackTo="/" titleHeader="Mis metas">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {metas?.metasCobros
           .sort(
             (a, b) =>
               new Date(a.fechaCreado).getTime() -
-              new Date(b.fechaCreado).getTime()
+              new Date(b.fechaCreado).getTime(),
           )
           .map((meta) => {
             const percentageComplete =
@@ -327,8 +326,8 @@ function MyGoals() {
                               percentageComplete >= 100
                                 ? "text-green-500"
                                 : percentageComplete >= 75
-                                ? "text-blue-500"
-                                : "text-gray-500"
+                                  ? "text-blue-500"
+                                  : "text-gray-500",
                             )}
                           />
                           <span>
@@ -354,7 +353,7 @@ function MyGoals() {
                             className={cn(
                               diferencia >= 0
                                 ? "text-green-600"
-                                : "text-red-600"
+                                : "text-red-600",
                             )}
                           >
                             Diferencia: {diferencia.toFixed(2)}%
@@ -376,7 +375,7 @@ function MyGoals() {
                           "rounded-lg p-2 text-center",
                           diferencia >= 0
                             ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                            : "bg-red-100 text-red-700",
                         )}
                       >
                         <div className="text-xs font-medium">Diferencia</div>
@@ -421,7 +420,7 @@ function MyGoals() {
           .sort(
             (a, b) =>
               new Date(a.fechaInicio).getTime() -
-              new Date(b.fechaInicio).getTime()
+              new Date(b.fechaInicio).getTime(),
           )
           .map((meta) => {
             const percentageComplete =
@@ -494,8 +493,8 @@ function MyGoals() {
                               percentageComplete >= 100
                                 ? "text-green-500"
                                 : percentageComplete >= 75
-                                ? "text-blue-500"
-                                : "text-gray-500"
+                                  ? "text-blue-500"
+                                  : "text-gray-500",
                             )}
                           />
                           <span>
@@ -511,8 +510,8 @@ function MyGoals() {
                                 referencia >= 75
                                   ? "text-green-500"
                                   : referencia >= 50
-                                  ? "text-yellow-500"
-                                  : "text-gray-500"
+                                    ? "text-yellow-500"
+                                    : "text-gray-500",
                               )}
                             />
                             <span>Referencia: {referencia.toFixed(1)}%</span>
@@ -529,7 +528,7 @@ function MyGoals() {
                             className={cn(
                               diferencia >= 0
                                 ? "text-green-600"
-                                : "text-red-600"
+                                : "text-red-600",
                             )}
                           >
                             Diferencia: {diferencia.toFixed(2)}%
@@ -551,7 +550,7 @@ function MyGoals() {
                           "rounded-lg p-2 text-center",
                           diferencia >= 0
                             ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                            : "bg-red-100 text-red-700",
                         )}
                       >
                         <div className="text-xs font-medium">Diferencia</div>
@@ -778,7 +777,7 @@ function MyGoals() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageTransition>
   );
 }
 

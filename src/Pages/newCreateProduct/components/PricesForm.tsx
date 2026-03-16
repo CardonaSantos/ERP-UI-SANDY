@@ -37,10 +37,10 @@ export default function PricesForm({ precios, setPrecios }: Props) {
   const updateField = <K extends keyof PrecioProductoInventario>(
     idx: number,
     key: K,
-    value: PrecioProductoInventario[K]
+    value: PrecioProductoInventario[K],
   ) => {
     const next = precios.map((item, i) =>
-      i === idx ? { ...item, [key]: value } : item
+      i === idx ? { ...item, [key]: value } : item,
     );
     setPrecios(next);
   };
@@ -59,7 +59,7 @@ export default function PricesForm({ precios, setPrecios }: Props) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Precios</CardTitle>
+        <CardTitle className="text-base">Precios</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

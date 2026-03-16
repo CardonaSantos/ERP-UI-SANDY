@@ -42,8 +42,7 @@ import {
   SelectedLine,
 } from "./newMap/requisicion.interfaces";
 import RequisicionesList from "./newMap/mapRequisiciones";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
-
+import { PageTransition } from "@/components/Transition/layout-transition";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -79,14 +78,14 @@ export default function RequisitionBuilder() {
         sortBy,
         sortDir,
       },
-      { enabled: !!sucursalId }
+      { enabled: !!sucursalId },
     );
 
   // Métricas de selección
   const selectedCount = Object.keys(selected).length;
   const totalSelectedQty = Object.values(selected).reduce(
     (acc, s) => acc + (s.cantidad || 0),
-    0
+    0,
   );
   const totalSelectedCost = Object.values(selected).reduce((acc, s) => {
     const unit = Number(s.precioCostoUnitario || "0");
@@ -132,14 +131,7 @@ export default function RequisitionBuilder() {
   console.log("La data es: ", data);
 
   return (
-    <div className="w-full">
-      <PageHeader
-        title="Requisiciones"
-        subtitle="Haga requisiciones de sus productos sin stock"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Requisiciones">
       <Tabs defaultValue="requisiciones" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="requisiciones">Requisiciones</TabsTrigger>
@@ -299,6 +291,6 @@ export default function RequisitionBuilder() {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageTransition>
   );
 }

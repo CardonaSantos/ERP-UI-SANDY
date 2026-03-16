@@ -18,7 +18,6 @@ import {
 
 import { Switch } from "@/components/ui/switch";
 import { Plus } from "lucide-react";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import {
   useApiMutation,
@@ -27,8 +26,7 @@ import {
 import { ProveedorFormData, ProveedorType } from "./ProveedorTypePage";
 import { EP, QK } from "./QkProviders";
 import { ProvidersTable } from "./ProvidersTable";
-
-// Tipos (si ya existe ProveedorType en tu proyecto, puedes importar y usarlo)
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 function ProviderCreateCard() {
   const qc = useQueryClient();
@@ -80,7 +78,7 @@ function ProviderCreateCard() {
         const msg = err?.response?.data?.message || "No se pudo crear";
         toast.error(msg);
       },
-    }
+    },
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -295,18 +293,11 @@ export default function ProveedoresPage() {
     QK.PROVEEDORES,
     EP.LIST,
     undefined,
-    { staleTime: 60_000 }
+    { staleTime: 60_000 },
   );
 
   return (
-    <div className="container mx-auto px-3 sm:px-4">
-      <PageHeader
-        title="Proveedores"
-        subtitle="Cree, visualice y edite sus proveedores"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Proveedores">
       <Tabs defaultValue="add" className="mt-2">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="add">Agregar</TabsTrigger>
@@ -348,6 +339,6 @@ export default function ProveedoresPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageTransition>
   );
 }

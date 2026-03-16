@@ -15,8 +15,8 @@ import { FiltersBarGO } from "./_components/FiltersBarGO";
 import { ResumenGridGO } from "./_components/ResumenGridGO";
 import { ChartsGO } from "./_components/ChartsGO";
 import { DetalleTableGO } from "./_components/DetalleTableGO";
+import { PageTransition } from "@/components/Transition/layout-transition";
 import useGetSucursales from "@/hooks/getSucursales/use-sucursales";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 
 const TZGT = "America/Guatemala";
 dayjs.extend(utc);
@@ -28,7 +28,7 @@ export default function GastoOperativoHistoricoPage() {
     () => ({
       from: dayjs().tz(TZGT).startOf("month").toDate(),
       to: dayjs().tz(TZGT).endOf("day").toDate(),
-    })
+    }),
   );
 
   const [sucursal, setSucursal] = useState<SucursalOption | null>(null);
@@ -45,12 +45,12 @@ export default function GastoOperativoHistoricoPage() {
   const fromYMD = useMemo(
     () =>
       range.from ? dayjs(range.from).tz(TZGT).format("YYYY-MM-DD") : undefined,
-    [range.from]
+    [range.from],
   );
   const toYMD = useMemo(
     () =>
       range.to ? dayjs(range.to).tz(TZGT).format("YYYY-MM-DD") : undefined,
-    [range.to]
+    [range.to],
   );
 
   const fetchData = async () => {
@@ -77,14 +77,7 @@ export default function GastoOperativoHistoricoPage() {
   }, [fromYMD, toYMD, sucursal?.value]);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Gastos Operativos Históricos"
-        subtitle="Vea sus gastos operativos"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Gastos Operativos">
       <FiltersBarGO
         from={range.from}
         to={range.to}
@@ -116,6 +109,6 @@ export default function GastoOperativoHistoricoPage() {
           <DetalleTableGO detalle={data.detalle} />
         </div>
       )}
-    </div>
+    </PageTransition>
   );
 }

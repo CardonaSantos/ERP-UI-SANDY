@@ -17,7 +17,7 @@ import { ChartsCV } from "./components/ChartsCV";
 import { DetalleTable } from "./components/DetalleTable";
 import useGetSucursales from "@/hooks/getSucursales/use-sucursales";
 import { CostoVentaResponseUI } from "./costoVentasHistoricosTypes";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 const TZGT = "America/Guatemala";
 dayjs.extend(utc);
@@ -28,7 +28,7 @@ export default function CostosVentaHistoricoPage() {
     () => ({
       from: dayjs().tz(TZGT).subtract(6, "day").startOf("day").toDate(),
       to: dayjs().tz(TZGT).endOf("day").toDate(),
-    })
+    }),
   );
 
   const [sucursal, setSucursal] = useState<SucursalOption | null>(null);
@@ -47,12 +47,12 @@ export default function CostosVentaHistoricoPage() {
       range.from
         ? dayjs(range.from).tz(TZGT).startOf("day").toISOString()
         : null,
-    [range.from]
+    [range.from],
   );
   const toISO = useMemo(
     () =>
       range.to ? dayjs(range.to).tz(TZGT).endOf("day").toISOString() : null,
-    [range.to]
+    [range.to],
   );
 
   const fetchData = async () => {
@@ -75,18 +75,10 @@ export default function CostosVentaHistoricoPage() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromISO, toISO, sucursal?.value]);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Costos de Ventas Histórico"
-        subtitle="Vea sus costos de ventas"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Costos Venta Historicos">
       <FiltersBarCV
         from={range.from}
         to={range.to}
@@ -122,6 +114,6 @@ export default function CostosVentaHistoricoPage() {
           <DetalleTable detalle={data.detalle} />
         </motion.div>
       )}
-    </div>
+    </PageTransition>
   );
 }

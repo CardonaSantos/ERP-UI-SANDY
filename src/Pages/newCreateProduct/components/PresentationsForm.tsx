@@ -26,7 +26,7 @@ export default function PresentationsForm({
   const ensureSingleDefault = useCallback(
     (idxDefault: number) =>
       setItems(items.map((it, i) => ({ ...it, esDefault: i === idxDefault }))),
-    [items, setItems]
+    [items, setItems],
   );
 
   const addItem = () => {
@@ -64,8 +64,8 @@ export default function PresentationsForm({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Presentaciones</span>
+        <CardTitle className="flex items-center justify-between text-base">
+          Presentaciones
           <Button
             type="button"
             variant="outline"

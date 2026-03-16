@@ -36,7 +36,7 @@ export default function BasicInfoForm({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Datos básicos</CardTitle>
+        <CardTitle className="text-base">Datos básicos</CardTitle>
         <CardDescription>Información esencial del producto</CardDescription>
       </CardHeader>
 

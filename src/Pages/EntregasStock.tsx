@@ -49,7 +49,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formateDateWithMinutes } from "@/Crm/Utils/FormateDate";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 // Tipos
 type Producto = {
@@ -110,13 +110,13 @@ export default function EntregasStock() {
   const sucursalID = useStore((state) => state.sucursalId);
   const [entregas, setEntregas] = useState<EntregaStock[]>([]);
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaStock | null>(
-    null
+    null,
   );
 
   const getEntregasRegist = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/entrega-stock/get-my-delivery-stock/${sucursalID}`
+        `${API_URL}/entrega-stock/get-my-delivery-stock/${sucursalID}`,
       );
 
       if (response.status === 200) {
@@ -213,7 +213,7 @@ export default function EntregasStock() {
                     {safeGet(
                       entrega.proveedor,
                       "nombre",
-                      "Proveedor sin nombre"
+                      "Proveedor sin nombre",
                     )}
                   </p>
                   <p className="text-sm text-muted-foreground">
@@ -248,7 +248,7 @@ export default function EntregasStock() {
                 {safeGet(
                   entrega.sucursal,
                   "direccion",
-                  "Dirección no disponible"
+                  "Dirección no disponible",
                 )}
               </p>
             </CardContent>
@@ -267,7 +267,7 @@ export default function EntregasStock() {
               {safeGet(
                 entrega.usuarioRecibido,
                 "nombre",
-                "Usuario no especificado"
+                "Usuario no especificado",
               )}
             </p>
             <Badge variant="secondary" className="mt-1">
@@ -297,7 +297,7 @@ export default function EntregasStock() {
                         {safeGet(
                           stock.producto,
                           "codigoProducto",
-                          "Sin código"
+                          "Sin código",
                         )}
                       </p>
 
@@ -364,13 +364,7 @@ export default function EntregasStock() {
   };
 
   return (
-    <div className="container mx-auto ">
-      <PageHeader
-        title="Registros de entregas de stock"
-        subtitle="Historiales"
-        sticky={false}
-        fallbackBackTo="/"
-      />
+    <PageTransition fallbackBackTo="/" titleHeader="Entregas de Stock">
       <Card className="shadow-xl">
         <CardContent>
           <Table>
@@ -398,7 +392,7 @@ export default function EntregasStock() {
                           ? safeGet(
                               entrega.proveedor,
                               "nombre",
-                              "Proveedor sin nombre"
+                              "Proveedor sin nombre",
                             )
                           : "Sin proveedor"}
                       </div>
@@ -415,7 +409,7 @@ export default function EntregasStock() {
                         {safeGet(
                           entrega.sucursal,
                           "nombre",
-                          "Sucursal sin nombre"
+                          "Sucursal sin nombre",
                         )}
                       </div>
                     </TableCell>
@@ -427,7 +421,7 @@ export default function EntregasStock() {
                         entrega.stockEntregado.length > 0
                           ? entrega.stockEntregado.reduce(
                               (total, prod) => total + (prod.cantidad || 0),
-                              0
+                              0,
                             )
                           : 0}
                       </div>
@@ -550,6 +544,6 @@ export default function EntregasStock() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageTransition>
   );
 }

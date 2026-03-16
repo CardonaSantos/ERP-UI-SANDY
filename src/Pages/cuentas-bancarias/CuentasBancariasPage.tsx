@@ -20,7 +20,7 @@ import { CuentaFormDialog } from "./_components/CreateEditCuentaDialog";
 import { useApiMutation } from "@/hooks/genericoCall/genericoCallHook";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 export default function CuentasBancariasPage() {
   const [search, setSearch] = useState("");
@@ -31,7 +31,7 @@ export default function CuentasBancariasPage() {
 
   const params = useMemo(
     () => ({ page, limit, search: debouncedSearch, incluirInactivas }),
-    [page, limit, debouncedSearch, incluirInactivas]
+    [page, limit, debouncedSearch, incluirInactivas],
   );
   const { data, isLoading } = useCuentasBancarias(params);
   const mut = useCuentaBancariaMutations(params);
@@ -41,12 +41,12 @@ export default function CuentasBancariasPage() {
 
   const [openToggle, setOpenToggle] = useState(false);
   const [rowToToggle, setRowToToggle] = useState<CuentaBancariaResumen | null>(
-    null
+    null,
   );
 
   const [openDelete, setOpenDelete] = useState(false);
   const [rowToDelete, setRowToDelete] = useState<CuentaBancariaResumen | null>(
-    null
+    null,
   );
 
   const columns = useMemo(
@@ -68,7 +68,7 @@ export default function CuentasBancariasPage() {
           setOpenDelete(true);
         },
       }),
-    []
+    [],
   );
 
   const qc = useQueryClient();
@@ -90,7 +90,7 @@ export default function CuentasBancariasPage() {
         toast.success("Cuenta creada");
         invalidate();
       },
-    }
+    },
   );
 
   // nota: el endpoint usa el id del registro que estés editando AHORA
@@ -103,7 +103,7 @@ export default function CuentasBancariasPage() {
         toast.success("Cuenta actualizada");
         invalidate();
       },
-    }
+    },
   );
 
   // activar / desactivar usan el row seleccionado AHORA
@@ -118,7 +118,7 @@ export default function CuentasBancariasPage() {
         toast.success("Cuenta activada");
         invalidate();
       },
-    }
+    },
   );
 
   const desactivarCuenta = useApiMutation<any, void>(
@@ -132,7 +132,7 @@ export default function CuentasBancariasPage() {
         toast.success("Cuenta desactivada");
         invalidate();
       },
-    }
+    },
   );
 
   const eliminarCuenta = useApiMutation<any, void>(
@@ -146,7 +146,7 @@ export default function CuentasBancariasPage() {
         toast.success("Cuenta eliminada");
         invalidate();
       },
-    }
+    },
   );
 
   // ---------- HANDLERS ----------
@@ -187,15 +187,7 @@ export default function CuentasBancariasPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* header */}
-      <PageHeader
-        title="Cuenta Bancaria"
-        subtitle="Administre sus cuentas bancarias"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Cuentas Bancarias">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <Button
           onClick={() => {
@@ -281,6 +273,6 @@ export default function CuentasBancariasPage() {
         loading={false}
         onConfirm={onConfirmDelete}
       />
-    </div>
+    </PageTransition>
   );
 }

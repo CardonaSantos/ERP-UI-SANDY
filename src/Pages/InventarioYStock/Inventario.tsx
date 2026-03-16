@@ -7,9 +7,6 @@ import "dayjs/locale/es";
 import utc from "dayjs/plugin/utc";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { ProductCreate } from "./interfaces.interface";
-import { motion } from "framer-motion";
-import DesvanecerHaciaArriba from "@/Crm/Motion/DashboardAnimations";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import { QueryTable } from "./interfaces/querytable";
 import TableInventario from "./table/table";
 import { PaginatedInventarioResponse } from "./interfaces/InventaryInterfaces";
@@ -77,14 +74,7 @@ export default function Inventario({
   console.log();
 
   return (
-    <motion.div className="container mx-auto" {...DesvanecerHaciaArriba}>
-      <PageHeader
-        title="Inventario General"
-        subtitle="Gestione sus productos y stocks"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <>
       <div className="mb-3 grid gap-3 lg:grid-cols-[1fr_auto] items-start">
         {/* Controles (input + selects) */}
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))] items-end">
@@ -176,6 +166,6 @@ export default function Inventario({
         data={productsInventario.data}
         meta={productsInventario.meta}
       />
-    </motion.div>
+    </>
   );
 }

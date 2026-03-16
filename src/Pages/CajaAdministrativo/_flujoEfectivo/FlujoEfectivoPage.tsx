@@ -14,7 +14,7 @@ import { ResumenGridFE } from "./_components/ResumenGridFE";
 import { ChartsFE } from "./_components/ChartsFE";
 import { DetalleTableFE } from "./_components/DetalleTableFE";
 import useGetSucursales from "@/hooks/getSucursales/use-sucursales";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 const TZGT = "America/Guatemala";
 dayjs.extend(utc);
@@ -26,7 +26,7 @@ export default function FlujoEfectivoPage() {
     () => ({
       from: dayjs().tz(TZGT).startOf("month").toDate(),
       to: dayjs().tz(TZGT).endOf("day").toDate(),
-    })
+    }),
   );
 
   const [sucursal, setSucursal] = useState<SucursalOption | null>(null);
@@ -39,12 +39,12 @@ export default function FlujoEfectivoPage() {
   const fromYMD = useMemo(
     () =>
       range.from ? dayjs(range.from).tz(TZGT).format("YYYY-MM-DD") : undefined,
-    [range.from]
+    [range.from],
   );
   const toYMD = useMemo(
     () =>
       range.to ? dayjs(range.to).tz(TZGT).format("YYYY-MM-DD") : undefined,
-    [range.to]
+    [range.to],
   );
 
   const { data: sucursales = [] } = useGetSucursales();
@@ -74,18 +74,10 @@ export default function FlujoEfectivoPage() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromYMD, toYMD, sucursal?.value]);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Flujo de Efectivo"
-        subtitle="Vea sus flujos de efectivos"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Flujos de Efectivo">
       <FiltersBarFE
         from={range.from}
         to={range.to}
@@ -117,6 +109,6 @@ export default function FlujoEfectivoPage() {
           <DetalleTableFE detalle={data.detalle} />
         </div>
       )}
-    </div>
+    </PageTransition>
   );
 }

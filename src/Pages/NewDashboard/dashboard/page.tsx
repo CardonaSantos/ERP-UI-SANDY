@@ -5,7 +5,6 @@ import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { useStore } from "@/components/Context/ContextSucursal";
 import type {
   DailyMoney,
@@ -16,11 +15,7 @@ import type {
   VentasSemanalChart,
   VentaReciente,
 } from "../types/dashboard";
-
-// Motion y tarjetas generales
-import DesvanecerHaciaArriba from "../components/dashboard/motion/desvanecer-hacia-arriba";
 import { OverviewCards } from "../components/overview-cards";
-
 // Dashboard cards / tablas
 import { SalesChartCard } from "../components/sales-chart-card";
 import { TopSellingProductsTable } from "../components/top-selling-products-table";
@@ -38,7 +33,7 @@ import { TimeLineDto } from "../components/API/interfaces.interfaces";
 import { createNewTimeLine } from "../components/API/api";
 import { EstadoGarantia, GarantiaType } from "../types/newGarantyTypes";
 import { formattMonedaGT } from "@/utils/formattMoneda";
-import { useSocketEvent } from "@/Web/realtime/SocketProvider"; // ✅ nuevo
+import { useSocketEvent } from "@/Web/realtime/SocketProvider";
 import {
   useApiMutation,
   useApiQuery,
@@ -72,9 +67,9 @@ import CxpCreditCardList from "../creditos-compras/CxpCreditCardList";
 import { useCxpCreditosActivos } from "../creditos-compras/utils/useCxpActivos";
 import { Textarea } from "@/components/ui/textarea";
 import { ListResp, upsertIntoList } from "../helpers/UpserSocketEvent";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 const API_URL = import.meta.env.VITE_API_URL;
-// Otras utilidades
 dayjs.extend(localizedFormat);
 dayjs.extend(customParseFormat);
 dayjs.locale("es");
@@ -84,10 +79,8 @@ interface RejectDto {
   sucursalId: number | null;
   motivoRechazo: string;
 }
-// arriba del componente
 
 export default function DashboardPageMain() {
-  //  Store / Params / Utiles
   const sucursalId = useStore((s) => s.sucursalId) ?? 0;
   const userID = useStore((s) => s.userId) ?? 0;
 
@@ -638,9 +631,7 @@ export default function DashboardPageMain() {
   // Hook de CXPs (queda al final para mantener jerarquía de dependencias)
   const { items, isLoading } = useCxpCreditosActivos();
   return (
-    <motion.div {...DesvanecerHaciaArriba} className="container mx-auto">
-      <h1 className="text-2xl font-semibold">Dashboard Administrador</h1>
-
+    <PageTransition fallbackBackTo="/" titleHeader="Dashboard Administrador">
       {/* Resumen de ventas */}
       <OverviewCards
         ventasMes={ventasMes}
@@ -853,6 +844,6 @@ export default function DashboardPageMain() {
           formatearFecha={formatearFecha}
         />
       </div>
-    </motion.div>
+    </PageTransition>
   );
 }

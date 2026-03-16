@@ -24,7 +24,7 @@ import {
   CardDescription,
   CardHeader,
 } from "@/components/ui/card";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 const API_URL = import.meta.env.VITE_API_URL;
 
 interface Producto {
@@ -93,12 +93,12 @@ export default function TransferenciaProductos() {
       };
       const response = await axios.post(
         `${API_URL}/solicitud-transferencia-producto`,
-        transferenciaData
+        transferenciaData,
       );
 
       if (response.status === 201) {
         toast.success(
-          "Solicitud de transferencia enviada. Esperando respuesta del administrador."
+          "Solicitud de transferencia enviada. Esperando respuesta del administrador.",
         );
         getProductos(); // Actualiza los productos después de la transferencia
 
@@ -115,7 +115,7 @@ export default function TransferenciaProductos() {
     } catch (error) {
       console.error("Error al transferir el producto:", error);
       toast.error(
-        "Error al solicitar transferencia. Por favor, intenta de nuevo."
+        "Error al solicitar transferencia. Por favor, intenta de nuevo.",
       );
     } finally {
       // Restablece el estado de truncar independientemente de si hubo éxito o error
@@ -130,7 +130,7 @@ export default function TransferenciaProductos() {
   const getProductos = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/products/products/to-transfer/${sucursalId}`
+        `${API_URL}/products/products/to-transfer/${sucursalId}`,
       );
       if (response.status === 200) {
         setProductos(response.data);
@@ -145,7 +145,7 @@ export default function TransferenciaProductos() {
     const getProductos = async () => {
       try {
         const response = await axios.get(
-          `${API_URL}/products/products/to-transfer/${sucursalId}`
+          `${API_URL}/products/products/to-transfer/${sucursalId}`,
         );
         if (response.status === 200) {
           setProductos(response.data);
@@ -164,7 +164,7 @@ export default function TransferenciaProductos() {
     const getSucursales = async () => {
       try {
         const response = await axios.get(
-          `${API_URL}/sucursales/sucursales-to-transfer`
+          `${API_URL}/sucursales/sucursales-to-transfer`,
         );
         if (response.status === 200) {
           setSucursales(response.data);
@@ -196,11 +196,11 @@ export default function TransferenciaProductos() {
     }));
 
   const handleProductChange = (
-    option: SingleValue<{ value: number; label: string }>
+    option: SingleValue<{ value: number; label: string }>,
   ) => {
     if (option) {
       const productoSeleccionado = productos?.find(
-        (prod) => prod.id === option.value
+        (prod) => prod.id === option.value,
       );
       setSelectedProduct(productoSeleccionado || null);
     } else {
@@ -209,11 +209,11 @@ export default function TransferenciaProductos() {
   };
 
   const handleSucursalChange = (
-    option: SingleValue<{ value: number; label: string }>
+    option: SingleValue<{ value: number; label: string }>,
   ) => {
     if (option) {
       const sucursalSeleccionada = sucursales.find(
-        (suc) => suc.id === option.value
+        (suc) => suc.id === option.value,
       );
       setSelectedSucursalDestino(sucursalSeleccionada || null);
     } else {
@@ -222,14 +222,7 @@ export default function TransferenciaProductos() {
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <PageHeader
-        title="Transferencia de Stocks"
-        subtitle="Tranfiera sus stocks entre sus sucursales"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Transferencia Productos">
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="producto-select">Seleccionar Producto</Label>
@@ -262,7 +255,7 @@ export default function TransferenciaProductos() {
                   Total en Stocks:{" "}
                   {selectedProduct.stock.reduce(
                     (total, stock) => total + stock.cantidad,
-                    0
+                    0,
                   )}
                 </h2>
               </div>
@@ -381,6 +374,6 @@ export default function TransferenciaProductos() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </PageTransition>
   );
 }

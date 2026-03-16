@@ -38,6 +38,7 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -149,7 +150,7 @@ function UserConfig() {
     try {
       const response = await axios.patch(
         `${API_URL}/user/update-user/${userId}`,
-        user
+        user,
       );
       if (response.status === 201 || response.status === 200) {
         toast.success("Usuario actualizado correctamente");
@@ -164,7 +165,7 @@ function UserConfig() {
   };
 
   const handleChangeInputs = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setUser((datosPrevios) => ({
@@ -181,7 +182,7 @@ function UserConfig() {
   };
 
   const handleChangeEditUser = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setUserEdit((datosPrevios) => ({
@@ -221,7 +222,7 @@ function UserConfig() {
 
       const response = await axios.patch(
         `${API_URL}/user/update-user/as-admin/${userId}`,
-        payload
+        payload,
       );
 
       if (response.status === 200 || response.status === 201) {
@@ -247,7 +248,7 @@ function UserConfig() {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <PageTransition fallbackBackTo="/" titleHeader="Usuarios y Config.">
       <Tabs defaultValue="usuario" className="w-full">
         <div className="flex justify-center mb-6">
           <TabsList className="w-full max-w-md">
@@ -596,7 +597,7 @@ function UserConfig() {
           </Dialog>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageTransition>
   );
 }
 

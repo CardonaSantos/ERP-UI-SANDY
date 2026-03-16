@@ -50,7 +50,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 const API_URL = import.meta.env.VITE_API_URL;
 type DialogState = {
@@ -75,7 +75,7 @@ function Vencimientos() {
   const getVencimientos = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/vencimientos/get-all-regist-expiration`
+        `${API_URL}/vencimientos/get-all-regist-expiration`,
       );
 
       if (response.status === 200) {
@@ -132,14 +132,7 @@ function Vencimientos() {
   console.log("los venciminetos son: ", vencimientos);
 
   return (
-    <div className="container mx-auto ">
-      <PageHeader
-        title="Vencimientos"
-        subtitle="Vea sus vencimientos próximos"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Vencimientos">
       <div className="rounded-md border">
         <Card className="shadow-xl">
           <CardHeader>
@@ -240,7 +233,7 @@ function Vencimientos() {
                                         </h3>
                                         <p className="text-xs">
                                           {formatearFecha(
-                                            vencimiento.fechaVencimiento
+                                            vencimiento.fechaVencimiento,
                                           )}
                                         </p>
                                       </div>
@@ -377,7 +370,7 @@ function Vencimientos() {
           </CardFooter>
         </Card>
       </div>
-    </div>
+    </PageTransition>
   );
 }
 

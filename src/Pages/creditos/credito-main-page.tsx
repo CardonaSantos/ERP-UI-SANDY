@@ -1,6 +1,3 @@
-import { motion } from "framer-motion";
-import DesvanecerHaciaArriba from "@/Pages/NewDashboard/components/dashboard/motion/desvanecer-hacia-arriba";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import {
   useApiMutation,
   useApiQuery,
@@ -16,6 +13,7 @@ import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { useStore } from "@/components/Context/ContextSucursal";
 import { toast } from "sonner";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 function CreditoMainPageManage() {
   const userRol = useStore((state) => state.userRol) ?? "";
@@ -46,7 +44,7 @@ function CreditoMainPageManage() {
       refetchOnMount: "always",
       refetchOnReconnect: "always",
       retry: 1,
-    }
+    },
   );
 
   const [openDeletCredito, setOpenDeleteCredito] =
@@ -87,23 +85,13 @@ function CreditoMainPageManage() {
   };
 
   return (
-    <motion.div
-      {...DesvanecerHaciaArriba}
-      className="container p-4 space-y-4 mx-auto"
-    >
-      <PageHeader
-        title="Administrador de créditos"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Créditos">
       <CreditTable
         data={credits}
         isLoading={isLoading}
         search={search}
         onSearchChange={(e) => {
           setSearch(e.target.value);
-          // opcional: debounce + setPage(1)
           setPage(1);
         }}
         page={meta.page}
@@ -139,7 +127,7 @@ function CreditoMainPageManage() {
           onClick: () => setOpenDeleteCredito(false),
         }}
       />
-    </motion.div>
+    </PageTransition>
   );
 }
 

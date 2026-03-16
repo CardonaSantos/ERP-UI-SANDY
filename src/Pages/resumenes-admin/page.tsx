@@ -28,7 +28,7 @@ import ReactSelectComponent from "react-select";
 import { Label } from "@/components/ui/label";
 import { es } from "date-fns/locale";
 import { ResumenDiarioAdminResponse } from "./interfaces/resumen";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 type Option = { value: string; label: string };
 type Sucursal = { id: number; nombre: string };
@@ -129,33 +129,20 @@ export default function ResumenDiarioPage() {
   const comp = data.comparativos;
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="space-y-2"
-      >
-        <PageHeader
-          title="Resumenes diarios de cajas"
-          subtitle="Visualice sus registros de cajas por sucursales diarios"
-          sticky={false}
-          fallbackBackTo="/"
-        />
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold">
-              Resumen Diario – Sucursal #{data.sucursalId}
-            </h1>
-            <p className="text-muted-foreground">{formattFecha(data.fecha)}</p>
-          </div>
-          <Button onClick={loadData} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refrescar
-          </Button>
+    <PageTransition fallbackBackTo="/" titleHeader="Resumenes diarios de Cajas">
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <h1 className="text-base font-bold">
+            Resumen Diario – Sucursal #{data.sucursalId}
+          </h1>
+
+          <p className="text-muted-foreground">{formattFecha(data.fecha)}</p>
         </div>
-      </motion.div>
+        <Button onClick={loadData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refrescar
+        </Button>
+      </div>
 
       {/* Filtros */}
       <Card>
@@ -208,11 +195,11 @@ export default function ResumenDiarioPage() {
           title="Caja – Final Operativo"
           value={data.caja.finalOperativo}
           subtitle={`Operativo = Inicio (${formattMonedaGT(
-            data.caja.inicio
+            data.caja.inicio,
           )}) + Ingresos (${formattMonedaGT(
-            data.caja.ingresos
+            data.caja.ingresos,
           )}) − Egresos s/ Cierre (${formattMonedaGT(
-            data.caja.egresosSinCierre
+            data.caja.egresosSinCierre,
           )})`}
           index={0}
         />
@@ -220,7 +207,7 @@ export default function ResumenDiarioPage() {
           title="Caja – Final Físico"
           value={data.caja.finalFisico}
           subtitle={`Físico = Inicio + Ingresos − Egresos (${formattMonedaGT(
-            data.caja.egresos
+            data.caja.egresos,
           )})`}
           index={1}
         />
@@ -228,9 +215,9 @@ export default function ResumenDiarioPage() {
           title="Banco – Final"
           value={data.banco.final}
           subtitle={`Inicio: ${formattMonedaGT(
-            data.banco.inicio
+            data.banco.inicio,
           )} | Ingresos: ${formattMonedaGT(
-            data.banco.ingresos
+            data.banco.ingresos,
           )} | Egresos: ${formattMonedaGT(data.banco.egresos)}`}
           index={2}
         />
@@ -240,7 +227,7 @@ export default function ResumenDiarioPage() {
           subtitle={`${
             data.ventas.cantidad
           } transacciones • Ticket: ${formattMonedaGT(
-            data.ventas.ticketPromedio
+            data.ventas.ticketPromedio,
           )}`}
           index={3}
         />
@@ -266,9 +253,9 @@ export default function ResumenDiarioPage() {
           title="Cuadre Caja vs Efectivo"
           value={data.comparativos.variacionCajaVsVentasEfectivo}
           subtitle={`Neto Caja (op): ${formattMonedaGT(
-            data.comparativos.netoCajaOperativo
+            data.comparativos.netoCajaOperativo,
           )} • Efectivo ventas: ${formattMonedaGT(
-            data.comparativos.efectivoVentas
+            data.comparativos.efectivoVentas,
           )}`}
           badge={{
             text: data.comparativos.alertas.length > 0 ? "Alerta" : "OK",
@@ -403,7 +390,7 @@ export default function ResumenDiarioPage() {
                   <div className="font-medium">
                     {formattMonedaGT(
                       data.transferencias.validaciones
-                        .cajaDisponibleAntesDeDepositar
+                        .cajaDisponibleAntesDeDepositar,
                     )}
                   </div>
                 </div>
@@ -413,7 +400,7 @@ export default function ResumenDiarioPage() {
                   </div>
                   <div className="font-medium">
                     {formattMonedaGT(
-                      data.transferencias.validaciones.excesoDeposito
+                      data.transferencias.validaciones.excesoDeposito,
                     )}
                   </div>
                 </div>
@@ -425,6 +412,6 @@ export default function ResumenDiarioPage() {
 
       {/* Tabla de Depósitos por cuenta */}
       <DepositsTable deposits={dep.porCuenta} />
-    </div>
+    </PageTransition>
   );
 }

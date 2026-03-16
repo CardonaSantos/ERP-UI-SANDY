@@ -23,7 +23,7 @@ import CajaForm from "./caja-form";
 import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
 import { CuentasBancariasSelect } from "@/Types/CuentasBancarias/CuentasBancariasSelect";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 function Caja() {
   const sucursalID: number = useStore((state) => state.sucursalId) ?? 0;
   const userID: number = useStore((state) => state.userId) ?? 0;
@@ -36,7 +36,7 @@ function Caja() {
   console.log(
     "los movimientos y ventas, no se usan mas son: ",
     movimientos,
-    ventas
+    ventas,
   );
 
   const [cajaMontoAnterior, setCajaMontoAnterior] = useState<number>(1);
@@ -88,7 +88,7 @@ function Caja() {
   }, []);
 
   const handleChangeGeneric = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     if (!nuevaCaja) return; // solo en modo ABRIR
     const { name, value, type } = e.target as HTMLInputElement;
@@ -100,7 +100,7 @@ function Caja() {
   };
 
   const handleChangeCerrar = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     if (!cerrarCajaDto) return; // solo en modo CERRAR
     const { name, value, type } = e.target as HTMLInputElement;
@@ -253,7 +253,7 @@ function Caja() {
   console.log("La caja abierta es: ", cajaAbierta);
   console.log(
     "El saldo anterior que en teoria es del parcial es: ",
-    cajaMontoAnterior
+    cajaMontoAnterior,
   );
 
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -280,7 +280,7 @@ function Caja() {
       initialData: [],
       enabled: true, // 👈 fuerza el fetch
       refetchOnMount: "always", // opcional, asegura que pegue al server al montar
-    }
+    },
   );
 
   useEffect(() => {
@@ -291,81 +291,75 @@ function Caja() {
   console.log("cuentas bancarias en caja main page es: ", cuentas);
 
   return (
-    <div className="container mx-auto">
-      <motion.div {...DesvanecerHaciaArriba} className="w-full">
-        <PageHeader
-          title="Caja y Movimientos Financieros"
-          subtitle="Registre turnos en caja y movimientos financieros"
-          sticky={false}
-          fallbackBackTo="/"
-        />
+    <PageTransition
+      fallbackBackTo="/"
+      titleHeader="Registro de Caja y Movimientos Financieros"
+    >
+      <Tabs className="w-full" defaultValue="registrarcaja">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 h-auto p-1">
+          <TabsTrigger
+            value="registrarcaja"
+            className="w-full text-sm md:text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+          >
+            <span className="truncate">Registrar Caja</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="movimientoscaja"
+            className="w-full text-sm md:text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+          >
+            <span className="truncate">Registrar Movimientos de Caja</span>
+          </TabsTrigger>
+        </TabsList>
 
-        <Tabs className="w-full" defaultValue="registrarcaja">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 h-auto p-1">
-            <TabsTrigger
-              value="registrarcaja"
-              className="w-full text-sm md:text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              <span className="truncate">Registrar Caja</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="movimientoscaja"
-              className="w-full text-sm md:text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              <span className="truncate">Registrar Movimientos de Caja</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* TAB: Registrar Caja */}
-          <TabsContent value="registrarcaja" className="mt-6">
-            <motion.div {...DesvanecerHaciaArriba} className="w-full">
-              {/* Center wrapper */}
-              <div className="w-full flex justify-center">
-                {/* El hijo ocupa todo el ancho disponible */}
-                <div className="w-full">
-                  <CajaForm
-                    cuentas={cuentas}
-                    hasOpen={hasOpen}
-                    nuevaCaja={nuevaCaja}
-                    handleChangeGeneric={handleChangeGeneric}
-                    handleSubmitIniciarCaja={handleSubmitIniciarCaja}
-                    cerrarCajaDto={cerrarCajaDto}
-                    handleChangeCerrar={handleChangeCerrar}
-                    handleCerrarCaja={handleCerrarCaja}
-                    isSubmiting={isSubmiting}
-                    cajaMontoAnterior={cajaMontoAnterior}
-                    openCloseCaja={openCloseCaja}
-                    openConfirmDialog={openConfirmDialog}
-                    setOpenCloseCaja={setOpenCloseCaja}
-                    /* ojo: nombre consistente */
-                    setOpenConfirDialog={setOpenConfirDialog}
-                    cajaAbierta={cajaAbierta}
-                    reloadContext={reloadContext}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          </TabsContent>
-
-          {/* TAB: Movimientos de Caja */}
-          <TabsContent value="movimientoscaja" className="mt-6">
+        {/* TAB: Registrar Caja */}
+        <TabsContent value="registrarcaja" className="mt-6">
+          <motion.div {...DesvanecerHaciaArriba} className="w-full">
             {/* Center wrapper */}
             <div className="w-full flex justify-center">
               {/* El hijo ocupa todo el ancho disponible */}
               <div className="w-full">
-                <MovimientoCajaPage
-                  proveedores={proveedores}
+                <CajaForm
+                  cuentas={cuentas}
+                  hasOpen={hasOpen}
+                  nuevaCaja={nuevaCaja}
+                  handleChangeGeneric={handleChangeGeneric}
+                  handleSubmitIniciarCaja={handleSubmitIniciarCaja}
+                  cerrarCajaDto={cerrarCajaDto}
+                  handleChangeCerrar={handleChangeCerrar}
+                  handleCerrarCaja={handleCerrarCaja}
+                  isSubmiting={isSubmiting}
+                  cajaMontoAnterior={cajaMontoAnterior}
+                  openCloseCaja={openCloseCaja}
+                  openConfirmDialog={openConfirmDialog}
+                  setOpenCloseCaja={setOpenCloseCaja}
+                  /* ojo: nombre consistente */
+                  setOpenConfirDialog={setOpenConfirDialog}
+                  cajaAbierta={cajaAbierta}
                   reloadContext={reloadContext}
-                  userID={userID}
-                  getMovimientosCaja={refreshMovimientos}
-                  cuentasBancarias={cuentas}
                 />
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
-      </motion.div>
-    </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* TAB: Movimientos de Caja */}
+        <TabsContent value="movimientoscaja" className="mt-6">
+          {/* Center wrapper */}
+          <div className="w-full flex justify-center">
+            {/* El hijo ocupa todo el ancho disponible */}
+            <div className="w-full">
+              <MovimientoCajaPage
+                proveedores={proveedores}
+                reloadContext={reloadContext}
+                userID={userID}
+                getMovimientosCaja={refreshMovimientos}
+                cuentasBancarias={cuentas}
+              />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </PageTransition>
   );
 }
 

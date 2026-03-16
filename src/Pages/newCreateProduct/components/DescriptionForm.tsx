@@ -25,7 +25,7 @@ export default function DescriptionForm({ value, onChange }: Props) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Descripción</CardTitle>
+        <CardTitle className="text-base">Descripción</CardTitle>
         <CardDescription>Información detallada del producto</CardDescription>
       </CardHeader>
 

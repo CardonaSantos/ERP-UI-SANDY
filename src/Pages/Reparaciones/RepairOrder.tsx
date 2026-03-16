@@ -60,7 +60,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 dayjs.extend(utc);
 dayjs.extend(localizedFormat);
@@ -120,7 +120,7 @@ export default function RepairOrderForm() {
   const handleChange = (
     e:
       | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { name: string; value: string } }
+      | { target: { name: string; value: string } },
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -177,7 +177,7 @@ export default function RepairOrderForm() {
   const fetchProductos = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/products/product-to-warranty`
+        `${API_URL}/products/product-to-warranty`,
       );
       if (response.status === 200) {
         setProductos(response.data);
@@ -190,7 +190,7 @@ export default function RepairOrderForm() {
   const getUsers = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/client/customers-to-warranty`
+        `${API_URL}/client/customers-to-warranty`,
       );
       if (response.status === 200) {
         setClientes(response.data);
@@ -252,7 +252,7 @@ export default function RepairOrderForm() {
 
   function RepairRecordsTable({ reparaciones }: RepairRecordsTableProps) {
     const [selectedRepair, setSelectedRepair] = useState<Reparacion | null>(
-      null
+      null,
     );
 
     const InfoItem = ({
@@ -439,7 +439,7 @@ export default function RepairOrderForm() {
                                       icon={Calendar}
                                       label="Fecha Recibido"
                                       value={formatearFecha(
-                                        selectedRepair.fechaRecibido
+                                        selectedRepair.fechaRecibido,
                                       )}
                                     />
                                     {selectedRepair.fechaEntregado && (
@@ -447,7 +447,7 @@ export default function RepairOrderForm() {
                                         icon={Calendar}
                                         label="Fecha Entregado"
                                         value={formatearFecha(
-                                          selectedRepair.fechaEntregado
+                                          selectedRepair.fechaEntregado,
                                         )}
                                       />
                                     )}
@@ -540,7 +540,7 @@ export default function RepairOrderForm() {
                                                 icon={Calendar}
                                                 label="Fecha de entrega"
                                                 value={formatearFecha(
-                                                  registro.fechaRegistro
+                                                  registro.fechaRegistro,
                                                 )}
                                               />
                                               <InfoItem
@@ -570,7 +570,7 @@ export default function RepairOrderForm() {
                                                   {
                                                     style: "currency",
                                                     currency: "GTQ",
-                                                  }
+                                                  },
                                                 )
                                                   .format(registro.montoPagado)
                                                   .toString()}
@@ -586,7 +586,7 @@ export default function RepairOrderForm() {
                                               />
                                             </div>
                                           </li>
-                                        )
+                                        ),
                                       )}
                                     </ul>
                                   </CardContent>
@@ -646,13 +646,7 @@ export default function RepairOrderForm() {
   }
 
   return (
-    <div className="">
-      <PageHeader
-        title="Reparaciones"
-        subtitle="Administre sus registros de reparaciones"
-        sticky={false}
-        fallbackBackTo="/"
-      />
+    <PageTransition fallbackBackTo="/" titleHeader="Metas">
       <Tabs defaultValue="reparaciones" className="w-full max-w-6xl mx-auto">
         <TabsList className="flex justify-center w-full border-b border-muted">
           <TabsTrigger className="w-full " value="reparaciones">
@@ -805,6 +799,6 @@ export default function RepairOrderForm() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageTransition>
   );
 }

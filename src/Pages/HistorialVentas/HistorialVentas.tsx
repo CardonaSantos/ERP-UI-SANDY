@@ -31,7 +31,6 @@ import {
   useApiMutation,
   useApiQuery,
 } from "@/hooks/genericoCall/genericoCallHook";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import VentaDetalleDialog from "../POS/VentaDetalleDialog";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,6 +42,7 @@ import {
   useReportVentas,
   UtilidadReportQuery,
 } from "@/hooks/use-reports/use-report-excel";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 registerLocale("es", es);
 
@@ -367,15 +367,7 @@ export default function HistorialVentasMain() {
   }
 
   return (
-    <div className="max-w-7xl container mx-auto">
-      {/* Header */}
-      <PageHeader
-        title="Historial de ventas"
-        fallbackBackTo="/"
-        sticky={false}
-        subtitle="Filtre y vea el detalle de sus ventas"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Historial de Ventas">
       {/* Filtros */}
       <Card className="mb-4">
         <CardContent className="p-4 space-y-3">
@@ -675,6 +667,6 @@ export default function HistorialVentasMain() {
           </div>
         }
       />
-    </div>
+    </PageTransition>
   );
 }

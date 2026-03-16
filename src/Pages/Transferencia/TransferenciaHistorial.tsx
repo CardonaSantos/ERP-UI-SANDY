@@ -42,7 +42,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 const API_URL = import.meta.env.VITE_API_URL;
 
 interface Producto {
@@ -105,12 +105,12 @@ export default function TransferenciaProductosHistorial() {
     const fetchTransferencias = async () => {
       try {
         const response = await axios.get(
-          `${API_URL}/transferencia-producto/get-my-translates/${sucursalId}`
+          `${API_URL}/transferencia-producto/get-my-translates/${sucursalId}`,
         );
         setTransferencias(response.data);
       } catch (err) {
         setError(
-          "Hubo un error al cargar los datos. Por favor, intenta de nuevo."
+          "Hubo un error al cargar los datos. Por favor, intenta de nuevo.",
         );
       }
     };
@@ -167,13 +167,10 @@ export default function TransferenciaProductosHistorial() {
   );
 
   return (
-    <div className="container mx-auto">
-      <PageHeader
-        title="Historiales de transferencias"
-        subtitle="Tranfiera sus stocks entre sus sucursales"
-        sticky={false}
-        fallbackBackTo="/"
-      />
+    <PageTransition
+      fallbackBackTo="/"
+      titleHeader="Historial de Transferencias Stock"
+    >
       <Card className="shadow-xl">
         <CardContent>
           <div className="">
@@ -265,39 +262,12 @@ export default function TransferenciaProductosHistorial() {
                                     label="Producto"
                                     value={
                                       formatearFecha(
-                                        transferencia.fechaTransferencia
+                                        transferencia.fechaTransferencia,
                                       ) ?? undefined
                                     }
                                   />
                                 </CardContent>
                               </Card>
-
-                              {/* <Card className="mt-6 border-none shadow-none">
-                            <CardHeader>
-                              <CardTitle className="text-xl font-semibold text-primary">
-                                Información de Contacto
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <InfoItem
-                                icon={<User className="h-5 w-5" />}
-                                label="Nombre del Contacto"
-                                value={providerView.nombreContacto ?? undefined}
-                              />
-                              <InfoItem
-                                icon={<Phone className="h-5 w-5" />}
-                                label="Teléfono de Contacto"
-                                value={
-                                  providerView.telefonoContacto ?? undefined
-                                }
-                              />
-                              <InfoItem
-                                icon={<Mail className="h-5 w-5" />}
-                                label="Email de Contacto"
-                                value={providerView.emailContacto ?? undefined}
-                              />
-                            </CardContent>
-                          </Card> */}
                             </ScrollArea>
                           </DialogContent>
                         </Dialog>
@@ -395,6 +365,6 @@ export default function TransferenciaProductosHistorial() {
           </CardFooter>
         </CardContent>
       </Card>
-    </div>
+    </PageTransition>
   );
 }

@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 const API_URL = import.meta.env.VITE_API_URL;
 
 type Sucursal = {
@@ -61,7 +61,7 @@ export default function Sucursales() {
 
     try {
       const response = await axios.get(
-        `${API_URL}/sucursales/info/sucursales-infor`
+        `${API_URL}/sucursales/info/sucursales-infor`,
       );
       console.log("Respuesta de la API:", response);
 
@@ -92,7 +92,7 @@ export default function Sucursales() {
     try {
       const response = await axios.patch(
         `${API_URL}/sucursales/editar-sucursal/${editingSucursal.id}`,
-        editingSucursal
+        editingSucursal,
       );
       console.log("Respuesta de edición:", response);
 
@@ -102,7 +102,7 @@ export default function Sucursales() {
       } else {
         console.log(
           "Error al actualizar la sucursal. Status:",
-          response.status
+          response.status,
         );
       }
     } catch (error) {
@@ -123,14 +123,7 @@ export default function Sucursales() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <PageHeader
-        title="Sucursales"
-        subtitle="Administre sus sucursales"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Sucursales">
       {/* Renderiza un spinner o algún indicador de carga */}
       {loading && <div>Cargando sucursales...</div>}
 
@@ -370,6 +363,6 @@ export default function Sucursales() {
           </Card>
         ))}
       </div>
-    </div>
+    </PageTransition>
   );
 }

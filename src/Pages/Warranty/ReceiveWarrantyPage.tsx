@@ -2,7 +2,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { useStore } from "@/components/Context/ContextSucursal"; // Asumiendo que esta ruta es correcta
-import { motion } from "framer-motion";
 import {
   fetchAllGarantias,
   fetchProvidersToWarranty,
@@ -21,12 +20,11 @@ import {
   VentasHistorial,
 } from "./interfaces2.interfaces";
 import CardGarantiaCreate from "./CardGarantiaCreate";
-import DesvanecerHaciaArriba from "@/Crm/Motion/DashboardAnimations";
 import { WarrantyList } from "./garantiasMap/warranty-list";
 import { GarantiaDto } from "./interfacesTable";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 import { useApiMutation } from "@/hooks/genericoCall/genericoCallHook";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 // Sub-componentes para la sección de detalles
 type OptionType = { value: number; label: string };
 export default function ReceiveWarrantyPage() {
@@ -41,19 +39,19 @@ export default function ReceiveWarrantyPage() {
 
   // UI state
   const [ventaSelected, setVentaSelected] = useState<VentaHistorialItem | null>(
-    null
+    null,
   );
   const [productoSelected, setProductoSelected] =
     useState<ProductoVenta | null>(null);
   const [productSelected, setProductSelected] = useState<ProductoVenta | null>(
-    null
+    null,
   );
   const [openSelectedProduct, setOpenSelectedProduct] = useState(false);
   const [selectedProduct, setSelectedProduct] =
     useState<ProductoVentaToTable | null>(null);
   const [openProductDialog, setOpenProductDialog] = useState(false);
   const [selecProviderID, setSelecProviderID] = useState<OptionType | null>(
-    null
+    null,
   );
 
   // Form
@@ -104,7 +102,7 @@ export default function ReceiveWarrantyPage() {
   // Select options
   const providerOptionSelect = useMemo<OptionType[]>(
     () => providers.map((prov) => ({ label: prov.nombre, value: prov.id })),
-    [providers]
+    [providers],
   );
 
   const optionsVenta = useMemo<OptionType[]>(
@@ -113,7 +111,7 @@ export default function ReceiveWarrantyPage() {
         label: `Venta No. #${v.id} | Cliente: ${v.cliente.nombre} | Productos: ${v.productos.length}`,
         value: v.id,
       })),
-    [ventas]
+    [ventas],
   );
 
   // Handlers
@@ -126,7 +124,7 @@ export default function ReceiveWarrantyPage() {
       const venta = ventas.find((v) => v.id === opt.value) ?? null;
       setVentaSelected(venta);
     },
-    [ventas]
+    [ventas],
   );
 
   const handleChangeProvider = useCallback((selected: OptionType | null) => {
@@ -152,7 +150,7 @@ export default function ReceiveWarrantyPage() {
           loading: "Registrando garantía...",
           success: "Registro insertado correctamente",
           error: (error) => getApiErrorMessageAxios(error),
-        }
+        },
       );
 
       // Reset form mínimo
@@ -209,14 +207,7 @@ export default function ReceiveWarrantyPage() {
   }, [garantiaSelected, eliminarGarantia, loadInitialData]);
 
   return (
-    <motion.div {...DesvanecerHaciaArriba} className="w-full">
-      <PageHeader
-        title="Garantías"
-        subtitle="Cree, visualice y edite sus garantías"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Garantías">
       <Tabs defaultValue="regist" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="regist" className="w-full">
@@ -272,6 +263,6 @@ export default function ReceiveWarrantyPage() {
           />
         </TabsContent>
       </Tabs>
-    </motion.div>
+    </PageTransition>
   );
 }

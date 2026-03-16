@@ -20,12 +20,12 @@ import {
   TipoPresentacion,
   PresentationDetailDTO,
 } from "./interfaces/DomainProdPressTypes";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/components/Context/ContextSucursal";
 import { buildFormData, debugFormData } from "./builder";
 import { QueryKey, useQueryClient } from "@tanstack/react-query";
 import { validateBeforeSubmit } from "./helpers/validators";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 // Estado inicial
 const initialProduct: ProductCreateDTO = {
@@ -205,13 +205,10 @@ export default function ProductEditorContainer({
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Creación y edición de un producto"
-        sticky={false}
-        fallbackBackTo="/"
-        subtitle="Edite los detalles de su modelo de productos"
-      />
+    <PageTransition
+      fallbackBackTo="/"
+      titleHeader="Creación y Edición de Producto"
+    >
       {/* Secciones solo en modo producto */}
       {mode === "product" && (
         <>
@@ -258,7 +255,7 @@ export default function ProductEditorContainer({
             : `Crear ${mode === "product" ? "Producto" : "Presentación"}`}
         </Button>
       </div>
-    </div>
+    </PageTransition>
   );
 }
 

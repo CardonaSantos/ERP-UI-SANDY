@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 import { SucursalOption } from "./interfaces/FlujoCajaHsitoricoTypes";
 import { FlujoGlobalDiaUI, FlujoSucursalDiaUI } from "./interfaces/interface2";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 // === NUEVOS TYPES ===
 
@@ -36,7 +36,7 @@ export default function FlujoHistoricoPage() {
     () => ({
       from: dayjs().tz(TZGT).subtract(6, "day").startOf("day").toDate(),
       to: dayjs().tz(TZGT).endOf("day").toDate(),
-    })
+    }),
   );
   const [sucursal, setSucursal] = useState<SucursalOption | null>(null);
 
@@ -52,12 +52,12 @@ export default function FlujoHistoricoPage() {
       range.from
         ? dayjs(range.from).tz(TZGT).startOf("day").toISOString()
         : null,
-    [range.from]
+    [range.from],
   );
   const toISO = useMemo(
     () =>
       range.to ? dayjs(range.to).tz(TZGT).endOf("day").toISOString() : null,
-    [range.to]
+    [range.to],
   );
 
   // Queries (con nuevos tipos)
@@ -70,7 +70,7 @@ export default function FlujoHistoricoPage() {
     ["flujoCajaGlobal", fromISO, toISO, sucursalID],
     "caja-administrativo/global",
     { params: { from: fromISO, to: toISO, sucursalId: sucursalID } },
-    { enabled: Boolean(fromISO && toISO) }
+    { enabled: Boolean(fromISO && toISO) },
   );
 
   const {
@@ -82,7 +82,7 @@ export default function FlujoHistoricoPage() {
     ["cajaSucursal", fromISO, toISO, sucursalID],
     `/caja-administrativo/sucursal/${sucursalID}`,
     { params: { from: fromISO, to: toISO, sucursalId: sucursalID } },
-    { enabled: Boolean(fromISO && toISO) }
+    { enabled: Boolean(fromISO && toISO) },
   );
 
   const isLoading = isLoadingGlobal || isLoadingSucursal;
@@ -130,14 +130,7 @@ export default function FlujoHistoricoPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Flujo de Caja Histórico"
-        subtitle="Ingresos y egresos de cajas históricos"
-        sticky={false}
-        fallbackBackTo="/"
-      />
-
+    <PageTransition fallbackBackTo="/" titleHeader="Flujo de Caja Historico">
       <FiltersBar
         from={range.from}
         to={range.to}
@@ -174,6 +167,6 @@ export default function FlujoHistoricoPage() {
           </TabsContent>
         </Tabs>
       )}
-    </div>
+    </PageTransition>
   );
 }

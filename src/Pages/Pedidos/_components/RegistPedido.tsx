@@ -18,9 +18,7 @@ import {
   useApiMutation,
   useApiQuery,
 } from "@/hooks/genericoCall/genericoCallHook";
-import { motion } from "framer-motion";
-import DesvanecerHaciaArriba from "@/Crm/Motion/DashboardAnimations";
-import { PageHeader } from "@/utils/components/PageHeaderPos";
+import { PageTransition } from "@/components/Transition/layout-transition";
 type Option = { label: string; value: string };
 
 // (mínimo) tipo de respuesta del listado de pedidos
@@ -44,7 +42,7 @@ export default function PedidosMainPage() {
     {
       onError: (e) =>
         toast.error((e as Error)?.message ?? "Error al cargar clientes"),
-    }
+    },
   );
   console.log("Los clientes son: ", clientes);
 
@@ -56,7 +54,7 @@ export default function PedidosMainPage() {
         value: String(c.id),
         label: `${c.nombre} ${c.apellidos ?? ""}`.trim(),
       })),
-    [clientes]
+    [clientes],
   );
 
   const sucursalesOptions: Option[] = useMemo(
@@ -65,7 +63,7 @@ export default function PedidosMainPage() {
         value: String(c.id),
         label: c.nombre,
       })),
-    [sucursales]
+    [sucursales],
   );
 
   // ---------- Productos (para seleccionar) ----------
@@ -97,7 +95,7 @@ export default function PedidosMainPage() {
         toast.error(e?.message ?? "Error al crear pedido");
         setOpenCreate(false);
       },
-    }
+    },
   );
 
   // ---------- Eliminar pedido (DELETE /pedidos/delete-regist-pedido/:id) ----------
@@ -109,12 +107,12 @@ export default function PedidosMainPage() {
     {
       mutationFn: async ({ id }) => {
         const { data } = await axiosClient.delete(
-          `/pedidos/delete-regist-pedido/${id}`
+          `/pedidos/delete-regist-pedido/${id}`,
         );
         return data;
       },
       onError: (err) => toast.error(getApiErrorMessageAxios(err)),
-    }
+    },
   );
 
   const handleDelete = (id: number) => {
@@ -134,7 +132,7 @@ export default function PedidosMainPage() {
           setIsDeleting(false);
           refetchPedidos();
         },
-      }
+      },
     );
   };
 
@@ -160,7 +158,7 @@ export default function PedidosMainPage() {
     },
     {
       placeholderData: keepPreviousData,
-    }
+    },
   );
 
   if (isLoading) return <p>Cargando sucursales…</p>;
@@ -171,13 +169,7 @@ export default function PedidosMainPage() {
   };
 
   return (
-    <motion.div {...DesvanecerHaciaArriba}>
-      <PageHeader
-        title="Pedidos"
-        subtitle="Cree pedidos para clientes o su sucursal"
-        fallbackBackTo="/"
-        sticky={false}
-      />
+    <PageTransition fallbackBackTo="/" titleHeader="Pedidos">
       <Tabs defaultValue="pedidos" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
@@ -222,6 +214,6 @@ export default function PedidosMainPage() {
           />
         </TabsContent>
       </Tabs>
-    </motion.div>
+    </PageTransition>
   );
 }
