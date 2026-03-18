@@ -249,6 +249,17 @@ const menuItemsAdmin = [
     ],
   },
 
+  {
+    icon: PiggyBank,
+    label: "Costos Presupuestales",
+    submenu: [
+      {
+        icon: ClipboardList,
+        label: "Costos Presupuestales",
+        href: "/costos-presupuestales",
+      },
+    ],
+  },
   // === Compras ===
   {
     icon: ShoppingCart,

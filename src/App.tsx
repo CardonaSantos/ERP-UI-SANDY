@@ -93,6 +93,7 @@ import PlantillasLegales from "./Pages/plantillas-legales-credito/page";
 import ContratoImprimible from "./Pages/plantillas-legales-credito/components/render-plantilla";
 import ComprobanteCuota from "./Pages/creditos/components/comprobante-cuota";
 import CotizadorMainPage from "./Pages/cotizador/page";
+import CostoPresupuestalMainPage from "./Pages/costo_presupuestal/page";
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -472,6 +473,15 @@ function App() {
               element={
                 <ProtectRouteAdmin>
                   <CuentasBancariasPage />
+                </ProtectRouteAdmin>
+              }
+            />
+
+            <Route
+              path="/costos-presupuestales"
+              element={
+                <ProtectRouteAdmin>
+                  <CostoPresupuestalMainPage />
                 </ProtectRouteAdmin>
               }
             />
