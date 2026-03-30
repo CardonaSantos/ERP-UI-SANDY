@@ -32,7 +32,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 gap-1 px-1 text-xs font-semibold text-slate-950 hover:bg-slate-100"
+        className="h-7 gap-1 px-1 text-xs font-semibold  hover:bg-slate-100"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Partida
@@ -46,9 +46,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
           <p className="text-xs font-mono font-semibold text-slate-500 leading-none">
             {codigo}
           </p>
-          <p className="text-sm font-medium text-slate-950 leading-snug mt-0.5">
-            {nombre}
-          </p>
+          <p className="text-sm font-medium  leading-snug mt-0.5">{nombre}</p>
         </div>
       );
     },
@@ -59,9 +57,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
     id: "centroCosto",
     accessorFn: (row) => row.centroCosto.nombre,
     header: () => (
-      <span className="text-xs font-semibold text-slate-950">
-        Centro de Costo
-      </span>
+      <span className="text-xs font-semibold ">Centro de Costo</span>
     ),
     cell: ({ row }) => {
       const { codigo, nombre, activo } = row.original.centroCosto;
@@ -70,7 +66,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
           <p className="text-xs font-mono text-slate-500 leading-none">
             {codigo}
           </p>
-          <p className="text-sm text-slate-950 leading-snug mt-0.5">{nombre}</p>
+          <p className="text-sm  leading-snug mt-0.5">{nombre}</p>
           {!activo && (
             <span className="text-[10px] text-slate-400 italic">Inactivo</span>
           )}
@@ -82,11 +78,9 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
   // ── 3. Sucursal ─────────────────────────────────────────────────────────────
   {
     accessorKey: "sucursal",
-    header: () => (
-      <span className="text-xs font-semibold text-slate-950">Sucursal</span>
-    ),
+    header: () => <span className="text-xs font-semibold ">Sucursal</span>,
     cell: ({ row }) => (
-      <span className="text-sm text-slate-950 whitespace-nowrap">
+      <span className="text-sm  whitespace-nowrap">
         {row.original.sucursal}
       </span>
     ),
@@ -96,20 +90,16 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
   {
     id: "periodo",
     accessorFn: (row) => row.periodo.nombre,
-    header: () => (
-      <span className="text-xs font-semibold text-slate-950">Periodo</span>
-    ),
+    header: () => <span className="text-xs font-semibold ">Periodo</span>,
     cell: ({ row }) => {
       const { nombre, estado } = row.original.periodo;
       const isOpen = estado === true;
       return (
         <div className="flex flex-col gap-1 min-w-[110px]">
-          <span className="text-sm text-slate-950 whitespace-nowrap">
-            {nombre}
-          </span>
+          <span className="text-sm  whitespace-nowrap">{nombre}</span>
           <Badge
             variant="outline"
-            className={`w-fit text-[10px] px-1.5 py-0 leading-5 font-semibold border text-slate-950 ${
+            className={`w-fit text-[10px] px-1.5 py-0 leading-5 font-semibold border  ${
               isOpen
                 ? "border-emerald-400 bg-emerald-50"
                 : "border-slate-300 bg-slate-100"
@@ -129,7 +119,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 gap-1 px-1 text-xs font-semibold text-slate-950 hover:bg-slate-100 justify-end w-full"
+        className="h-7 gap-1 px-1 text-xs font-semibold  hover:bg-slate-100 justify-end w-full"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Asignado
@@ -137,7 +127,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
       </Button>
     ),
     cell: ({ row }) => (
-      <span className="text-sm font-medium tabular-nums text-slate-950 block text-right">
+      <span className="text-sm font-medium tabular-nums  block text-right">
         {formatGTQ(row.original.montoAsignado)}
       </span>
     ),
@@ -147,12 +137,10 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
   {
     accessorKey: "montoEjercido",
     header: () => (
-      <span className="text-xs font-semibold text-slate-950 block text-right">
-        Ejercido
-      </span>
+      <span className="text-xs font-semibold  block text-right">Ejercido</span>
     ),
     cell: ({ row }) => (
-      <span className="text-sm tabular-nums text-slate-700 block text-right">
+      <span className="text-sm tabular-nums  block text-right">
         {formatGTQ(row.original.montoEjercido)}
       </span>
     ),
@@ -165,7 +153,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 gap-1 px-1 text-xs font-semibold text-slate-950 hover:bg-slate-100 justify-end w-full"
+        className="h-7 gap-1 px-1 text-xs font-semibold  hover:bg-slate-100 justify-end w-full"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Disponible
@@ -180,7 +168,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
         <div className="min-w-[120px] text-right">
           <span
             className={`text-sm font-semibold tabular-nums ${
-              isLow ? "text-rose-600" : "text-slate-950"
+              isLow ? "text-rose-600" : ""
             }`}
           >
             {formatGTQ(available)}
@@ -214,7 +202,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 w-7 p-0 text-slate-500 hover:text-slate-950 hover:bg-slate-100"
+        className="h-7 w-7 p-0 text-slate-500 hover: hover:bg-slate-100"
         aria-label={`Ver detalles del presupuesto ${row.original.id}`}
         asChild
       >

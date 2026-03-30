@@ -1,8 +1,7 @@
-import { PresupuestoListItem } from "@/Types/costos presupuestales/presupuestos_all";
-import React from "react";
+import { Periodo } from "@/Types/costos presupuestales/partida-periodo-costo";
 
 interface Props {
-  data: PresupuestoListItem[];
+  data: Periodo[];
   isLoading: boolean;
 }
 

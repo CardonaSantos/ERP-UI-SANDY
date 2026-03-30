@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useMemo } from "react";
 import {
   useReactTable,
@@ -36,6 +35,7 @@ import {
 } from "lucide-react";
 import { PresupuestoListItem } from "@/Types/costos presupuestales/presupuestos_all";
 import { columns } from "./table/columns";
+import { Link } from "react-router-dom";
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatGTQ = (amount: number) =>
@@ -63,14 +63,14 @@ function SummaryCard({
   accent = "default",
 }: SummaryCardProps) {
   const accentBg = {
-    default: "bg-slate-50 border-slate-200",
-    warn: "bg-amber-50 border-amber-200",
-    danger: "bg-rose-50 border-rose-200",
+    default: " border-slate-200",
+    warn: " border-amber-200",
+    danger: " border-rose-200",
   }[accent];
   const accentIcon = {
-    default: "text-slate-500",
-    warn: "text-amber-600",
-    danger: "text-rose-600",
+    default: "",
+    warn: "",
+    danger: "",
   }[accent];
 
   return (
@@ -79,12 +79,8 @@ function SummaryCard({
     >
       <span className={`mt-0.5 shrink-0 ${accentIcon}`}>{icon}</span>
       <div>
-        <p className="text-xs text-slate-500 font-medium leading-none">
-          {label}
-        </p>
-        <p className="text-base font-semibold text-slate-950 mt-1 tabular-nums">
-          {value}
-        </p>
+        <p className="text-xs  font-medium leading-none">{label}</p>
+        <p className="text-base font-semibold  mt-1 tabular-nums">{value}</p>
         {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
       </div>
     </article>
@@ -161,21 +157,21 @@ export function PresupuestosDashboard({ data, isLoading }: Props) {
         <div className="flex items-center gap-2">
           <LayoutDashboard size={18} className="text-slate-400" />
           <div>
-            <h2 className="text-base font-semibold text-slate-950 leading-none">
-              Gestión de Presupuestos
-            </h2>
             <p className="text-xs text-slate-400 mt-0.5">
               {data.length} registro{data.length !== 1 ? "s" : ""} en total
             </p>
           </div>
         </div>
-        <Button
-          size="sm"
-          className="h-8 gap-1.5 text-xs font-medium bg-slate-950 text-white hover:bg-slate-800"
-        >
-          <Plus size={14} />
-          Nueva Asignación
-        </Button>
+
+        <Link to={`/crear-presupuesto`}>
+          <Button
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-medium  text-white"
+          >
+            <Plus size={14} />
+            Nueva Asignación
+          </Button>
+        </Link>
       </header>
 
       {/* ── Summary cards ─────────────────────────────────────────────────── */}
@@ -254,10 +250,7 @@ export function PresupuestosDashboard({ data, isLoading }: Props) {
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((hg) => (
-                <TableRow
-                  key={hg.id}
-                  className="bg-slate-50 border-b border-slate-200 hover:bg-slate-50"
-                >
+                <TableRow key={hg.id} className="">
                   {hg.headers.map((header) => (
                     <TableHead
                       key={header.id}
@@ -280,7 +273,7 @@ export function PresupuestosDashboard({ data, isLoading }: Props) {
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
-                    className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors"
+                    className="border-b border-slate-100  transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
@@ -299,7 +292,7 @@ export function PresupuestosDashboard({ data, isLoading }: Props) {
                 <TableRow>
                   <TableCell
                     colSpan={columns.length}
-                    className="h-32 text-center text-sm text-slate-400"
+                    className="h-32 text-center text-sm "
                   >
                     No se encontraron presupuestos.
                   </TableCell>
@@ -312,7 +305,7 @@ export function PresupuestosDashboard({ data, isLoading }: Props) {
 
       {/* ── Pagination ─────────────────────────────────────────────────────── */}
       {!isLoading && totalRows > pageSize && (
-        <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="flex items-center justify-between text-xs ">
           <span>
             Mostrando {from}–{to} de {totalRows} registros
           </span>

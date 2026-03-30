@@ -3,6 +3,11 @@ import { PresupuestoDetalleView } from "@/Types/costos presupuestales/costos_pre
 import { CostosPresupuestalesQkeys } from "./Qk";
 import { erpEndpoints } from "@/API/routes/endpoints";
 import { PresupuestoListItem } from "@/Types/costos presupuestales/presupuestos_all";
+import {
+  CentroCosto,
+  Partida,
+  Periodo,
+} from "@/Types/costos presupuestales/partida-periodo-costo";
 
 // Obtener lista de presupuestos
 export function useGetPresupuestos() {
@@ -20,17 +25,24 @@ export function useGetPresupuestoDetalle(id: number) {
   );
 }
 
-// Catálogos
+// Catálogos Tipados
 export function useGetPartidas() {
-  return erp.useQueryApi<Array<any>>(
+  return erp.useQueryApi<Partida[]>(
     CostosPresupuestalesQkeys.partidas,
     erpEndpoints.costos_presupuestales.partidas,
   );
 }
 
 export function useGetPeriodos() {
-  return erp.useQueryApi<Array<any>>(
+  return erp.useQueryApi<Periodo[]>(
     CostosPresupuestalesQkeys.periodos,
     erpEndpoints.costos_presupuestales.periodos,
+  );
+}
+
+export function useGetCentrosCosto() {
+  return erp.useQueryApi<CentroCosto[]>(
+    CostosPresupuestalesQkeys.centros_costos,
+    erpEndpoints.costos_presupuestales.centros_costos,
   );
 }

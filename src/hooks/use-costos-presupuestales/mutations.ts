@@ -16,3 +16,10 @@ export interface CreatePeriodoDto {
   fechaInicio: string | Date;
   fechaFin: string | Date;
 }
+
+export interface CreateCentroCostoDto {
+  codigo: string;
+  nombre: string;
+  sucursalId: number;
+  activo: boolean;
+}

@@ -5,4 +5,6 @@ export const CostosPresupuestalesQkeys = {
     ["costos-presupuestales", "presupuesto", id] as const,
   partidas: ["costos-presupuestales", "partidas"] as const,
   periodos: ["costos-presupuestales", "periodos"] as const,
+
+  centros_costos: ["catalogos", "centros-costo"] as const,
 };

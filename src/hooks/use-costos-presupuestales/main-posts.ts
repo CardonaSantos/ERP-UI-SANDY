@@ -3,10 +3,12 @@ import { CostosPresupuestalesQkeys } from "./Qk";
 import { erp } from "@/API/erpApi";
 import { erpEndpoints } from "@/API/routes/endpoints";
 import {
+  CreateCentroCostoDto,
   CreatePartidaDto,
   CreatePeriodoDto,
   CreatePresupuestoDto,
 } from "./mutations";
+import { toast } from "sonner";
 
 // --- CREACIÓN DE PARTIDA ---
 export function usePostPartida() {
@@ -17,7 +19,7 @@ export function usePostPartida() {
     {},
     {
       onSuccess: () => {
-        // Al crear una partida, invalidamos la lista de partidas
+        toast.info("Ejecutando"); // ← aquí sí tiene sentido
         queryClient.invalidateQueries({
           queryKey: CostosPresupuestalesQkeys.partidas,
         });
@@ -55,6 +57,29 @@ export function usePostPresupuesto() {
         // Al asignar un nuevo presupuesto, invalidamos la lista general
         queryClient.invalidateQueries({
           queryKey: CostosPresupuestalesQkeys.presupuestos,
+        });
+      },
+    },
+  );
+}
+
+export function useGetCentrosCosto() {
+  return erp.useQueryApi<Array<any>>(
+    CostosPresupuestalesQkeys.centros_costos,
+    "/centros-costo",
+  );
+}
+
+export function usePostCentroCosto() {
+  const queryClient = useQueryClient();
+  return erp.useMutationApi<void, CreateCentroCostoDto>(
+    "post",
+    "/centros-costo",
+    {},
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: CostosPresupuestalesQkeys.centros_costos,
         });
       },
     },

@@ -13,6 +13,7 @@ export const erpEndpoints = {
     // Catálogos
     partidas: `/partidas`,
     periodos: `/periodos`,
+    centros_costos: `/centros-costo`,
   },
   tickets_boleta: {
     byId: (id: number) => `/tickets-soporte/get-ticket-boleta/${id}`,
