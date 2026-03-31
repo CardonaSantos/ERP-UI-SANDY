@@ -9,7 +9,7 @@ export interface PresupuestoDetalleView {
     nombre: string;
     fechaInicio: string | Date;
     fechaFin: string | Date;
-    estado: boolean;
+    estado: EstadoPeriodo;
   };
 
   centroCosto: {
@@ -27,6 +27,12 @@ export interface PresupuestoDetalleView {
   };
 
   historial: MovimientoHistorial[];
+}
+
+export enum EstadoPeriodo {
+  ABIERTO = "ABIERTO",
+  CERRADO = "CERRADO",
+  BLOQUEADO = "BLOQUEADO",
 }
 
 export interface MovimientoHistorial {

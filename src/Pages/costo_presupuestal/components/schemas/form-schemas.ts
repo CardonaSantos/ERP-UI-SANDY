@@ -3,6 +3,22 @@ import z from "zod";
 import { FieldConfig } from "../dynamictEntityForm/dynamicForm";
 import { SelectOption } from "../presupuestos/form/presupuesto-form";
 
+// ---- AJUSTE PRESUPUESTO FORM
+export const presupuestoSchemaAjuste = z.object({
+  montoAsignado: z
+    .number({ error: "Ingresa un monto a setear" })
+    .positive("Debe ser mayor a 0"),
+});
+
+export const presupuestoAjuste: FieldConfig[] = [
+  {
+    name: "montoAsignado",
+    label: "Nuevo Monto",
+    type: "number",
+    placeholder: "1000",
+  },
+];
+
 // ── PRESUPUESTO ────────────────────────────────────────────────────────────
 
 interface generarOptions {

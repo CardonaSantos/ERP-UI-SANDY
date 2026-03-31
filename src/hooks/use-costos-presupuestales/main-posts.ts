@@ -7,8 +7,10 @@ import {
   CreatePartidaDto,
   CreatePeriodoDto,
   CreatePresupuestoDto,
+  PresupuestoAjusteDto,
 } from "./mutations";
 import { toast } from "sonner";
+import { getApiErrorMessageAxios } from "@/Pages/Utils/UtilsErrorApi";
 
 // --- CREACIÓN DE PARTIDA ---
 export function usePostPartida() {
@@ -58,6 +60,31 @@ export function usePostPresupuesto() {
         queryClient.invalidateQueries({
           queryKey: CostosPresupuestalesQkeys.presupuestos,
         });
+      },
+    },
+  );
+}
+
+// --- AJUSTE DE MONTO ---
+
+export function usePresupuestoAjuste(id: number) {
+  const queryClient = useQueryClient();
+  return erp.useMutationApi<void, PresupuestoAjusteDto>(
+    "patch",
+    erpEndpoints.costos_presupuestales.ajustar(id),
+    {},
+    {
+      onSuccess: () => {
+        toast.info(`Ejecutando a presupuesto: ${id}`);
+        queryClient.invalidateQueries({
+          queryKey: CostosPresupuestalesQkeys.presupuesto(id),
+        });
+        queryClient.invalidateQueries({
+          queryKey: CostosPresupuestalesQkeys.presupuestos,
+        });
+      },
+      onError: (error) => {
+        toast.error(getApiErrorMessageAxios(error));
       },
     },
   );

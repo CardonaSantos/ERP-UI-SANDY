@@ -4,20 +4,6 @@ import { useGetPresupuestoDetalle } from "@/hooks/use-costos-presupuestales/use-
 import { useParams, useNavigate } from "react-router-dom";
 import { PresupuestoDetalle } from "./presupuesto-details";
 
-/**
- * Route: /presupuestos/:id
- *
- * Reads `id` from React Router params, calls useGetPresupuestoDetalle(id),
- * and renders the detail view.
- *
- * In a real app, replace the import of `useGetPresupuestoDetalle` with:
- *   import { useGetPresupuestoDetalle } from "@/hooks/costos-presupuestales";
- * which calls:
- *   erp.useQueryApi<PresupuestoDetalleView>(
- *     CostosPresupuestalesQkeys.presupuesto(id),
- *     erpEndpoints.costos_presupuestales.byId(id),
- *   )
- */
 export function PresupuestoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

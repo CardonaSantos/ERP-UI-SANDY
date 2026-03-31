@@ -100,9 +100,7 @@ export const columns: ColumnDef<PresupuestoListItem>[] = [
           <Badge
             variant="outline"
             className={`w-fit text-[10px] px-1.5 py-0 leading-5 font-semibold border  ${
-              isOpen
-                ? "border-emerald-400 bg-emerald-50"
-                : "border-slate-300 bg-slate-100"
+              isOpen ? "border-emerald-400 " : "border-slate-300 "
             }`}
           >
             {estado}

@@ -14,6 +14,7 @@ export const erpEndpoints = {
     partidas: `/partidas`,
     periodos: `/periodos`,
     centros_costos: `/centros-costo`,
+    movimientos_presupuestales: `/movimientos`,
   },
   tickets_boleta: {
     byId: (id: number) => `/tickets-soporte/get-ticket-boleta/${id}`,

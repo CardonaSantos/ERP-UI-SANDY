@@ -29,10 +29,20 @@ import {
   FileText,
 } from "lucide-react";
 import {
+  EstadoPeriodo,
   PresupuestoDetalleView,
   TipoMovimientoPresupuesto,
 } from "@/Types/costos presupuestales/costos_presupuestales";
 import { PageTransition } from "@/components/Transition/layout-transition";
+import { Button } from "@/components/ui/button";
+import { useRef, useState } from "react";
+import DynamicEntityForm from "../../dynamictEntityForm/dynamicForm";
+import { usePresupuestoAjuste } from "@/hooks/use-costos-presupuestales/main-posts";
+import {
+  presupuestoAjuste,
+  presupuestoSchemaAjuste,
+} from "../../schemas/form-schemas";
+import { Label } from "@/components/ui/label";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -209,6 +219,15 @@ interface Props {
 export function PresupuestoDetalle({ data, isLoading }: Props) {
   if (isLoading) return <DetailSkeleton />;
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToForm = () => {
+    containerRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   const pct =
     data.montoAsignado > 0
       ? Math.round((data.montoEjercido / data.montoAsignado) * 100)
@@ -219,7 +238,9 @@ export function PresupuestoDetalle({ data, isLoading }: Props) {
       ? Math.round((data.montoComprometido / data.montoAsignado) * 100)
       : 0;
 
-  const periodoAbierto = data.periodo.estado === true;
+  const periodoAbierto = data.periodo.estado === EstadoPeriodo.ABIERTO;
+  console.log("El registro de presupuesto es: ", data);
+  const [openForm, setOpenForm] = useState<boolean>(false);
 
   return (
     <PageTransition
@@ -240,6 +261,27 @@ export function PresupuestoDetalle({ data, isLoading }: Props) {
               {" · "}
               {data.sucursal}
             </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {periodoAbierto && (
+              <Button
+                onClick={() => {
+                  const nextState = !openForm;
+                  setOpenForm(nextState);
+
+                  if (nextState) {
+                    setTimeout(() => scrollToForm(), 100);
+                  }
+                }}
+                size="sm"
+                variant="default"
+                className="h-7 px-2 text-[11px] gap-1.5 shadow-sm"
+              >
+                <PenLine size={12} />
+                Ajustar presupuesto
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -511,6 +553,30 @@ export function PresupuestoDetalle({ data, isLoading }: Props) {
           </div>
         )}
       </div>
+
+      {openForm && (
+        <div ref={containerRef} className="scroll-mt-10 mt-6 border-t pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-4 w-1 bg-slate-950 rounded-full" />
+            <Label className="text-xs font-bold uppercase tracking-wider">
+              Configuración de Ajuste
+            </Label>
+          </div>
+
+          <div className="px-4">
+            <DynamicEntityForm
+              mutationHook={() => usePresupuestoAjuste(data.id)}
+              onSuccess={() => {
+                setOpenForm(false);
+              }}
+              validationSchema={presupuestoSchemaAjuste}
+              config={presupuestoAjuste}
+              submitLabel="Aplicar Ajuste"
+              columns={2}
+            />
+          </div>
+        </div>
+      )}
     </PageTransition>
   );
 }

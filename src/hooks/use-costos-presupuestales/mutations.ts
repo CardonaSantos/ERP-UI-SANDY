@@ -11,6 +11,10 @@ export interface CreatePartidaDto {
   descripcion?: string;
 }
 
+export interface PresupuestoAjusteDto {
+  montoAsignado: number;
+}
+
 export interface CreatePeriodoDto {
   nombre: string;
   fechaInicio: string | Date;
