@@ -72,6 +72,7 @@ function CostoPresupuestalMainPage() {
       ),
     },
   ];
+  console.log("los presupuestos son: ", presupuestos);
 
   return (
     <PageTransition titleHeader="Control Presupuestal" fallbackBackTo="/">

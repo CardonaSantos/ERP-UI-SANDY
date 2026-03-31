@@ -14,6 +14,11 @@ export function useGetPresupuestos() {
   return erp.useQueryApi<Array<PresupuestoListItem>>(
     CostosPresupuestalesQkeys.presupuestos,
     erpEndpoints.costos_presupuestales.presupuestos,
+    {},
+    {
+      staleTime: 0,
+      gcTime: 0,
+    },
   );
 }
 

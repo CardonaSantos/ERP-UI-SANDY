@@ -12,7 +12,7 @@ import { User } from "lucide-react";
 
 import logo from "@/assets/NOVAPOSPNG.png";
 import type { VentaHistorialPDF } from "@/Types/PDF/VentaHistorialPDF";
-import { formatearMoneda } from "@/Pages/Requisicion/PDF/Pdf";
+import { formatearMoneda } from "@/Pages/requisiciones/PDF/Pdf";
 import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
 import { PageHeader } from "@/utils/components/PageHeaderPos";
 
@@ -39,7 +39,7 @@ export default function Invoice() {
     {
       enabled: Boolean(id),
       refetchOnWindowFocus: false,
-    }
+    },
   );
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function Invoice() {
   const total =
     venta.productos?.reduce(
       (acc, item) => acc + item.precioVenta * item.cantidad,
-      0
+      0,
     ) ?? 0;
 
   const nombreCliente =

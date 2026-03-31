@@ -91,6 +91,7 @@ export interface DynamicEntityFormProps<
   submitLabel?: string;
   /** Layout en columnas (default: 1) */
   columns?: 1 | 2 | 3;
+  onSubmitExternal?: (data: TData) => void;
 }
 
 interface FieldRendererProps {
@@ -370,6 +371,7 @@ export function DynamicEntityForm<
   defaultValues,
   submitLabel = "Guardar",
   columns = 1,
+  onSubmitExternal,
 }: DynamicEntityFormProps<TData, TResult, TError>) {
   const form = useForm<TData>({
     resolver: zodResolver(validationSchema as any) as Resolver<TData>,
@@ -380,6 +382,11 @@ export function DynamicEntityForm<
   const mutation = mutationHook();
 
   const onSubmit: SubmitHandler<TData> = (data) => {
+    if (onSubmitExternal) {
+      onSubmitExternal(data);
+      return;
+    }
+
     mutation.mutate(data, {
       onSuccess: (response) => {
         form.reset();

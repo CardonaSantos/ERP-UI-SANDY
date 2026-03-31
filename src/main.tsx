@@ -13,7 +13,16 @@ const VITE_WS_PATH = "/socket.io";
 
 const getToken = () => localStorage.getItem("authTokenPos");
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: "always",
+    },
+  },
+});
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
     <StrictMode>
@@ -34,5 +43,5 @@ createRoot(document.getElementById("root")!).render(
         </GoogleMapsProvider>
       </SocketProvider>
     </StrictMode>
-  </ThemeProvider>
+  </ThemeProvider>,
 );

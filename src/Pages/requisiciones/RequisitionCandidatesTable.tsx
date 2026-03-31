@@ -37,18 +37,19 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { formattMoneda } from "../Utils/Utils";
+
+import { computePresentacionCostoUnitario } from "./helpers";
 import {
+  keyForPresentacion,
+  keyForProducto,
   PagedResponse,
   RequisitionProductCandidate,
   SelectedKey,
   SelectedLine,
-  keyForProducto,
-  keyForPresentacion,
-} from "./newMap/requisicion.interfaces";
-import { computePresentacionCostoUnitario } from "./helpers";
+} from "@/Types/requisicion-interfaces/interfaces";
 
 const toFixed2 = (n: number | string | null | undefined) => {
-  const v = typeof n === "string" ? Number(n) : n ?? 0;
+  const v = typeof n === "string" ? Number(n) : (n ?? 0);
   return Number.isFinite(v) ? v.toFixed(2) : "0.00";
 };
 
@@ -117,7 +118,7 @@ export default function RequisitionCandidatesTable(props: Props) {
 
   const togglePresentacion = (
     row: RequisitionProductCandidate,
-    presentacionId: number
+    presentacionId: number,
   ) => {
     const k = keyForPresentacion(presentacionId);
     const pres = row.presentaciones.find((x) => x.id === presentacionId)!;
@@ -129,7 +130,7 @@ export default function RequisitionCandidatesTable(props: Props) {
         const precio = computePresentacionCostoUnitario(
           pres.costoReferencialPresentacion,
           row.precioCostoProducto,
-          pres.factorUnidadBase
+          pres.factorUnidadBase,
         );
         next[k] = {
           scope: "PRESENTACION",
@@ -368,7 +369,7 @@ export default function RequisitionCandidatesTable(props: Props) {
         },
       },
     ],
-    [selected]
+    [selected],
   );
 
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
@@ -461,7 +462,7 @@ export default function RequisitionCandidatesTable(props: Props) {
                         <TableCell key={cell.id} className="align-middle">
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}
@@ -479,7 +480,7 @@ export default function RequisitionCandidatesTable(props: Props) {
                               const costoSug = computePresentacionCostoUnitario(
                                 pp.costoReferencialPresentacion,
                                 row.original.precioCostoProducto,
-                                pp.factorUnidadBase
+                                pp.factorUnidadBase,
                               );
 
                               return (
@@ -527,7 +528,7 @@ export default function RequisitionCandidatesTable(props: Props) {
                                               {pp.pendientesFolios.map(
                                                 (f, i) => (
                                                   <li key={i}>• {f}</li>
-                                                )
+                                                ),
                                               )}
                                             </ul>
                                           </PopoverContent>
@@ -558,7 +559,7 @@ export default function RequisitionCandidatesTable(props: Props) {
                                         onChange={(e) =>
                                           updateQty(
                                             presKey,
-                                            Number(e.target.value)
+                                            Number(e.target.value),
                                           )
                                         }
                                         aria-label="Cantidad presentación"
@@ -599,7 +600,7 @@ export default function RequisitionCandidatesTable(props: Props) {
                                         value={
                                           presSel.fechaExpiracion
                                             ? dayjs(
-                                                presSel.fechaExpiracion
+                                                presSel.fechaExpiracion,
                                               ).format("YYYY-MM-DD")
                                             : ""
                                         }

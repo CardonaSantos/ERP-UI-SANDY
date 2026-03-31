@@ -75,12 +75,8 @@ export function usePresupuestoAjuste(id: number) {
     {},
     {
       onSuccess: () => {
-        toast.info(`Ejecutando a presupuesto: ${id}`);
         queryClient.invalidateQueries({
-          queryKey: CostosPresupuestalesQkeys.presupuesto(id),
-        });
-        queryClient.invalidateQueries({
-          queryKey: CostosPresupuestalesQkeys.presupuestos,
+          queryKey: CostosPresupuestalesQkeys.all,
         });
       },
       onError: (error) => {

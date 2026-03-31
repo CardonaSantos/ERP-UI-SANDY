@@ -35,14 +35,15 @@ import {
   CreateRequisitionDto,
   CreateRequisitionLine,
 } from "./requisicion.queries";
+
+import RequisicionesList from "./newMap/mapRequisiciones";
+import { PageTransition } from "@/components/Transition/layout-transition";
 import {
   PagedResponse,
   RequisitionProductCandidate,
   SelectedKey,
   SelectedLine,
-} from "./newMap/requisicion.interfaces";
-import RequisicionesList from "./newMap/mapRequisiciones";
-import { PageTransition } from "@/components/Transition/layout-transition";
+} from "@/Types/requisicion-interfaces/interfaces";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 

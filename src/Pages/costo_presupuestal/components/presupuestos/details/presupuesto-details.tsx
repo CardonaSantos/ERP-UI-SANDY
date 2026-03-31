@@ -1,5 +1,4 @@
 "use client";
-
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -43,6 +42,10 @@ import {
   presupuestoSchemaAjuste,
 } from "../../schemas/form-schemas";
 import { Label } from "@/components/ui/label";
+import { AdvancedDialogERP } from "@/utils/components/dialog/advanced-dialog";
+import { toast } from "sonner";
+import { getApiErrorMessageAxios } from "@/Pages/Utils/UtilsErrorApi";
+import { PresupuestoAjusteDto } from "@/hooks/use-costos-presupuestales/mutations";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -219,8 +222,11 @@ interface Props {
 export function PresupuestoDetalle({ data, isLoading }: Props) {
   if (isLoading) return <DetailSkeleton />;
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [openConfirm, setOpenConfirm] = useState<boolean>(false);
+  const mutation = usePresupuestoAjuste(data.id);
+  const [formData, setFormData] = useState<PresupuestoAjusteDto | null>(null);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const scrollToForm = () => {
     containerRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -241,6 +247,23 @@ export function PresupuestoDetalle({ data, isLoading }: Props) {
   const periodoAbierto = data.periodo.estado === EstadoPeriodo.ABIERTO;
   console.log("El registro de presupuesto es: ", data);
   const [openForm, setOpenForm] = useState<boolean>(false);
+
+  const handleSubmitUpdate = async () => {
+    if (!formData) return;
+
+    try {
+      await toast.promise(mutation.mutateAsync(formData), {
+        loading: "Aplicando ajuste...",
+        success: "Presupuesto actualizado",
+        error: "Error al actualizar",
+      });
+
+      setOpenConfirm(false);
+      setOpenForm(false);
+    } catch (error) {
+      console.log(getApiErrorMessageAxios(error));
+    }
+  };
 
   return (
     <PageTransition
@@ -565,18 +588,38 @@ export function PresupuestoDetalle({ data, isLoading }: Props) {
 
           <div className="px-4">
             <DynamicEntityForm
-              mutationHook={() => usePresupuestoAjuste(data.id)}
-              onSuccess={() => {
-                setOpenForm(false);
-              }}
+              mutationHook={() => mutation}
               validationSchema={presupuestoSchemaAjuste}
               config={presupuestoAjuste}
-              submitLabel="Aplicar Ajuste"
-              columns={2}
+              onSubmitExternal={(data) => {
+                setFormData(data);
+                setOpenConfirm(true);
+              }}
             />
           </div>
         </div>
       )}
+      <AdvancedDialogERP
+        open={openConfirm}
+        onOpenChange={setOpenConfirm}
+        title="Confirmar Ajuste Presupuestal"
+        description="Estás a punto de modificar el monto asignado a esta partida. Este cambio actualizará inmediatamente el saldo disponible."
+        type="warning"
+        question="¿Estás seguro de que deseas aplicar esta modificación?"
+        confirmButton={{
+          label: "Sí, aplicar ajuste",
+          onClick: handleSubmitUpdate,
+          loading: mutation.isPending,
+          disabled: mutation.isPending,
+        }}
+        cancelButton={{
+          onClick: () => {
+            setOpenConfirm(false);
+          },
+          label: "Cancelar",
+          disabled: mutation.isPending,
+        }}
+      />
     </PageTransition>
   );
 }

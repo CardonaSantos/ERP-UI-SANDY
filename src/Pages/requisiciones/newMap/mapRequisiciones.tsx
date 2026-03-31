@@ -1,10 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import type {
-  RequisitionResponseDTO,
-  RequisitionEstado,
-  RequisitionLineDTO,
-} from "./requisicion.interfaces";
+
 import {
   Table,
   TableBody,
@@ -68,6 +64,11 @@ import { formattMonedaGT as formatearMoneda } from "@/utils/formattMoneda";
 import { formattFechaWithMinutes as formatearFecha } from "@/Pages/Utils/Utils";
 import { getApiErrorMessageAxios } from "@/Pages/Utils/UtilsErrorApi";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
+import {
+  RequisitionEstado,
+  RequisitionLineDTO,
+  RequisitionResponseDTO,
+} from "@/Types/requisicion-interfaces/interfaces";
 
 // ---------- UI helpers ----------
 const CLOSED_STATES = new Set<RequisitionEstado>([
@@ -150,7 +151,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
           refetchOnReconnect: true,
           refetchOnWindowFocus: false,
           staleTime: 10_000,
-        }
+        },
       )
     : {
         data: props.data ?? [],
@@ -168,7 +169,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
         value: String(p.id),
         label: `${p.nombre} (${p.telefonoContacto ?? "Sin contacto"})`,
       })),
-    [proveedores]
+    [proveedores],
   );
 
   // ---------- UI state ----------
@@ -225,7 +226,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
   const deleteRequisicion = useApiMutation<void, void>(
     "delete",
     `requisicion/${selectedRequisicion?.id}`,
-    {}
+    {},
   );
 
   interface DtoToSendCompras {
@@ -241,7 +242,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
       onSuccess: () => {
         reFetchRequisiciones();
       },
-    }
+    },
   );
 
   const handleDeleteRequisicion = async () => {
@@ -478,7 +479,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
                         );
                       }
                       return null;
-                    }
+                    },
                   )}
 
                   <PaginationItem>
@@ -559,7 +560,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
                             </span>
                             <Badge
                               variant={getEstadoBadgeVariant(
-                                selectedRequisicion.estado
+                                selectedRequisicion.estado,
                               )}
                             >
                               {selectedRequisicion.estado}
@@ -591,7 +592,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
                           </InfoRow>
                           <InfoRow label="Total:" bold>
                             {formatearMoneda(
-                              selectedRequisicion.totalRequisicion
+                              selectedRequisicion.totalRequisicion,
                             )}
                           </InfoRow>
                         </CardContent>
@@ -622,8 +623,8 @@ export default function RequisicionesList(props: ExternalQueryProps) {
                             selectedRequisicion.ingresadaAStock
                               ? "Ya fue ingresada a stock"
                               : f.isClosed
-                              ? "No editable en este estado"
-                              : undefined
+                                ? "No editable en este estado"
+                                : undefined
                           }
                         >
                           Editar Registro
@@ -757,7 +758,7 @@ export default function RequisicionesList(props: ExternalQueryProps) {
                                 </div>
                               </CardContent>
                             </Card>
-                          )
+                          ),
                         )}
                       </div>
                     </div>

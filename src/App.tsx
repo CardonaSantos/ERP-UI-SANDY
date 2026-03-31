@@ -54,9 +54,9 @@ import { useAuthStoreCRM } from "./Crm/CrmAuthRoutes/AuthStateCRM";
 import CrmRegist from "./Crm/CrmAuth/CrmRegist";
 import CrmLogin from "./Crm/CrmAuth/CrmLogin";
 import { SummarySales } from "./Pages/SummarySales/SummarySales";
-import RequisitionBuilder from "./Pages/Requisicion/Requisicion";
-import RequisicionPDF from "./Pages/Requisicion/PDF/Pdf";
-import { RequisitionEditor } from "./Pages/Requisicion/RequisitionEditor";
+import RequisitionBuilder from "./Pages/requisiciones/Requisicion";
+import RequisicionPDF from "./Pages/requisiciones/PDF/Pdf";
+import { RequisitionEditor } from "./Pages/requisiciones/RequisitionEditor";
 import PuntoVenta from "./Pages/POS/PuntoVenta";
 import MovimientosStock from "./Pages/HistorialCambiosStock/HistorialCambiosStock";
 import InventarioStockPage from "./Pages/InventarioYStock/InventarioStockPage";
@@ -96,6 +96,7 @@ import CotizadorMainPage from "./Pages/cotizador/page";
 import CostoPresupuestalMainPage from "./Pages/costo_presupuestal/page";
 import { PresupuestoDetallePage } from "./Pages/costo_presupuestal/components/presupuestos/details/page";
 import { CreatePresupuestoForm } from "./Pages/costo_presupuestal/components/presupuestos/form/presupuesto-form";
+import RequisicionesPage from "./Pages/requisiciones/components/requisiciones-page";
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -708,7 +709,7 @@ function App() {
               path="/requisiciones"
               element={
                 <ProtectRouteAdmin>
-                  <RequisitionBuilder />
+                  <RequisicionesPage />
                 </ProtectRouteAdmin>
               }
             />
