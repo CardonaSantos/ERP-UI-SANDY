@@ -1,34 +1,14 @@
 "use client";
 
-import type { ColumnDef, RowData } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, DollarSign, Package } from "lucide-react";
 import {
   getEstadoBadgeVariant,
   RequisitionResponseDTO,
-} from "@/Types/requisicion-interfaces/interfaces";
-// Asegúrate de que esta ruta coincida con la ubicación de tu subcomponente
+} from "@/Types/requisiciones/requisiciones-tables";
 import { RequisitionRowActions } from "../components/requisiciones-row-actions";
-
-// 1. Declaración global ÚNICA para todo el proyecto.
-// Usamos TData para que cualquier tabla pueda aprovechar estas acciones opcionales sin chocar.
-declare module "@tanstack/react-table" {
-  interface TableMeta<TData extends RowData> {
-    onVerDetalle?: (row: TData) => void;
-    onImprimir?: (row: TData) => void;
-    onSendToCompras?: (row: TData) => void;
-  }
-}
-
-// ============================================================
-// Formatters
-// ============================================================
-const formatearFecha = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-GT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+import { formattFecha } from "@/Pages/Utils/Utils";
 
 const formatearMoneda = (n: number) =>
   new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ" }).format(
@@ -62,7 +42,7 @@ export const requisicionColumns: ColumnDef<RequisitionResponseDTO, unknown>[] =
       ),
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
-          {formatearFecha(row.original.fecha)}
+          {formattFecha(row.original.fecha)}
         </span>
       ),
     },
@@ -128,8 +108,11 @@ export const requisicionColumns: ColumnDef<RequisitionResponseDTO, unknown>[] =
       id: "acciones",
       header: () => <span className="sr-only">Acciones</span>,
       cell: ({ row, table }) => {
-        // TypeScript ya infiere los tipos gracias al 'declare module' genérico
-        const meta = table.options.meta;
+        const meta = table.options.meta as {
+          onVerDetalle?: (row: RequisitionResponseDTO) => void;
+          onImprimir?: (row: RequisitionResponseDTO) => void;
+          onSendToCompras?: (row: RequisitionResponseDTO) => void;
+        };
 
         return (
           <div className="flex justify-end">

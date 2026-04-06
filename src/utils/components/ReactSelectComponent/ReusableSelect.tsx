@@ -120,7 +120,8 @@ function ReusableSelectInner<T>(
   );
 }
 
-export const ReusableSelect = forwardRef(ReusableSelectInner) as (<T>( // Sobrecargas para mejorar intellisense del ref y props según variante
+export const ReusableSelect = forwardRef(ReusableSelectInner) as (<T>(
+  // Sobrecargas para mejorar intellisense del ref y props según variante
   p: SingleProps<T> & {
     ref?: React.Ref<SelectInstance<OptionOf<T>, false>>;
   },

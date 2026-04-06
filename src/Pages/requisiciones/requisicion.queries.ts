@@ -1,16 +1,15 @@
-// requisicion.queries.ts
 import {
   useApiMutation,
   useApiQuery,
 } from "@/hooks/genericoCall/genericoCallHook";
 import { AxiosRequestConfig } from "axios";
+
+import { keepPreviousData } from "@tanstack/react-query";
 import {
   PagedResponse,
   RequisitionProductCandidate,
-} from "./newMap/requisicion.interfaces";
-import { keepPreviousData } from "@tanstack/react-query";
+} from "@/Types/requisiciones/requisiciones-tables";
 
-// GET candidatos (server-side pagination, search, sorting)
 export const useRequisitionCandidatesQuery = (
   sucursalId: number,
   params: {
@@ -20,7 +19,7 @@ export const useRequisitionCandidatesQuery = (
     sortBy?: string;
     sortDir?: "asc" | "desc";
   },
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean },
 ) => {
   const config: AxiosRequestConfig = {
     params: {
@@ -40,7 +39,7 @@ export const useRequisitionCandidatesQuery = (
     {
       enabled: !!sucursalId && (options?.enabled ?? true),
       placeholderData: keepPreviousData,
-    }
+    },
   );
 };
 

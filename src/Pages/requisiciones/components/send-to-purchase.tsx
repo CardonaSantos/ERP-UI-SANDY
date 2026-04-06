@@ -24,7 +24,9 @@ import { TriangleAlert, Loader2, LandmarkIcon } from "lucide-react";
 import {
   RequisitionResponseDTO,
   SendToComprasDTO,
-} from "@/Types/requisicion-interfaces/interfaces";
+} from "@/Types/requisiciones/requisiciones-tables";
+import { PresupuestoPartidaSelect } from "@/Types/costos presupuestales/selects";
+import { ReusableSelect } from "@/utils/components/ReactSelectComponent/ReusableSelect";
 
 // ============================================================
 // Tipos locales
@@ -49,7 +51,7 @@ interface SendToPurchasesDialogProps {
   onOpenChange: (open: boolean) => void;
   requisicion: RequisitionResponseDTO | null;
   proveedores: ProveedorOption[];
-  partidas: PartidaPresupuestal[];
+  partidas: Array<PresupuestoPartidaSelect>;
   isPending: boolean;
   onConfirm: (
     dto: SendToComprasDTO & { partidaPresupuestalId: string },
@@ -103,7 +105,7 @@ export function SendToPurchasesDialog({
     }
   };
 
-  const selectedPartida = partidas.find((p) => p.id === partidaId);
+  const selectedPartida = partidas.find((p) => p.id === parseInt(partidaId));
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -174,38 +176,46 @@ export function SendToPurchasesDialog({
               <LandmarkIcon className="h-3.5 w-3.5" />
               Partida presupuestal / Centro de costo
             </Label>
-            <Select
-              value={partidaId}
-              onValueChange={setPartidaId}
-              disabled={isPending}
-            >
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Seleccionar partida..." />
-              </SelectTrigger>
-              <SelectContent>
-                {partidas.map((p) => (
-                  <SelectItem key={p.id} value={p.id} className="text-xs">
-                    <span className="font-mono mr-1.5 text-muted-foreground">
-                      {p.codigoContable}
-                    </span>
-                    {p.nombre}
-                    {p.saldoDisponible !== undefined
-                      ? ` — Disp. ${formatMoneda(p.saldoDisponible)}`
-                      : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
-            {/* Saldo disponible inline al seleccionar */}
-            {selectedPartida?.saldoDisponible !== undefined && (
+            <ReusableSelect
+              items={partidas}
+              // Retornamos el ID único (es number según tu interfaz)
+              getValue={(p) => p.id}
+              // Lo que el usuario verá en la lista
+              getLabel={(p) =>
+                `${p.partida} — Disp. ${formatMoneda(p.montoDisponible)}`
+              }
+              // Buscamos el objeto completo basado en tu partidaId del estado
+              value={partidas.find((p) => String(p.id) === partidaId) || null}
+              // Al cambiar, actualizamos tu estado de string
+              onChange={(p) => setPartidaId(p ? String(p.id) : "")}
+              placeholder="Seleccionar partida..."
+              isClearable={true}
+              // Podemos pasar estilos o props adicionales de react-select aquí
+              selectProps={{
+                isDisabled: isPending,
+                noOptionsMessage: () => "No hay partidas disponibles",
+                // Estilos para que combine con tu diseño (opcional)
+                styles: {
+                  control: (base) => ({
+                    ...base,
+                    minHeight: "32px",
+                    height: "32px",
+                    fontSize: "12px",
+                  }),
+                },
+              }}
+            />
+
+            {/* Saldo disponible inline (tu lógica actual sigue funcionando igual) */}
+            {selectedPartida && (
               <p className="text-[11px] text-muted-foreground">
                 Saldo disponible:{" "}
                 <span className="font-medium text-foreground">
-                  {formatMoneda(selectedPartida.saldoDisponible)}
+                  {formatMoneda(selectedPartida.montoDisponible)}
                 </span>
                 {requisicion &&
-                  selectedPartida.saldoDisponible <
+                  selectedPartida.montoDisponible <
                     requisicion.totalRequisicion && (
                     <span className="ml-2 text-destructive font-medium">
                       Saldo insuficiente

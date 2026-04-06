@@ -49,30 +49,12 @@ import {
   RequisitionLineDTO,
   RequisitionResponseDTO,
   SendToComprasDTO,
-} from "@/Types/requisicion-interfaces/interfaces";
-import {
-  PartidaPresupuestal,
-  ProveedorOption,
-  SendToPurchasesDialog,
-} from "./send-to-purchase";
+} from "@/Types/requisiciones/requisiciones-tables";
+import { ProveedorOption, SendToPurchasesDialog } from "./send-to-purchase";
 import { requisicionColumns } from "../columns/columns";
-
-// ============================================================
-// Formatters (stubs — reemplazar con los reales de tu proyecto)
-// ============================================================
-const formatearFecha = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-GT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-const formatearMoneda = (n: number) =>
-  new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ" }).format(
-    n,
-  );
+import { PresupuestoPartidaSelect } from "@/Types/costos presupuestales/selects";
+import { formattFecha } from "@/Pages/Utils/Utils";
+import { formattMonedaGT } from "@/utils/formattMoneda";
 
 // ============================================================
 // Sub-component: InfoRow
@@ -100,18 +82,18 @@ function InfoRow({
 // ============================================================
 
 interface RequisitionsTableProps {
-  // ── Data ────────────────────────────────────────────────────
+  // ── Data
   data: RequisitionResponseDTO[];
   isLoading: boolean;
   isError: boolean;
   error: unknown;
   onRefetch: () => void;
 
-  // ── Dialog dependencies ─────────────────────────────────────
+  // ── Dialog dependencies
   proveedores: ProveedorOption[];
-  partidas: PartidaPresupuestal[];
+  partidas: PresupuestoPartidaSelect[];
 
-  // ── Mutations (manejadas en el nivel superior) ───────────────
+  // ── Mutations (manejadas en el nivel superior)
   isSendingToCompras: boolean;
   isDeletingRequisicion: boolean;
   onSendToCompras: (
@@ -354,7 +336,7 @@ export function RequisitionsTable({
                     <CardContent className="px-3 pb-3 space-y-2">
                       <InfoRow label="Folio:">{detailReq.folio}</InfoRow>
                       <InfoRow label="Fecha:">
-                        {formatearFecha(detailReq.fecha)}
+                        {formattFecha(detailReq.fecha)}
                       </InfoRow>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Estado:</span>
@@ -391,7 +373,7 @@ export function RequisitionsTable({
                       </InfoRow>
                       <InfoRow label="Rol:">{detailReq.usuario.rol}</InfoRow>
                       <InfoRow label="Total:" bold>
-                        {formatearMoneda(detailReq.totalRequisicion)}
+                        {formattMonedaGT(detailReq.totalRequisicion)}
                       </InfoRow>
                     </CardContent>
                   </Card>
@@ -465,7 +447,7 @@ export function RequisitionsTable({
                               )}
                               {l.fechaExpiracion && (
                                 <p className="text-[11px] text-muted-foreground">
-                                  Vence: {formatearFecha(l.fechaExpiracion)}
+                                  Vence: {formattFecha(l.fechaExpiracion)}
                                 </p>
                               )}
                             </div>
@@ -488,10 +470,10 @@ export function RequisitionsTable({
                             {/* Precios */}
                             <div className="space-y-1.5">
                               <InfoRow label="Precio unitario:">
-                                {formatearMoneda(l.precioUnitario)}
+                                {formattMonedaGT(l.precioUnitario)}
                               </InfoRow>
                               <InfoRow label="Subtotal:" bold>
-                                {formatearMoneda(l.subtotal)}
+                                {formattMonedaGT(l.subtotal)}
                               </InfoRow>
                             </div>
                           </div>
@@ -510,10 +492,10 @@ export function RequisitionsTable({
                   </CardHeader>
                   <CardContent className="px-3 pb-3 grid grid-cols-2 gap-2">
                     <InfoRow label="Creado:">
-                      {formatearFecha(detailReq.createdAt)}
+                      {formattFecha(detailReq.createdAt)}
                     </InfoRow>
                     <InfoRow label="Actualizado:">
-                      {formatearFecha(detailReq.updatedAt)}
+                      {formattFecha(detailReq.updatedAt)}
                     </InfoRow>
                   </CardContent>
                 </Card>

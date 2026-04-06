@@ -19,7 +19,7 @@ import {
 import {
   getReqFlags,
   RequisitionResponseDTO,
-} from "@/Types/requisicion-interfaces/interfaces";
+} from "@/Types/requisiciones/requisiciones-tables";
 import { Link } from "react-router-dom";
 
 // ============================================================
@@ -31,7 +31,7 @@ interface RequisitionRowActionsProps {
   onVerDetalle: (req: RequisitionResponseDTO) => void;
   onImprimir: (req: RequisitionResponseDTO) => void;
   onSendToCompras: (req: RequisitionResponseDTO) => void;
-  // onDelete?: (row: TData) => void;
+  onDelete?: (req: RequisitionResponseDTO) => void;
 }
 
 // ============================================================
@@ -43,6 +43,7 @@ export function RequisitionRowActions({
   onVerDetalle,
   onImprimir,
   onSendToCompras,
+  onDelete,
 }: RequisitionRowActionsProps) {
   const { canEdit, canSendToCompras, isEnviadaCompras } =
     getReqFlags(requisicion);
@@ -102,13 +103,13 @@ export function RequisitionRowActions({
         <DropdownMenuSeparator />
 
         {/* ── Eliminar ────────────────────────────────────── */}
-        {/* <DropdownMenuItem
+        <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onClick={() => onDelete(requisicion)}
+          onClick={() => onDelete?.(requisicion)}
         >
           <Trash2 className="h-4 w-4 mr-2" />
           Eliminar
-        </DropdownMenuItem> */}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

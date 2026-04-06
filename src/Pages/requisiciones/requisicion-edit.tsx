@@ -43,11 +43,14 @@ import {
 import { formattMoneda } from "../Utils/Utils";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { useNavigate, useParams } from "react-router-dom";
-import { getRequisicionToEdit, updateRequisicion } from "./requisicion.api";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import {
+  useGetRequisicionToEdit,
+  useUpdateRequisicion,
+} from "@/hooks/use-requisiciones/use-requisiciones";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -91,14 +94,21 @@ export const RequisitionEditor = () => {
   const requisicionIdNum = requisicionID ? Number(requisicionID) : 0;
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  // 1. Instanciamos los Hooks de React Query en el nivel superior
+  const { data: queryData, isFetching: loading } =
+    useGetRequisicionToEdit(requisicionIdNum);
+  const mutationUpdate = useUpdateRequisicion();
+
+  const submitting = mutationUpdate.isPending; // Reemplaza al estado local manual
+
+  // 2. Estados locales (Eliminamos const [loading] y const [submitting])
   const [initialData, setInitialData] = useState<RequisitionItem[]>([]);
   const [openSaveDialog, setOpenSaveDialog] = useState<boolean>(false);
   const [openCancelDialog, setOpenCancelDialog] = useState<boolean>(false);
   const [items, setItems] = useState<RequisitionItem[]>([]);
-  const [selected, setSelected] = useState<Record<number, SelectedLine>>({}); // Updated type
-  const [submitting, setSubmitting] = useState(false);
+  const [selected, setSelected] = useState<Record<number, SelectedLine>>({});
   const [hasChanges, setHasChanges] = useState(false);
+
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -107,21 +117,22 @@ export const RequisitionEditor = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentItems = items.slice(startIndex, endIndex);
 
+  // 3. Sincronizar datos de React Query al estado local solo la primera vez.
+  // Como `queryData` puede ser undefined al inicio, esperamos a que tenga valor.
   useEffect(() => {
-    getRequisicion();
-  }, [requisicionIdNum]);
+    // Si ya hay queryData y no hemos inicializado los datos locales
+    if (queryData && initialData.length === 0) {
+      // Nota: Si tu hook retorna { data: [...] }, usa queryData.data.
+      // Si retorna el array directo, usa queryData.
+      const rawData = Array.isArray(queryData)
+        ? queryData
+        : ((queryData as any).data ?? []);
 
-  const getRequisicion = async () => {
-    if (!requisicionIdNum) return;
-    setLoading(true);
-    try {
-      const response = await getRequisicionToEdit(requisicionIdNum);
-      setItems(response.data);
-      setInitialData(response.data); // Store initial data for change detection
+      setItems(rawData);
+      setInitialData(rawData);
 
-      // Initialize selection with all products, converting date string to Date object
       const initialSelected: Record<number, SelectedLine> = Object.fromEntries(
-        response.data.map((item: RequisitionItem) => [
+        rawData.map((item: RequisitionItem) => [
           item.productoId,
           {
             cantidad: item.cantidadSugerida,
@@ -129,16 +140,11 @@ export const RequisitionEditor = () => {
               ? dayjs(item.fechaExpiracion).toDate()
               : null,
           },
-        ])
+        ]),
       );
       setSelected(initialSelected);
-    } catch (error) {
-      console.log("Error: ", error);
-      toast.error("Error al conseguir registro");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [queryData, initialData.length]);
 
   // Detectar cambios
   useEffect(() => {
@@ -153,7 +159,7 @@ export const RequisitionEditor = () => {
             ? dayjs(item.fechaExpiracion).format("YYYY-MM-DD")
             : null,
         },
-      ])
+      ]),
     );
 
     const currentSelectedMap = new Map(
@@ -165,7 +171,7 @@ export const RequisitionEditor = () => {
             ? dayjs(data.fechaExpiracion).format("YYYY-MM-DD")
             : null,
         },
-      ])
+      ]),
     );
 
     let changesDetected = false;
@@ -173,12 +179,12 @@ export const RequisitionEditor = () => {
     if (initialSelectedMap.size !== currentSelectedMap.size) {
       changesDetected = true;
     } else {
-      for (const [prodId, initialData] of initialSelectedMap.entries()) {
-        const currentData = currentSelectedMap.get(prodId);
+      for (const [prodId, initialItem] of initialSelectedMap.entries()) {
+        const currentItem = currentSelectedMap.get(prodId);
         if (
-          !currentData ||
-          currentData.cantidad !== initialData.cantidad ||
-          currentData.fechaExpiracion !== initialData.fechaExpiracion
+          !currentItem ||
+          currentItem.cantidad !== initialItem.cantidad ||
+          currentItem.fechaExpiracion !== initialItem.fechaExpiracion
         ) {
           changesDetected = true;
           break;
@@ -192,7 +198,7 @@ export const RequisitionEditor = () => {
   const selectedCount = Object.keys(selected).length;
   const totalSelectedQty = Object.values(selected).reduce(
     (acc, data) => acc + data.cantidad,
-    0
+    0,
   );
   const totalSelectedCost = items.reduce((acc, item) => {
     const qty = selected[item.productoId]?.cantidad ?? 0;
@@ -257,6 +263,7 @@ export const RequisitionEditor = () => {
   // Guardar cambios
   const handleSave = useCallback(async () => {
     if (submitting || Object.keys(selected).length === 0) return;
+
     const dto: UpdateRequisitionDto = {
       requisicionId: requisicionIdNum,
       sucursalId,
@@ -266,18 +273,22 @@ export const RequisitionEditor = () => {
         cantidadSugerida: data.cantidad,
         fechaExpiracion: data.fechaExpiracion
           ? data.fechaExpiracion.toISOString()
-          : null, // Convert Date to ISO string
+          : null,
       })),
     };
+
     const MIN_DELAY = 600;
     const start = Date.now();
-    setSubmitting(true);
+
     try {
-      await updateRequisicion(dto);
+      // USAMOS LA MUTACIÓN APROPIADA DE REACT QUERY
+      await mutationUpdate.mutateAsync(dto);
+
       const elapsed = Date.now() - start;
       if (elapsed < MIN_DELAY) {
         await new Promise((r) => setTimeout(r, MIN_DELAY - elapsed));
       }
+
       toast.success("Requisición actualizada correctamente");
       setHasChanges(false);
       setOpenSaveDialog(false);
@@ -285,10 +296,16 @@ export const RequisitionEditor = () => {
     } catch (err) {
       console.error(err);
       toast.error("Error al actualizar la requisición");
-    } finally {
-      setSubmitting(false);
     }
-  }, [requisicionIdNum, sucursalId, usuarioId, selected, submitting, navigate]);
+  }, [
+    requisicionIdNum,
+    sucursalId,
+    usuarioId,
+    selected,
+    submitting,
+    navigate,
+    mutationUpdate,
+  ]);
 
   // Cancelar cambios
   const handleCancel = () => {
@@ -310,14 +327,13 @@ export const RequisitionEditor = () => {
             ? dayjs(item.fechaExpiracion).toDate()
             : null,
         },
-      ])
+      ]),
     );
     setSelected(initialSelected);
     setHasChanges(false);
     setOpenCancelDialog(false);
-    navigate("/requisiciones"); // Navigate after confirming cancel
+    navigate("/requisiciones");
   };
-  console.log("El obj para update es: ", selected);
 
   return (
     <Card>
@@ -484,7 +500,7 @@ export const RequisitionEditor = () => {
                     const checked = item.productoId in selected;
                     const alertInfo = getAlertLevel(
                       item.stockActual,
-                      item.stockMinimo
+                      item.stockMinimo,
                     );
                     const currentQty = selected[item.productoId]?.cantidad || 0;
                     const hasQuantityChanged =
@@ -547,7 +563,7 @@ export const RequisitionEditor = () => {
                                 onChange={(e) =>
                                   updateQty(
                                     item.productoId,
-                                    Number(e.target.value)
+                                    Number(e.target.value),
                                   )
                                 }
                                 className={`w-16 h-7 text-center text-xs ${
@@ -680,7 +696,7 @@ export const RequisitionEditor = () => {
                           );
                         }
                         return null;
-                      }
+                      },
                     )}
                     <PaginationItem>
                       <PaginationNext
