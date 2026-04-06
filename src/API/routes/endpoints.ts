@@ -29,7 +29,9 @@ export const erpEndpoints = {
     get_requisicion_to_edit: (id: number) =>
       `/requisicion/requisicion-to-edit/${id}`,
     update_requisicion: () => `requisicion/update`,
+    candidates: `/requisicion/candidatos-requisicion`,
   },
+
   tickets_boleta: {
     byId: (id: number) => `/tickets-soporte/get-ticket-boleta/${id}`,
   },

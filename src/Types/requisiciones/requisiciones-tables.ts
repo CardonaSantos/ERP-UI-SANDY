@@ -223,6 +223,7 @@ export interface SendToComprasDTO {
   requisicionID: number;
   userID: number;
   proveedorId: number;
+  presupuestoId: number;
 }
 
 // ============================================================

@@ -94,199 +94,121 @@ const RequisicionPDF = () => {
   }
 
   return (
-    <div className="p-4">
+    <div className="p-6 bg-gray-100">
       <div
         ref={requisicionRef}
-        className={`shadow-lg rounded-lg ${pdfUrl ? "hidden" : "block"}`}
+        className={`${pdfUrl ? "hidden" : "block"} mx-auto bg-white shadow-xl rounded-lg`}
         style={{
           width: "210mm",
           minHeight: "297mm",
-          margin: "0 auto",
-          backgroundColor: "#ffffff",
-          color: "#000000",
-          padding: "20px 24px",
+          padding: "28px",
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
-        {/* Header con número de documento destacado */}
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-xs font-medium uppercase text-gray-700">
-            Requisición de productos
-          </span>
+        {/* HEADER */}
+        <div className="flex justify-between items-start border-b pb-4 mb-6">
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight">
+              Requisición de Productos
+            </h1>
+            <p className="text-xs text-gray-500 mt-1">
+              Documento generado automáticamente
+            </p>
+          </div>
 
-          <div className="flex flex-col items-end rounded px-2 py-0.5">
-            <span className="text-[8px] uppercase text-gray-500 leading-none">
-              Folio
-            </span>
-            <span className="text-xs font-semibold text-gray-800 leading-tight">
-              {requisicion.folio}
-            </span>
+          <div className="text-right">
+            <p className="text-[10px] text-gray-500 uppercase">Folio</p>
+            <p className="text-sm font-semibold">{requisicion.folio}</p>
           </div>
         </div>
 
-        {/* Info principal en grid compacto */}
-        <div
-          className="grid grid-cols-2 gap-2 mb-4 p-2 rounded-sm shadow-sm"
-          style={{
-            backgroundColor: "#f9fafb",
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          <table className="w-full text-[12px]">
-            <tbody>
-              <tr>
-                <td className="py-0.5 text-gray-600 font-medium">Fecha:</td>
-                <td className="py-0.5 pl-1 text-gray-700">
-                  {formateDateWithMinutes(requisicion.fecha)}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-0.5 text-gray-600 font-medium">
-                  Actualizado:
-                </td>
-                <td className="py-0.5 pl-1 text-gray-700">
-                  {formateDateWithMinutes(requisicion.updatedAt)}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-0.5 text-gray-600 font-medium">Sucursal:</td>
-                <td className="py-0.5 pl-1 text-gray-700">
-                  {requisicion.sucursal.nombre}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-0.5 text-gray-600 font-medium">
-                  Solicitante:
-                </td>
-                <td className="py-0.5 pl-1 text-gray-700">
-                  {requisicion.usuario.nombre}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        {/* INFO PRINCIPAL */}
+        <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+          <div className="space-y-1">
+            <p>
+              <span className="text-gray-500">Fecha:</span>{" "}
+              {formateDateWithMinutes(requisicion.fecha)}
+            </p>
+            <p>
+              <span className="text-gray-500">Actualizado:</span>{" "}
+              {formateDateWithMinutes(requisicion.updatedAt)}
+            </p>
+            <p>
+              <span className="text-gray-500">Sucursal:</span>{" "}
+              {requisicion.sucursal.nombre}
+            </p>
+            <p>
+              <span className="text-gray-500">Solicitante:</span>{" "}
+              {requisicion.usuario.nombre}
+            </p>
+          </div>
 
-          <table className="w-full text-[12px]">
-            <tbody>
-              <tr>
-                <td className="py-0.5 text-gray-600 font-medium">
-                  Total líneas:
-                </td>
-                <td className="py-0.5 pl-1 text-gray-700">
-                  {requisicion.totalLineas}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-0.5 text-gray-600 font-medium">
-                  Total est.:
-                </td>
-                <td className="py-0.5 pl-1 font-semibold text-gray-800">
-                  {formatearMoneda(requisicion.totalRequisicion)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="space-y-1 text-right">
+            <p>
+              <span className="text-gray-500">Total líneas:</span>{" "}
+              {requisicion.totalLineas}
+            </p>
+            <p className="font-medium">
+              <span className="text-gray-500">Total estimado:</span>{" "}
+              {formatearMoneda(requisicion.totalRequisicion)}
+            </p>
+          </div>
         </div>
 
-        {/* Observaciones */}
+        {/* OBSERVACIONES */}
         {requisicion.observaciones && (
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">
-              Observaciones
-            </h3>
-            <div
-              className="p-3 rounded-md shadow-sm text-sm"
-              style={{
-                backgroundColor: "#f3f4f6",
-                border: "1px solid #e5e7eb",
-              }}
-            >
-              <p className="text-gray-600">{requisicion.observaciones}</p>
+            <h3 className="text-sm font-medium mb-2">Observaciones</h3>
+            <div className="border rounded-md p-3 text-sm text-gray-700 bg-gray-50">
+              {requisicion.observaciones}
             </div>
           </div>
         )}
 
-        {/* Título de sección */}
+        {/* TABLA */}
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-700">
-            Detalle de productos solicitados
-          </h3>
-        </div>
+          <h3 className="text-sm font-medium mb-3">Detalle de productos</h3>
 
-        {/* Tabla de productos */}
-        <div
-          className="mb-6 rounded-md shadow-sm"
-          style={{
-            border: "1px solid #d1d5db",
-            overflow: "hidden",
-          }}
-        >
-          <table
-            className="w-full"
-            style={{
-              fontSize: "10px",
-              borderCollapse: "collapse",
-            }}
-          >
-            <thead>
-              <tr style={{ backgroundColor: "#e5e7eb" }}>
-                <th className="py-2 px-2 text-left text-gray-700 font-medium border-b border-gray-300">
-                  Código
-                </th>
-                <th className="py-2 px-2 text-left text-gray-700 font-medium border-b border-gray-300">
-                  Producto
-                </th>
-                <th className="py-2 px-2 text-center text-gray-700 font-medium border-b border-gray-300">
-                  Stock Actual
-                </th>
-                <th className="py-2 px-2 text-center text-gray-700 font-medium border-b border-gray-300">
-                  Stock Mín.
-                </th>
-                <th className="py-2 px-2 text-center text-gray-700 font-medium border-b border-gray-300">
-                  Cant. Sugerida
-                </th>
-                <th className="py-2 px-2 text-center text-gray-700 font-medium border-b border-gray-300">
-                  Cant. Recibida
-                </th>
-                <th className="py-2 px-2 text-right text-gray-700 font-medium border-b border-gray-300">
-                  F. Exp
-                </th>
-                <th className="py-2 px-2 text-right text-gray-700 font-medium border-b border-gray-300">
-                  Subtotal
-                </th>
+          <table className="w-full text-xs border border-gray-200 rounded-md overflow-hidden">
+            <thead className="bg-gray-100 text-gray-700">
+              <tr>
+                <th className="px-2 py-2 text-left">Código</th>
+                <th className="px-2 py-2 text-left">Producto</th>
+                <th className="px-2 py-2 text-center">Stock</th>
+                <th className="px-2 py-2 text-center">Mín</th>
+                <th className="px-2 py-2 text-center">Sug.</th>
+                <th className="px-2 py-2 text-center">Rec.</th>
+                <th className="px-2 py-2 text-right">Exp.</th>
+                <th className="px-2 py-2 text-right">Subtotal</th>
               </tr>
             </thead>
+
             <tbody>
-              {requisicion.lineas.map((linea, index) => (
+              {requisicion.lineas.map((linea, i) => (
                 <tr
                   key={linea.id}
-                  style={{
-                    backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9fafb",
-                  }}
+                  className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}
                 >
-                  <td className="py-2 px-2 border-b border-gray-200 font-mono text-xs text-gray-700">
+                  <td className="px-2 py-2 font-mono">
                     {linea.producto.codigoProducto}
                   </td>
-                  <td className="py-2 px-2 border-b border-gray-200 text-gray-700">
-                    {linea.producto.nombre}
-                  </td>
-                  <td className="py-2 px-2 text-center border-b border-gray-200 text-gray-700">
+                  <td className="px-2 py-2">{linea.producto.nombre}</td>
+                  <td className="px-2 py-2 text-center">
                     {linea.cantidadActual}
                   </td>
-                  <td className="py-2 px-2 text-center border-b border-gray-200 text-gray-700">
-                    {linea.stockMinimo}
-                  </td>
-                  <td className="py-2 px-2 text-center border-b border-gray-200 font-medium text-gray-700">
+                  <td className="px-2 py-2 text-center">{linea.stockMinimo}</td>
+                  <td className="px-2 py-2 text-center font-medium">
                     {linea.cantidadSugerida}
                   </td>
-                  <td className="py-2 px-2 text-center border-b border-gray-200 font-medium text-gray-700">
-                    {linea.cantidadRecibida ? linea?.cantidadRecibida : "N/A"}
+                  <td className="px-2 py-2 text-center">
+                    {linea.cantidadRecibida ?? "—"}
                   </td>
-                  <td className="py-2 px-2 text-right border-b border-gray-200 text-gray-700">
+                  <td className="px-2 py-2 text-right">
                     {linea.fechaExpiracion
-                      ? formattFecha(linea?.fechaExpiracion)
-                      : "N/A"}
+                      ? formattFecha(linea.fechaExpiracion)
+                      : "—"}
                   </td>
-                  <td className="py-2 px-2 text-right border-b border-gray-200 font-medium text-gray-700">
+                  <td className="px-2 py-2 text-right font-medium">
                     {formatearMoneda(
                       linea.precioUnitario * linea.cantidadSugerida,
                     )}
@@ -297,58 +219,38 @@ const RequisicionPDF = () => {
           </table>
         </div>
 
-        {/* Resumen totales */}
-        <div className="flex justify-end mb-8">
-          <div
-            className="w-64 rounded-md shadow-sm"
-            style={{
-              border: "1px solid #d1d5db",
-            }}
-          >
-            <table className="w-full text-xs">
-              <tbody>
-                <tr>
-                  <td className="py-2 px-3 border-b border-gray-200 text-gray-600">
-                    Total de productos:
-                  </td>
-                  <td className="py-2 px-3 border-b border-gray-200 text-right font-medium">
-                    {requisicion.totalLineas}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-3 border-b border-gray-200 text-gray-600">
-                    Total de unidades:
-                  </td>
-                  <td className="py-2 px-3 border-b border-gray-200 text-right font-medium">
-                    {requisicion.lineas.reduce(
-                      (acc, linea) => acc + linea.cantidadSugerida,
-                      0,
-                    )}
-                  </td>
-                </tr>
-                <tr style={{ backgroundColor: "#e5e7eb" }}>
-                  <td className="py-2 px-3 text-gray-800 font-medium">
-                    TOTAL ESTIMADO:
-                  </td>
-                  <td className="py-2 px-3 text-right font-semibold text-gray-800 text-base">
-                    {formatearMoneda(requisicion.totalRequisicion)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        {/* TOTALES */}
+        <div className="flex justify-end">
+          <div className="w-72 border rounded-md text-sm">
+            <div className="flex justify-between px-3 py-2 border-b">
+              <span className="text-gray-500">Productos</span>
+              <span>{requisicion.totalLineas}</span>
+            </div>
+
+            <div className="flex justify-between px-3 py-2 border-b">
+              <span className="text-gray-500">Unidades</span>
+              <span>
+                {requisicion.lineas.reduce(
+                  (acc, l) => acc + l.cantidadSugerida,
+                  0,
+                )}
+              </span>
+            </div>
+
+            <div className="flex justify-between px-3 py-3 font-semibold text-base bg-gray-100">
+              <span>Total</span>
+              <span>{formatearMoneda(requisicion.totalRequisicion)}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Vista previa del PDF */}
+      {/* PDF preview */}
       {pdfUrl && (
-        <div className="mt-6">
-          <iframe
-            src={pdfUrl}
-            className="w-full h-[80vh] border rounded-lg"
-            title="Vista previa PDF de requisición"
-          />
-        </div>
+        <iframe
+          src={pdfUrl}
+          className="w-full h-[80vh] mt-6 border rounded-lg"
+        />
       )}
     </div>
   );

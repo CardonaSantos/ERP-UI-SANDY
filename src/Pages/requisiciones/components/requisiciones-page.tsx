@@ -13,23 +13,16 @@ import {
   useGetRequisiciones,
 } from "@/hooks/use-requisiciones/use-requisiciones";
 
-// Importamos los nuevos hooks de dominio
-
 const getApiErrorMessageAxios = (err: unknown): string =>
   (err as { response?: { data?: { message?: string } } })?.response?.data
     ?.message ??
   (err as { message?: string })?.message ??
   "Error desconocido";
 
-type SendToComprasExtDTO = SendToComprasDTO & {
-  partidaPresupuestalId: string;
-};
-
 export function RequisicionesPage() {
   const { data: partidas_presupuestos } = useGetPresupuestosPartidas();
   const partidas = partidas_presupuestos ? partidas_presupuestos : [];
 
-  // 1. Usamos el hook de dominio (¡Mira qué limpio!)
   const {
     data: requisiciones = [],
     isFetching: isLoadingRequisiciones,
@@ -50,17 +43,15 @@ export function RequisicionesPage() {
     [proveedoresRaw],
   );
 
-  // 2. Instanciamos las mutaciones
   const mutationSendToCompras = useGenerarCompra();
-  const mutationDeleteRequisicion = useDeleteRequisicion(); // Ya no necesita el ID inicial
+  const mutationDeleteRequisicion = useDeleteRequisicion();
 
-  // 3. Handlers simplificados
-  const handleSendToCompras = async (dto: SendToComprasExtDTO) => {
+  const handleSendToCompras = async (dto: SendToComprasDTO) => {
     if (
       !dto.requisicionID ||
       !dto.userID ||
       !dto.proveedorId ||
-      !dto.partidaPresupuestalId
+      !dto.presupuestoId
     ) {
       toast.warning("Faltan datos para el envío");
       return;
@@ -71,7 +62,6 @@ export function RequisicionesPage() {
       success: "Requisición enviada y saldo comprometido correctamente",
       error: (err) => getApiErrorMessageAxios(err),
     });
-    // ¡Ya no necesitas refetch() manual aquí! El hook invalida la caché.
   };
 
   const handleDeleteRequisicion = async (id: number) => {
@@ -80,16 +70,11 @@ export function RequisicionesPage() {
       return;
     }
 
-    await toast.promise(
-      // Pasamos el ID directamente al mutateAsync
-      mutationDeleteRequisicion.mutateAsync(id),
-      {
-        loading: "Eliminando requisición...",
-        success: "Requisición eliminada correctamente",
-        error: (err) => getApiErrorMessageAxios(err),
-      },
-    );
-    // ¡Ya no necesitas refetch() manual aquí tampoco!
+    await toast.promise(mutationDeleteRequisicion.mutateAsync(id), {
+      loading: "Eliminando requisición...",
+      success: "Requisición eliminada correctamente",
+      error: (err) => getApiErrorMessageAxios(err),
+    });
   };
 
   return (

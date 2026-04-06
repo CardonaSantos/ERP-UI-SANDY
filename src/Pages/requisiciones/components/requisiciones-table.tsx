@@ -96,9 +96,7 @@ interface RequisitionsTableProps {
   // ── Mutations (manejadas en el nivel superior)
   isSendingToCompras: boolean;
   isDeletingRequisicion: boolean;
-  onSendToCompras: (
-    dto: SendToComprasDTO & { partidaPresupuestalId: string },
-  ) => void;
+  onSendToCompras: (dto: SendToComprasDTO) => void;
   onDeleteRequisicion: (id: number) => void;
 }
 

@@ -20,17 +20,14 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { TriangleAlert, Loader2, LandmarkIcon } from "lucide-react";
+import { TriangleAlert, Loader2 } from "lucide-react";
 import {
   RequisitionResponseDTO,
   SendToComprasDTO,
 } from "@/Types/requisiciones/requisiciones-tables";
 import { PresupuestoPartidaSelect } from "@/Types/costos presupuestales/selects";
 import { ReusableSelect } from "@/utils/components/ReactSelectComponent/ReusableSelect";
-
-// ============================================================
-// Tipos locales
-// ============================================================
+import { formatMonedaGT } from "@/Pages/Compras/compras.utils";
 
 export interface ProveedorOption {
   id: number;
@@ -38,7 +35,6 @@ export interface ProveedorOption {
   telefonoContacto?: string | null;
 }
 
-/** Partida presupuestal / Centro de costo  */
 export interface PartidaPresupuestal {
   id: string;
   nombre: string;
@@ -53,23 +49,8 @@ interface SendToPurchasesDialogProps {
   proveedores: ProveedorOption[];
   partidas: Array<PresupuestoPartidaSelect>;
   isPending: boolean;
-  onConfirm: (
-    dto: SendToComprasDTO & { partidaPresupuestalId: string },
-  ) => void;
+  onConfirm: (dto: SendToComprasDTO) => void;
 }
-
-// ============================================================
-// Formatters
-// ============================================================
-
-const formatMoneda = (n: number) =>
-  new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ" }).format(
-    n,
-  );
-
-// ============================================================
-// Component
-// ============================================================
 
 export function SendToPurchasesDialog({
   open,
@@ -91,7 +72,7 @@ export function SendToPurchasesDialog({
       requisicionID: requisicion.id,
       userID: requisicion.usuarioId,
       proveedorId: parseInt(proveedorId, 10),
-      partidaPresupuestalId: partidaId,
+      presupuestoId: parseInt(partidaId),
     });
   };
 
@@ -110,7 +91,6 @@ export function SendToPurchasesDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
-        {/* ── Header ───────────────────────────────────────── */}
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold">
             Enviar a módulo de compras
@@ -122,29 +102,25 @@ export function SendToPurchasesDialog({
             </span>{" "}
             · Total:{" "}
             <span className="font-medium">
-              {requisicion ? formatMoneda(requisicion.totalRequisicion) : "—"}
+              {requisicion ? formatMonedaGT(requisicion.totalRequisicion) : "—"}
             </span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
-          {/* ── Advertencia presupuestal ──────────────────── */}
           <Alert variant="destructive" className="py-2.5">
             <TriangleAlert className="h-4 w-4" />
             <AlertTitle className="text-xs font-semibold mb-0.5">
-              Acción irreversible — compromete presupuesto
+              Confirmación de compromiso presupuestario
             </AlertTitle>
             <AlertDescription className="text-xs leading-relaxed">
-              Al confirmar, el sistema ejecutará el método{" "}
-              <strong>comprometer saldo</strong> sobre la partida presupuestal
-              seleccionada. Esta requisición no podrá editarse ni eliminarse una
-              vez enviada.
+              Al confirmar, se reservará y comprometerá el saldo de la partida
+              seleccionada de forma inmediata.
             </AlertDescription>
           </Alert>
 
           <Separator />
 
-          {/* ── Proveedor ─────────────────────────────────── */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Proveedor</Label>
             <Select
@@ -173,46 +149,56 @@ export function SendToPurchasesDialog({
           {/* ── Partida presupuestal ──────────────────────── */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium flex items-center gap-1">
-              <LandmarkIcon className="h-3.5 w-3.5" />
               Partida presupuestal / Centro de costo
             </Label>
 
             <ReusableSelect
               items={partidas}
-              // Retornamos el ID único (es number según tu interfaz)
               getValue={(p) => p.id}
-              // Lo que el usuario verá en la lista
-              getLabel={(p) =>
-                `${p.partida} — Disp. ${formatMoneda(p.montoDisponible)}`
-              }
-              // Buscamos el objeto completo basado en tu partidaId del estado
+              getLabel={(p) => {
+                const usable = p.montoDisponible - p.montoComprometido;
+                return `${p.partida} • Saldo: ${formatMonedaGT(usable)} (Disp: ${formatMonedaGT(p.montoDisponible)} | Comp: ${formatMonedaGT(p.montoComprometido)})`;
+              }}
               value={partidas.find((p) => String(p.id) === partidaId) || null}
-              // Al cambiar, actualizamos tu estado de string
               onChange={(p) => setPartidaId(p ? String(p.id) : "")}
               placeholder="Seleccionar partida..."
               isClearable={true}
-              // Podemos pasar estilos o props adicionales de react-select aquí
               selectProps={{
                 isDisabled: isPending,
                 noOptionsMessage: () => "No hay partidas disponibles",
-                // Estilos para que combine con tu diseño (opcional)
                 styles: {
                   control: (base) => ({
                     ...base,
-                    minHeight: "32px",
-                    height: "32px",
+                    minHeight: "30px", // Un poco más pequeño para ser más "vanilla"
+                    height: "30px",
+                    fontSize: "12px", // sm
+                  }),
+                  option: (base) => ({
+                    ...base,
+                    fontSize: "11px", // xs
+                    padding: "4px 8px", // Reducimos el padding para que sea compacto
+                  }),
+                  singleValue: (base) => ({
+                    ...base,
                     fontSize: "12px",
+                  }),
+                  indicatorsContainer: (base) => ({
+                    ...base,
+                    height: "30px",
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    fontSize: "11px",
                   }),
                 },
               }}
             />
 
-            {/* Saldo disponible inline (tu lógica actual sigue funcionando igual) */}
             {selectedPartida && (
               <p className="text-[11px] text-muted-foreground">
                 Saldo disponible:{" "}
                 <span className="font-medium text-foreground">
-                  {formatMoneda(selectedPartida.montoDisponible)}
+                  {formatMonedaGT(selectedPartida.montoDisponible)}
                 </span>
                 {requisicion &&
                   selectedPartida.montoDisponible <
@@ -226,7 +212,6 @@ export function SendToPurchasesDialog({
           </div>
         </div>
 
-        {/* ── Footer ───────────────────────────────────────── */}
         <DialogFooter className="gap-2">
           <Button
             variant="outline"

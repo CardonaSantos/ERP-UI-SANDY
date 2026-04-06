@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  LoaderCircle,
 } from "lucide-react";
 import {
   keyForPresentacion,
@@ -51,8 +52,8 @@ import {
   QtyInput,
   toFixed2,
 } from "./columns/columns-requisicion-table";
-
-// ─── types ────────────────────────────────────────────────────────────────────
+import { CreateRequisitionLine } from "./requisicion.queries";
+import { formattMoneda } from "../Utils/Utils";
 
 type Props = {
   data: PagedResponse<RequisitionProductCandidate> | undefined;
@@ -69,9 +70,9 @@ type Props = {
     React.SetStateAction<Record<SelectedKey, SelectedLine>>
   >;
   onAfterSelectionChange?: () => void;
+  handleOpenConfirm: () => void;
+  isPending: boolean;
 };
-
-// ─── main component ───────────────────────────────────────────────────────────
 
 export default function RequisitionCandidatesTable(props: Props) {
   const {
@@ -87,13 +88,13 @@ export default function RequisitionCandidatesTable(props: Props) {
     selected,
     setSelected,
     onAfterSelectionChange,
+    handleOpenConfirm,
+    isPending,
   } = props;
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
-
-  // ── selection handlers ──────────────────────────────────────────────────────
 
   const toggleProducto = (row: RequisitionProductCandidate) => {
     const k = keyForProducto(row.productoId);
@@ -171,8 +172,6 @@ export default function RequisitionCandidatesTable(props: Props) {
       [k]: { ...prev[k], actualizarCosto: checked },
     }));
 
-  // ── columns ────────────────────────────────────────────────────────────────
-
   const columns = React.useMemo(
     () =>
       buildCandidateColumns({
@@ -183,11 +182,8 @@ export default function RequisitionCandidatesTable(props: Props) {
         updatePrecio,
         toggleActualizarCosto,
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [selected],
   );
-
-  // ── table ──────────────────────────────────────────────────────────────────
 
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
@@ -206,8 +202,6 @@ export default function RequisitionCandidatesTable(props: Props) {
     pageCount: totalPages,
   });
 
-  // ── pagination helpers ─────────────────────────────────────────────────────
-
   const canPrev = pagination.pageIndex > 0;
   const canNext = pagination.pageIndex + 1 < totalPages;
   const goTo = (idx: number) =>
@@ -221,8 +215,18 @@ export default function RequisitionCandidatesTable(props: Props) {
     for (let i = left; i <= right; i++) range.push(i);
     return range;
   }, [pagination.pageIndex, totalPages]);
-
   // ─────────────────────────────────────────────────────────────────────────
+  const lineas: CreateRequisitionLine[] = Object.values(selected).map((s) => {
+    const base = {
+      cantidadSugerida: s.cantidad,
+      fechaExpiracion: s.fechaExpiracion,
+      precioCostoUnitario: s.precioCostoUnitario,
+      actualizarCosto: s.actualizarCosto || false,
+    };
+    return s.scope === "PRODUCTO"
+      ? { ...base, productoId: s.productoId! }
+      : { ...base, presentacionId: s.presentacionId! };
+  });
 
   return (
     <div className="flex flex-col gap-3">
@@ -255,6 +259,34 @@ export default function RequisitionCandidatesTable(props: Props) {
               {Object.keys(selected).length}
             </span>
             seleccionados
+          </span>
+        )}
+
+        {lineas.length > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 self-center">
+            <span className="font-medium text-foreground">
+              {lineas.reduce((acc, item) => acc + item.cantidadSugerida, 0)}
+            </span>
+            Unidades
+          </span>
+        )}
+
+        {lineas.length > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 self-center">
+            <span className="font-medium text-foreground">
+              {formattMoneda(
+                lineas.reduce(
+                  (acc, item) =>
+                    acc +
+                    item.cantidadSugerida *
+                      Number(
+                        item.precioCostoUnitario ? item.precioCostoUnitario : 0,
+                      ),
+                  0,
+                ),
+              )}
+            </span>
+            Costo Total
           </span>
         )}
       </div>
@@ -361,6 +393,35 @@ export default function RequisitionCandidatesTable(props: Props) {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelected({})}
+          disabled={Object.keys(selected).length === 0 || isPending}
+          className="h-8 text-xs text-muted-foreground hover:text-destructive"
+        >
+          Limpiar selección
+        </Button>
+
+        <Button
+          size="sm"
+          className="h-8 text-xs"
+          disabled={isPending || Object.keys(selected).length === 0}
+          onClick={handleOpenConfirm}
+        >
+          {isPending ? (
+            <>
+              <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
+              Generando...
+            </>
+          ) : (
+            "Generar requisición"
+          )}
+        </Button>
       </div>
 
       {/* Paginación */}

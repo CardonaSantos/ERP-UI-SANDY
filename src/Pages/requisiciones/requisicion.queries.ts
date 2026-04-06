@@ -1,7 +1,4 @@
-import {
-  useApiMutation,
-  useApiQuery,
-} from "@/hooks/genericoCall/genericoCallHook";
+import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
 import { AxiosRequestConfig } from "axios";
 
 import { keepPreviousData } from "@tanstack/react-query";
@@ -67,6 +64,3 @@ export type CreateRequisitionDto = {
   usuarioId: number;
   lineas: CreateRequisitionLine[];
 };
-
-export const useCreateRequisitionMutation = () =>
-  useApiMutation<any, CreateRequisitionDto>("post", "/requisicion");

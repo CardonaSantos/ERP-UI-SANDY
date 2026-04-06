@@ -4,11 +4,14 @@ import { CreateRequisitionDto } from "@/Pages/requisiciones/requisicion.queries"
 import { useInvalidateHandler } from "@/utils/query";
 import { requisicionesQkeys } from "./Qk";
 import {
+  PagedResponse,
+  RequisitionProductCandidate,
   RequisitionResponse,
   RequisitionResponseDTO,
 } from "@/Types/requisiciones/requisiciones-tables";
-import { useMutation } from "@tanstack/react-query";
+import { keepPreviousData, useMutation } from "@tanstack/react-query";
 import { erpApi } from "@/API/axiosClientCrm";
+import { presupuesto_partidasQkeys } from "../use-presupuestos-partidas/Qk";
 
 export interface UpdateRequisitionDto {
   requisicionId: number;
@@ -28,6 +31,39 @@ export interface dataCreateCompra {
 
 export interface StockAlertItem {
   id: number;
+}
+
+interface CandidateParams {
+  page: number;
+  pageSize: number;
+  q?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+}
+
+export function useGetRequisitionCandidates(
+  sucursalId: number,
+  params: CandidateParams,
+  options?: { enabled?: boolean },
+) {
+  return erp.useQueryApi<PagedResponse<RequisitionProductCandidate>>(
+    requisicionesQkeys.candidates(sucursalId, params),
+    erpEndpoints.requisiciones.candidates,
+    {
+      params: {
+        sucursalId,
+        page: params.page,
+        pageSize: params.pageSize,
+        q: params.q || "",
+        sortBy: params.sortBy || "prioridad",
+        sortDir: params.sortDir || "asc",
+      },
+    },
+    {
+      enabled: !!sucursalId && (options?.enabled ?? true),
+      placeholderData: keepPreviousData,
+    },
+  );
 }
 
 /** Obtener todas las requisiciones */
@@ -112,6 +148,8 @@ export function useGenerarCompra() {
     {
       onSuccess: () => {
         invalidate(requisicionesQkeys.all);
+        invalidate(requisicionesQkeys.all);
+        invalidate(presupuesto_partidasQkeys.all);
       },
     },
   );

@@ -14,8 +14,6 @@ import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 
 import RequisitionCandidatesTable from "./requisicion-table-pick";
 import {
-  useRequisitionCandidatesQuery,
-  useCreateRequisitionMutation,
   CreateRequisitionDto,
   CreateRequisitionLine,
 } from "./requisicion.queries";
@@ -32,6 +30,11 @@ import {
   SelectedKey,
   SelectedLine,
 } from "@/Types/requisiciones/requisiciones-tables";
+import {
+  useCreateRequisicion,
+  useGetRequisitionCandidates,
+} from "@/hooks/use-requisiciones/use-requisiciones";
+import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -59,7 +62,7 @@ export default function RequisitionBuilder() {
   const sortDir = sorting[0]?.desc ? "desc" : "asc";
 
   const { data, isLoading, refetch, isRefetching } =
-    useRequisitionCandidatesQuery(
+    useGetRequisitionCandidates(
       sucursalId,
       {
         page: pagination.pageIndex + 1,
@@ -73,7 +76,10 @@ export default function RequisitionBuilder() {
 
   const selectedCount = Object.keys(selected).length;
 
-  const createMutation = useCreateRequisitionMutation();
+  const createMutation = useCreateRequisicion();
+  const handleOpenConfirm = () => {
+    setOpenGenerateReq(!openGenerateReq);
+  };
 
   const handleCreate = async () => {
     if (!usuarioId || !sucursalId) {
@@ -97,8 +103,11 @@ export default function RequisitionBuilder() {
     const dto: CreateRequisitionDto = { sucursalId, usuarioId, lineas };
 
     try {
-      await createMutation.mutateAsync(dto);
-      toast.success("Requisición creada");
+      toast.promise(createMutation.mutateAsync(dto), {
+        loading: "Registrando requisición...",
+        success: "Registro insertado",
+        error: (error) => getApiErrorMessageAxios(error),
+      });
       setSelected({});
       setOpenGenerateReq(false);
       refetch();
@@ -118,6 +127,8 @@ export default function RequisitionBuilder() {
     {
       content: (
         <RequisitionCandidatesTable
+          isPending={createMutation.isPending}
+          handleOpenConfirm={handleOpenConfirm}
           data={data as PagedResponse<RequisitionProductCandidate> | undefined}
           isLoading={isLoading || isRefetching}
           pagination={pagination}
