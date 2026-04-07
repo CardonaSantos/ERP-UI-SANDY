@@ -1,61 +1,58 @@
 "use client";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  CreditCard,
+  Layers,
+  ShoppingBag,
+  XCircle,
+} from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { useStore } from "@/components/Context/ContextSucursal";
 import { formattMonedaGT } from "@/utils/formattMoneda";
 import { TZGT } from "../Utils/Utils";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CompraRegistroUI } from "./Interfaces/RegistroCompraInterface";
-// ⬇️ hooks genéricos (React Query + Axios client base)
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  useApiMutation,
-  useApiQuery,
-} from "@/hooks/genericoCall/genericoCallHook";
 import {
   ItemDetallesPayloadParcial,
   PayloadRecepcionParcial,
 } from "./table-select-recepcion/selectedItems";
 import dayjs from "dayjs";
-import { CompraRecepcionableResponse } from "./ResumenRecepcionParcial/Interfaces/detalleRecepcionable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ComprasMain from "./comprasMain";
 import RecepcionesMain from "./Recepciones/RecepcionesMain";
-import PaymentMethodCompraDialogConfirm from "./PaymentCompraDialog";
 import CreditoCompraMainPage from "./Credito/CreditoCompraMainPage";
-import PurchasePaymentFormDialog, {
-  CajaConSaldo,
-} from "@/utils/components/SelectMethodPayment/PurchasePaymentFormDialog";
-import { UICreditoCompra } from "./Credito/creditoCompraDisponible/interfaces/interfaces";
+import PurchasePaymentFormDialog from "@/utils/components/SelectMethodPayment/PurchasePaymentFormDialog";
 import { normalizarDetalles } from "./Credito/helpers/normalizador";
-import { qk } from "./qk";
+import CostosAsociadosDialog from "./components/Costos Asociados Dialog";
 import {
   CostosAsociadosDialogResult,
   MovimientoFinancieroDraft,
   ProrrateoMeta,
-} from "./CostoAsociadoTypes";
-import CostosAsociadosDialog from "./components/Costos Asociados Dialog";
+} from "./costo-asociado-types";
+import ComprasMain from "./comprasMain";
+import PaymentMethodCompraDialogConfirm from "./payment-compra-dialog";
+import {
+  useGetCompraRegistro,
+  useRecepcionarCompraParcial,
+  useRecepcionarCompraTotal,
+} from "@/hooks/use-compras/use-compras";
+import {
+  useGetCompraRecepcionable,
+  useGetCreditoCompra,
+} from "@/hooks/use-creditos/use-creditos";
+import { useGetCajasDisponibles } from "@/hooks/use-cajas/use-cajas";
+import { useGetCuentasBancarias } from "@/hooks/use-cuentas-bancarias/use-cuentas-bancarias";
+import { useProveedoresSelect } from "@/hooks/getProveedoresSelect/proveedores";
+import { useTabChangeWithUrl } from "@/utils/components/tabs/handleTabChangeWithParamURL";
+import { ReusableTabs, TabItem } from "@/utils/components/tabs/reusable-tabs";
+import { PageTransition } from "@/components/Transition/layout-transition";
 
 interface Option {
   label: string;
   value: string;
 }
 
-// Animaciones
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-  },
-};
-
-// 1) Tipos y helpers arriba del componente (o en un archivo de utils compartido)
 type MetodoPago =
   | "EFECTIVO"
   | "TRANSFERENCIA"
@@ -68,144 +65,27 @@ type MetodoPago =
 type RecepcionFlow = "NORMAL" | "PARCIAL";
 
 export default function CompraDetalle() {
-  const userId = useStore((state) => state.userId) ?? 0;
-
-  // === Helpers (puros) ======================================================
-  const isBankMethod = (m?: MetodoPago | "") =>
-    m === "TRANSFERENCIA" || m === "TARJETA" || m === "CHEQUE";
-  const isCashMethod = (m?: MetodoPago | "") =>
-    m === "EFECTIVO" || m === "CONTADO";
-
-  // === Router / Store =======================================================
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+
+  const userId = useStore((state) => state.userId) ?? 0;
   const sucursalId = useStore((state) => state.sucursalId) ?? 0;
   const compraId = Number.isFinite(Number(id)) ? Number(id) : 0;
-  const [recepcionFlow, setRecepcionFlow] = useState<RecepcionFlow>("NORMAL");
 
-  // === UI / Dialog states ===================================================
-  const [openSendStock, setOpenSendStock] = useState(false);
-  const [openFormDialog, setOpenFormDialog] = useState(false);
-  const [openFormPaymentDialog, setOpenFormPaymentDialog] = useState(false);
-
-  const [observaciones, setObservaciones] = useState<string>("");
-  const [proveedorSelected, setProveedorSelected] = useState<
-    string | undefined
-  >(undefined);
-  const [openCostoDialog, setOpenCostoDialog] = useState(false);
-
-  const [metodoPago, setMetodoPago] = useState<MetodoPago | "">("");
-  const [cuentaBancariaSelected, setCuentaBancariaSelected] =
-    useState<string>("");
-  const [cajaSelected, setCajaSelected] = useState<string | null>(null);
-
-  const [isRecibirParcial, setIsRecibirParcial] = useState<boolean>(false);
-  const [openRecibirParcial, setOpenRecibirParcial] = useState<boolean>(false);
-
-  const queryClient = useQueryClient();
-
-  const [selectedItems, setSelectedItems] = useState<PayloadRecepcionParcial>({
-    compraId: compraId,
-    fecha: dayjs().tz(TZGT).startOf("day").toISOString(),
-    observaciones: "",
-    usuarioId: userId,
-    sucursalId: sucursalId,
-    lineas: [],
-  });
-
-  const [mfDraft, setMfDraft] = useState<MovimientoFinancieroDraft | null>(
-    null
-  );
-  const [prorrateoMeta, setProrrateoMeta] = useState<ProrrateoMeta | null>(
-    null
-  );
-  const [costoStepDone, setCostoStepDone] = useState(false); // marcamos si el usuario completó el paso de costos
-
-  // ⚙️ Mantén lo elegido en el diálogo de costos; sólo completa sucursal/proveedor si falta.
-  const buildMf = useCallback(() => {
-    if (!mfDraft) return undefined;
-    return {
-      ...mfDraft,
-      sucursalId: mfDraft.sucursalId ?? sucursalId,
-      proveedorId: mfDraft.proveedorId ?? Number(proveedorSelected),
-      // Importante: NO sobreescribimos metodoPago / cuentaBancariaId / registroCajaId aquí.
-    };
-  }, [mfDraft, sucursalId, proveedorSelected]);
-
-  // === QUERIES ==============================================================
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaultTab = (searchParams.get("tab") as string) || "compra";
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
+  // QUERIES & MUTATIONS ===============================================
   const {
     data: registroQ,
     isPending: isPendingRegistro,
     isError: isErrorRegistro,
     error: errorRegistro,
     refetch: reFetchRegistro,
-  } = useApiQuery<CompraRegistroUI>(
-    ["compra", compraId],
-    `/compra-requisicion/get-registro/${compraId}`,
-    undefined,
-    {
-      enabled: Number.isFinite(compraId) && compraId > 0,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-    }
-  );
+  } = useGetCompraRegistro(compraId);
 
-  const queryKey = qk.creditoFromCompra(compraId);
   const { data: creditoFromCompra, refetch: refetchCredito } =
-    useApiQuery<UICreditoCompra>(
-      queryKey,
-      `/credito-documento-compra/${compraId}`,
-      undefined,
-      {
-        staleTime: 0,
-        refetchOnWindowFocus: false,
-      }
-    );
-
-  const proveedoresQ = useApiQuery<Array<{ id: number; nombre: string }>>(
-    ["proveedores"],
-    "/proveedor",
-    undefined,
-    {
-      staleTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-    }
-  );
-
-  const cuentasQ = useApiQuery<Array<{ id: number; nombre: string }>>(
-    ["cuentas-bancarias", "simple-select"],
-    "cuentas-bancarias/get-simple-select",
-    undefined,
-    {
-      staleTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-    }
-  );
-
-  // Cajas abiertas por sucursal
-  const cajasQ = useApiQuery<CajaConSaldo[]>(
-    ["cajas-disponibles", sucursalId],
-    `/caja/cajas-disponibles/${sucursalId}`,
-    undefined,
-    {
-      enabled: !!sucursalId,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-    }
-  );
-
-  // === MUTATIONS ============================================================
-  const recepcionarM = useApiMutation<any, any>(
-    "post",
-    `/compra-requisicion/${compraId}/recepcionar`,
-    undefined,
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["compra", compraId] });
-        queryClient.invalidateQueries({ queryKey: ["compras"] });
-      },
-    }
-  );
+    useGetCreditoCompra(compraId);
 
   const {
     data: recepcionable = {
@@ -216,39 +96,377 @@ export default function CompraDetalle() {
     },
     isPending: isPendingDrp,
     refetch: reFetchDRP,
-  } = useApiQuery<CompraRecepcionableResponse>(
-    ["compra-recepcionable", compraId],
-    "compras/get-data-compra-parcial",
-    { params: { compraId } }
-  );
+  } = useGetCompraRecepcionable(compraId);
 
-  // === DERIVED ==============================================================
+  const cajasQ = useGetCajasDisponibles(sucursalId);
+  const cuentasQ = useGetCuentasBancarias();
+  const proveedoresQ = useProveedoresSelect();
+
+  const recepcionarM = useRecepcionarCompraTotal(compraId);
+  const handleRecepcionarParcial = useRecepcionarCompraParcial(compraId);
+
+  const [recepcionFlow, setRecepcionFlow] = useState<RecepcionFlow>("NORMAL");
+  const [isRecibirParcial, setIsRecibirParcial] = useState<boolean>(false);
+
+  // Dialogs UI
+  const [openSendStock, setOpenSendStock] = useState(false);
+  const [openFormDialog, setOpenFormDialog] = useState(false);
+  const [openFormPaymentDialog, setOpenFormPaymentDialog] = useState(false);
+  const [openCostoDialog, setOpenCostoDialog] = useState(false);
+  const [openRecibirParcial, setOpenRecibirParcial] = useState<boolean>(false);
+  const [costoStepDone, setCostoStepDone] = useState(false);
+
+  // Datos de Formulario
+  const [observaciones, setObservaciones] = useState<string>("");
+  const [proveedorSelected, setProveedorSelected] = useState<
+    string | undefined
+  >(undefined);
+  const [metodoPago, setMetodoPago] = useState<MetodoPago | "">("");
+  const [cuentaBancariaSelected, setCuentaBancariaSelected] =
+    useState<string>("");
+  const [cajaSelected, setCajaSelected] = useState<string | null>(null);
+
+  // Payloads Complejos
+  const [mfDraft, setMfDraft] = useState<MovimientoFinancieroDraft | null>(
+    null,
+  );
+  const [prorrateoMeta, setProrrateoMeta] = useState<ProrrateoMeta | null>(
+    null,
+  );
+  const [selectedItems, setSelectedItems] = useState<PayloadRecepcionParcial>({
+    compraId: compraId,
+    fecha: dayjs().tz(TZGT).startOf("day").toISOString(),
+    observaciones: "",
+    usuarioId: userId,
+    sucursalId: sucursalId,
+    lineas: [],
+  });
+
+  const handleChangeTabs = useTabChangeWithUrl({
+    activeTab,
+    setActiveTab,
+    searchParams,
+    setSearchParams,
+  });
+
+  // HELPERS Y DATOS DERIVADOS =========================================
+  const isBankMethod = (m?: MetodoPago | "") =>
+    m === "TRANSFERENCIA" || m === "TARJETA" || m === "CHEQUE";
+
+  const isCashMethod = (m?: MetodoPago | "") =>
+    m === "EFECTIVO" || m === "CONTADO";
+
   const registro = registroQ ?? null;
   const proveedores = proveedoresQ.data ?? [];
   const cuentasBancarias = cuentasQ.data ?? [];
   const cajasDisponibles = cajasQ.data ?? [];
+
+  const loadingHard = isPendingRegistro;
+  const errorHard = isErrorRegistro && !registro;
+  const hasCredit: boolean =
+    Boolean(creditoFromCompra?.id) &&
+    (creditoFromCompra?.cuotas?.length ?? 0) > 0;
+
+  const normalizados = normalizarDetalles(
+    Array.isArray(registro?.detalles) ? registro.detalles : [],
+  );
 
   const montoRecepcion = useMemo(() => {
     if (recepcionFlow === "PARCIAL") {
       return selectedItems.lineas.reduce(
         (acc: number, item: ItemDetallesPayloadParcial) =>
           acc + item.cantidadRecibida * item.precioCosto,
-        0
+        0,
       );
     }
     return Number(registro?.resumen?.subtotal ?? registro?.total ?? 0);
   }, [registro, recepcionFlow, selectedItems]);
 
-  // === EFFECTS ==============================================================
+  const selectedIds = useMemo(() => {
+    return new Set(selectedItems.lineas.map((l) => l.compraDetalleId));
+  }, [selectedItems]);
 
-  // Reset de banco si el método no es bancario
+  const optionsCajas: Option[] = cajasDisponibles.map((c) => ({
+    label: `Caja #${c.id} · Inicial ${formattMonedaGT(
+      c.saldoInicial,
+    )} · Disponible ${formattMonedaGT(c.disponibleEnCaja)}`,
+    value: c.id.toString(),
+  }));
+
+  const cajaSel = cajasDisponibles.find(
+    (c) => String(c.id) === String(cajaSelected),
+  );
+
+  const cajaTieneSaldo = isCashMethod(metodoPago)
+    ? !!cajaSel && Number(cajaSel.disponibleEnCaja) >= montoRecepcion
+    : true;
+
+  const requiereBanco = isBankMethod(metodoPago);
+  const requiereCaja = isCashMethod(metodoPago);
+
+  const canContinue =
+    !!observaciones.trim() &&
+    !!proveedorSelected &&
+    !!metodoPago &&
+    (!requiereBanco || !!cuentaBancariaSelected) &&
+    (!requiereCaja || (!!cajaSelected && cajaTieneSaldo));
+
+  // CALLBACKS Y ACTUALIZADORES DE ESTADO ==============================
+  const buildMf = useCallback(() => {
+    if (!mfDraft) return undefined;
+    return {
+      ...mfDraft,
+      sucursalId: mfDraft.sucursalId ?? sucursalId,
+      proveedorId: mfDraft.proveedorId ?? Number(proveedorSelected),
+    };
+  }, [mfDraft, sucursalId, proveedorSelected]);
+
+  const buildProrrateo = useCallback(() => {
+    if (!prorrateoMeta?.aplicar) return undefined;
+    return {
+      aplicar: true,
+      base: prorrateoMeta.base ?? "COSTO",
+      incluirAntiguos: prorrateoMeta.incluirAntiguos ?? false,
+    } as const;
+  }, [prorrateoMeta]);
+
+  const updateCantidadDetalle = (
+    compraDetalleId: number,
+    nuevaCantidad: number,
+  ) => {
+    setSelectedItems((prev) => ({
+      ...prev,
+      lineas: prev.lineas.map((l) =>
+        l.compraDetalleId === compraDetalleId
+          ? { ...l, cantidadRecibida: nuevaCantidad }
+          : l,
+      ),
+    }));
+  };
+
+  const updateFechaVencimiento = (
+    compraDetalleId: number,
+    nuevaFechaVencimiento: string,
+  ) => {
+    setSelectedItems((previa) => ({
+      ...previa,
+      lineas: previa.lineas.map((linea) =>
+        linea.compraDetalleId === compraDetalleId
+          ? { ...linea, fechaExpiracion: nuevaFechaVencimiento }
+          : linea,
+      ),
+    }));
+  };
+
+  const upsserSelectItems = (
+    item: ItemDetallesPayloadParcial,
+    checked: boolean,
+  ) => {
+    setSelectedItems((prev) => {
+      const exists = prev.lineas.some(
+        (l) => l.compraDetalleId === item.compraDetalleId,
+      );
+
+      if (checked) {
+        return exists
+          ? {
+              ...prev,
+              lineas: prev.lineas.map((l) =>
+                l.compraDetalleId === item.compraDetalleId
+                  ? {
+                      ...l,
+                      ...item,
+                      fechaExpiracion:
+                        item.fechaExpiracion ?? l.fechaExpiracion,
+                      checked: true,
+                    }
+                  : l,
+              ),
+            }
+          : {
+              ...prev,
+              lineas: [...prev.lineas, { ...item, checked: true }],
+            };
+      } else {
+        return {
+          ...prev,
+          lineas: prev.lineas.filter(
+            (l) => l.compraDetalleId !== item.compraDetalleId,
+          ),
+        };
+      }
+    });
+  };
+
+  const verifyTransaction = () => {
+    if (
+      !selectedItems.compraId ||
+      !selectedItems.sucursalId ||
+      !selectedItems.usuarioId ||
+      !selectedItems.lineas ||
+      selectedItems.lineas.length <= 0
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  //  HANDLERS DE ACCIÓN ================================================
+  const onBack = () => navigate(-1);
+
+  const handleSelectCaja = (option: Option | null) => {
+    setCajaSelected(option ? option.value : null);
+  };
+
+  const onContinueFromPayment = useCallback(() => {
+    setOpenFormPaymentDialog(false);
+    setCostoStepDone(false);
+    setOpenCostoDialog(true);
+  }, [setOpenFormPaymentDialog]);
+
+  const handleRefresAll = React.useCallback(async () => {
+    await Promise.allSettled([
+      reFetchDRP(),
+      reFetchRegistro(),
+      refetchCredito(),
+    ]);
+  }, [reFetchDRP, reFetchRegistro, refetchCredito]);
+
+  const handleCreateRecepcionParcial = async () => {
+    try {
+      console.log("El log del payload (selectedItems): ", selectedItems);
+
+      const isValid = verifyTransaction();
+      if (!isValid) {
+        toast.warning("Verifique los datos a enviar");
+        return;
+      }
+
+      const mf = buildMf();
+      const pr = buildProrrateo();
+      const debeProrratear = Boolean(pr) && mf?.motivo === "COSTO_ASOCIADO";
+
+      const payloadParcial = {
+        ...selectedItems,
+        ...(mf ? { mf } : {}),
+        ...(debeProrratear
+          ? {
+              prorrateo: pr,
+              aplicarProrrateo: true,
+            }
+          : {}),
+      };
+
+      console.log("Payload parcial ENVIADO: ", payloadParcial);
+
+      await toast.promise(
+        handleRecepcionarParcial.mutateAsync(payloadParcial),
+        {
+          success: "Compra parcial recepcionada",
+          error: (error) => getApiErrorMessageAxios(error),
+          loading: "Registrando entrada...",
+        },
+      );
+    } catch (error) {
+      console.log("El error: ", error);
+    }
+  };
+
+  const sendtToStock = useCallback(async () => {
+    if (!registro || recepcionarM.isPending) return;
+
+    const usuarioId = registro.usuario.id ?? 1;
+
+    if (!proveedorSelected) {
+      toast.error("Seleccione un proveedor");
+      return;
+    }
+    if (!metodoPago) {
+      toast.error("Seleccione un método de pago");
+      return;
+    }
+    if (isBankMethod(metodoPago) && !cuentaBancariaSelected) {
+      toast.error("Seleccione una cuenta bancaria para este método");
+      return;
+    }
+    if (isCashMethod(metodoPago)) {
+      if (!cajaSelected) {
+        toast.error("Seleccione una caja con saldo suficiente.");
+        return;
+      }
+      if (!cajaSel || Number(cajaSel.disponibleEnCaja) < montoRecepcion) {
+        toast.error("La caja seleccionada no tiene saldo suficiente.");
+        return;
+      }
+    }
+
+    const mf = buildMf();
+    const aplicarProrrateo =
+      Boolean(prorrateoMeta?.aplicar) && mf?.motivo === "COSTO_ASOCIADO";
+
+    const payload: {
+      compraId?: number;
+      usuarioId: number;
+      proveedorId: number;
+      observaciones?: string;
+      metodoPago: string;
+      registroCajaId?: number;
+      sucursalId: number;
+      cuentaBancariaId?: number;
+      lineas?: Array<{
+        fechaVencimiento: string;
+        compraDetalleId: number;
+        loteCodigo: string;
+      }>;
+      mf?: typeof mf;
+      prorrateo?: { aplicar: true };
+    } = {
+      usuarioId,
+      proveedorId: Number(proveedorSelected),
+      observaciones,
+      metodoPago,
+      sucursalId,
+      ...(isBankMethod(metodoPago) && {
+        cuentaBancariaId: Number(cuentaBancariaSelected),
+      }),
+      ...(isCashMethod(metodoPago) &&
+        cajaSelected && { registroCajaId: Number(cajaSelected) }),
+      ...(mf ? { mf } : {}),
+      ...(aplicarProrrateo ? { prorrateo: { aplicar: true } } : {}),
+    };
+
+    console.log("El payload es: ", payload);
+
+    await toast.promise(recepcionarM.mutateAsync(payload), {
+      loading: "Recepcionando compra...",
+      success: "Compra recepcionada y enviada a stock",
+      error: (error) => getApiErrorMessageAxios(error),
+    });
+
+    setOpenSendStock(false);
+    setOpenFormDialog(false);
+    setObservaciones("");
+  }, [
+    registro,
+    recepcionarM,
+    proveedorSelected,
+    observaciones,
+    metodoPago,
+    cuentaBancariaSelected,
+    cajaSelected,
+    cajaSel,
+    montoRecepcion,
+    sucursalId,
+    buildMf,
+    prorrateoMeta?.aplicar,
+  ]);
+
   useEffect(() => {
     if (!isBankMethod(metodoPago) && cuentaBancariaSelected) {
       setCuentaBancariaSelected("");
     }
   }, [metodoPago, cuentaBancariaSelected]);
 
-  // Autoselección de caja válida si pago en efectivo/contado
   useEffect(() => {
     if (!isCashMethod(metodoPago)) {
       setCajaSelected(null);
@@ -272,315 +490,11 @@ export default function CompraDetalle() {
     }
   }, [metodoPago, cajasDisponibles, montoRecepcion, cajaSelected]);
 
-  // Prefill proveedor del registro
   useEffect(() => {
     const idProv = registro?.proveedor?.id;
     setProveedorSelected(idProv ? String(idProv) : undefined);
   }, [registro?.proveedor?.id]);
 
-  // === Handlers básicos =====================================================
-  const onBack = () => navigate(-1);
-  const handleSelectCaja = (option: Option | null) => {
-    setCajaSelected(option ? option.value : null);
-  };
-
-  // === Handler principal: Recepción total (enviar a stock) ==================
-  const sendtToStock = useCallback(async () => {
-    if (!registro || recepcionarM.isPending) return;
-
-    const usuarioId = registro.usuario.id ?? 1;
-
-    // Validaciones UI
-    if (!proveedorSelected) {
-      toast.error("Seleccione un proveedor");
-      return;
-    }
-    if (!metodoPago) {
-      toast.error("Seleccione un método de pago");
-      return;
-    }
-    if (isBankMethod(metodoPago) && !cuentaBancariaSelected) {
-      toast.error("Seleccione una cuenta bancaria para este método");
-      return;
-    }
-    if (isCashMethod(metodoPago)) {
-      if (!cajaSelected) {
-        toast.error("Seleccione una caja con saldo suficiente.");
-        return;
-      }
-      const cajaSel = cajasDisponibles.find(
-        (c) => String(c.id) === String(cajaSelected)
-      );
-      if (!cajaSel || Number(cajaSel.disponibleEnCaja) < montoRecepcion) {
-        toast.error("La caja seleccionada no tiene saldo suficiente.");
-        return;
-      }
-    }
-
-    // ⛏️ Construye MF exactamente como vino del diálogo de costos (sin pisar método/ids).
-    const mf = buildMf();
-
-    // 🔁 Flag minimal de prorrateo: sólo si el MF es COSTO_ASOCIADO y el usuario lo activó
-    const aplicarProrrateo =
-      Boolean(prorrateoMeta?.aplicar) && mf?.motivo === "COSTO_ASOCIADO";
-
-    // Payload final (top-level = pago/flujo de la recepción; mf = costos asociados)
-    const payload: {
-      compraId?: number; // el controller lo rellena con :id
-      usuarioId: number;
-      proveedorId: number;
-      observaciones?: string;
-      metodoPago: string;
-      registroCajaId?: number;
-      sucursalId: number;
-      cuentaBancariaId?: number;
-      lineas?: Array<{
-        fechaVencimiento: string;
-        compraDetalleId: number;
-        loteCodigo: string;
-      }>;
-      mf?: typeof mf;
-      prorrateo?: { aplicar: true };
-    } = {
-      usuarioId,
-      proveedorId: Number(proveedorSelected),
-      observaciones,
-      metodoPago, // debe matchear enum backend
-      sucursalId,
-      // Sólo setear si aplica (para el flujo principal)
-      ...(isBankMethod(metodoPago) && {
-        cuentaBancariaId: Number(cuentaBancariaSelected),
-      }),
-      ...(isCashMethod(metodoPago) &&
-        cajaSelected && { registroCajaId: Number(cajaSelected) }),
-      // MF del costo asociado (como lo dejó el diálogo)
-      ...(mf ? { mf } : {}),
-      // Prorrateo minimal
-      ...(aplicarProrrateo ? { prorrateo: { aplicar: true } } : {}),
-    };
-    console.log("El payload es: ", payload);
-
-    await toast.promise(recepcionarM.mutateAsync(payload), {
-      loading: "Recepcionando compra...",
-      success: "Compra recepcionada y enviada a stock",
-      error: (error) => getApiErrorMessageAxios(error),
-    });
-
-    setOpenSendStock(false);
-    setOpenFormDialog(false);
-    setObservaciones("");
-  }, [
-    registro,
-    recepcionarM,
-    proveedorSelected,
-    observaciones,
-    metodoPago,
-    cuentaBancariaSelected,
-    cajaSelected,
-    cajasDisponibles,
-    montoRecepcion,
-    sucursalId,
-    buildMf,
-    prorrateoMeta?.aplicar,
-  ]);
-
-  // === UI Utils =============================================================
-  const optionsCajas: Option[] = cajasDisponibles.map((c) => ({
-    label: `Caja #${c.id} · Inicial ${formattMonedaGT(
-      c.saldoInicial
-    )} · Disponible ${formattMonedaGT(c.disponibleEnCaja)}`,
-    value: c.id.toString(),
-  }));
-
-  // === Selección de líneas (parcial) ========================================
-  const selectedIds = useMemo(() => {
-    return new Set(selectedItems.lineas.map((l) => l.compraDetalleId));
-  }, [selectedItems]);
-
-  const updateCantidadDetalle = (
-    compraDetalleId: number,
-    nuevaCantidad: number
-  ) => {
-    setSelectedItems((prev) => ({
-      ...prev,
-      lineas: prev.lineas.map((l) =>
-        l.compraDetalleId === compraDetalleId
-          ? { ...l, cantidadRecibida: nuevaCantidad }
-          : l
-      ),
-    }));
-  };
-
-  const updateFechaVencimiento = (
-    compraDetalleId: number,
-    nuevaFechaVencimiento: string
-  ) => {
-    setSelectedItems((previa) => ({
-      ...previa,
-      lineas: previa.lineas.map((linea) =>
-        linea.compraDetalleId === compraDetalleId
-          ? { ...linea, fechaExpiracion: nuevaFechaVencimiento }
-          : linea
-      ),
-    }));
-  };
-
-  const upsserSelectItems = (
-    item: ItemDetallesPayloadParcial,
-    checked: boolean
-  ) => {
-    setSelectedItems((prev) => {
-      const exists = prev.lineas.some(
-        (l) => l.compraDetalleId === item.compraDetalleId
-      );
-
-      if (checked) {
-        return exists
-          ? {
-              ...prev,
-              lineas: prev.lineas.map((l) =>
-                l.compraDetalleId === item.compraDetalleId
-                  ? {
-                      ...l,
-                      ...item,
-                      // si el item trae undefined, conserva la anterior
-                      fechaExpiracion:
-                        item.fechaExpiracion ?? l.fechaExpiracion,
-                      checked: true,
-                    }
-                  : l
-              ),
-            }
-          : {
-              ...prev,
-              lineas: [...prev.lineas, { ...item, checked: true }],
-            };
-      } else {
-        return {
-          ...prev,
-          lineas: prev.lineas.filter(
-            (l) => l.compraDetalleId !== item.compraDetalleId
-          ),
-        };
-      }
-    });
-  };
-
-  // === Recepción parcial =====================================================
-  const handleRecepcionarParcial = useApiMutation<void, any>(
-    "post",
-    "compras/create-recepcion-parcial",
-    undefined,
-    {
-      onSuccess: () => {
-        reFetchRegistro();
-        reFetchDRP();
-        setSelectedItems({
-          compraId: compraId,
-          fecha: dayjs().tz(TZGT).startOf("day").toISOString(),
-          observaciones: "",
-          usuarioId: userId,
-          sucursalId: sucursalId,
-          lineas: [],
-        });
-        setOpenRecibirParcial(false);
-        setIsRecibirParcial(false);
-      },
-      onError: () => {},
-    }
-  );
-
-  const verifyTransaction = () => {
-    if (
-      !selectedItems.compraId ||
-      !selectedItems.sucursalId ||
-      !selectedItems.usuarioId ||
-      !selectedItems.lineas ||
-      selectedItems.lineas.length <= 0
-    ) {
-      return false;
-    }
-    return true;
-  };
-  const buildProrrateo = useCallback(() => {
-    if (!prorrateoMeta?.aplicar) return undefined;
-    return {
-      aplicar: true,
-      base: prorrateoMeta.base ?? "COSTO",
-      incluirAntiguos: prorrateoMeta.incluirAntiguos ?? false,
-    } as const;
-  }, [prorrateoMeta]);
-
-  const handleCreateRecepcionParcial = async () => {
-    try {
-      console.log("El log del payload (selectedItems): ", selectedItems);
-
-      const isValid = verifyTransaction();
-      if (!isValid) {
-        toast.warning("Verifique los datos a enviar");
-        return;
-      }
-
-      const mf = buildMf();
-
-      const pr = buildProrrateo();
-      const debeProrratear = Boolean(pr) && mf?.motivo === "COSTO_ASOCIADO";
-
-      const payloadParcial = {
-        ...selectedItems,
-        ...(mf ? { mf } : {}),
-        ...(debeProrratear
-          ? {
-              prorrateo: pr,
-              aplicarProrrateo: true,
-            }
-          : {}),
-      };
-
-      console.log("Payload parcial ENVIADO: ", payloadParcial);
-
-      await toast.promise(
-        handleRecepcionarParcial.mutateAsync(payloadParcial),
-        {
-          success: "Compra parcial recepcionada",
-          error: (error) => getApiErrorMessageAxios(error),
-          loading: "Registrando entrada...",
-        }
-      );
-    } catch (error) {
-      console.log("El error: ", error);
-    }
-  };
-
-  // === Utilidades UI adicionales ============================================
-  const loadingHard = isPendingRegistro;
-  const errorHard = isErrorRegistro && !registro;
-
-  const onContinueFromPayment = useCallback(() => {
-    setOpenFormPaymentDialog(false);
-    setCostoStepDone(false); // reset
-    setOpenCostoDialog(true); // 👉 abre el diálogo de costos asociados
-  }, [setOpenFormPaymentDialog]);
-
-  console.log("El registro de compra: ", registroQ);
-
-  const handleRefresAll = React.useCallback(async () => {
-    await Promise.allSettled([
-      reFetchDRP(),
-      reFetchRegistro(),
-      refetchCredito(), // usa el refetch del mismo queryKey
-    ]);
-  }, [reFetchDRP, reFetchRegistro, refetchCredito]);
-
-  const hasCredit: boolean =
-    Boolean(creditoFromCompra?.id) &&
-    (creditoFromCompra?.cuotas?.length ?? 0) > 0;
-
-  const normalizados = normalizarDetalles(
-    Array.isArray(registro?.detalles) ? registro.detalles : []
-  );
-
-  // === Guard Clauses (no hooks debajo de returns) ============================
   if (loadingHard) {
     return (
       <div className="min-h-screen bg-background p-2 sm:p-4 flex items-center justify-center">
@@ -624,98 +538,80 @@ export default function CompraDetalle() {
     );
   }
 
-  // === Derivados finales para los diálogos ==================================
-  const cajaSel = cajasDisponibles.find(
-    (c) => String(c.id) === String(cajaSelected)
-  );
-  const cajaTieneSaldo = isCashMethod(metodoPago)
-    ? !!cajaSel && Number(cajaSel.disponibleEnCaja) >= montoRecepcion
-    : true;
+  const tabs: Array<TabItem> = [
+    {
+      label: "Compra",
+      value: "compra",
+      icon: <ShoppingBag size={18} />,
+      content: (
+        <ComprasMain
+          //STATES
+          openFormPaymentDialog={openFormPaymentDialog}
+          setOpenFormPaymentDialog={setOpenFormPaymentDialog}
+          selectedItems={selectedItems}
+          setSelectedItems={setSelectedItems}
+          isPendingDrp={isPendingDrp}
+          reFetchDRP={reFetchDRP}
+          isRecibirParcial={isRecibirParcial}
+          setIsRecibirParcial={setIsRecibirParcial}
+          openFormDialog={openFormDialog}
+          setOpenFormDialog={setOpenFormDialog}
+          selectedIds={selectedIds}
+          openRecibirParcial={openRecibirParcial}
+          setOpenRecibirParcial={setOpenRecibirParcial}
+          //REGISTRO
+          registro={registroQ}
+          //HELPERS
+          updateCantidadDetalle={updateCantidadDetalle}
+          upsserSelectItems={upsserSelectItems}
+          recepcionable={recepcionable}
+          onOpenPaymentFor={(flow) => {
+            setRecepcionFlow(flow);
+            setOpenFormPaymentDialog(true);
+          }}
+          updateFechaVencimiento={updateFechaVencimiento}
+          //FLAGS
+          hasCredit={hasCredit}
+        />
+      ),
+    },
 
-  const requiereBanco = isBankMethod(metodoPago);
-  const requiereCaja = isCashMethod(metodoPago);
+    {
+      label: "Recepciones",
+      value: "recepciones",
+      icon: <Layers size={18} />,
+      content: <RecepcionesMain compraId={compraId} />,
+    },
 
-  const canContinue =
-    !!observaciones.trim() &&
-    !!proveedorSelected &&
-    !!metodoPago &&
-    (!requiereBanco || !!cuentaBancariaSelected) &&
-    (!requiereCaja || (!!cajaSelected && cajaTieneSaldo));
-
-  console.log("Los detalles de la compra son: ", registro.detalles);
+    {
+      label: "Credito",
+      value: "credito",
+      icon: <CreditCard size={18} />,
+      content: (
+        <CreditoCompraMainPage
+          cuentasBancarias={cuentasBancarias}
+          compraTotal={registro.total}
+          proveedores={proveedores}
+          compraId={compraId}
+          proveedorId={registro.proveedor?.id ?? 0}
+          cajasDisponibles={cajasDisponibles}
+          montoRecepcion={registro.total}
+          handleRefresAll={handleRefresAll}
+          creditoFromCompra={creditoFromCompra}
+          normalizados={normalizados}
+        />
+      ),
+    },
+  ];
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="min-h-screen bg-background p-2 sm:p-4"
-    >
-      <Tabs defaultValue="compra" className="">
-        <TabsList className="w-full max-h-8">
-          <TabsTrigger value="compra" className="flex-1 max-h-6">
-            Compra
-          </TabsTrigger>
-          <TabsTrigger value="recepcionesParciales" className="flex-1 max-h-6">
-            Recepciones
-          </TabsTrigger>
-
-          <TabsTrigger value="credito" className="flex-1 max-h-6">
-            Crédito
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="compra">
-          <ComprasMain
-            //STATES
-            openFormPaymentDialog={openFormPaymentDialog}
-            setOpenFormPaymentDialog={setOpenFormPaymentDialog}
-            selectedItems={selectedItems}
-            setSelectedItems={setSelectedItems}
-            isPendingDrp={isPendingDrp}
-            reFetchDRP={reFetchDRP}
-            isRecibirParcial={isRecibirParcial}
-            setIsRecibirParcial={setIsRecibirParcial}
-            openFormDialog={openFormDialog}
-            setOpenFormDialog={setOpenFormDialog}
-            selectedIds={selectedIds}
-            openRecibirParcial={openRecibirParcial}
-            setOpenRecibirParcial={setOpenRecibirParcial}
-            //REGISTRO
-            registro={registroQ}
-            //HELPERS
-            updateCantidadDetalle={updateCantidadDetalle}
-            upsserSelectItems={upsserSelectItems}
-            recepcionable={recepcionable}
-            onOpenPaymentFor={(flow) => {
-              setRecepcionFlow(flow);
-              setOpenFormPaymentDialog(true);
-            }}
-            updateFechaVencimiento={updateFechaVencimiento}
-            //FLAGS
-            hasCredit={hasCredit}
-          />
-        </TabsContent>
-        <TabsContent value="recepcionesParciales">
-          <RecepcionesMain compraId={compraId} />
-        </TabsContent>
-
-        {/* GENERAR CREDITO DE UNA COMPRA */}
-        <TabsContent value="credito">
-          <CreditoCompraMainPage
-            cuentasBancarias={cuentasBancarias}
-            compraTotal={registro.total}
-            proveedores={proveedores}
-            compraId={compraId}
-            proveedorId={registro.proveedor?.id ?? 0}
-            cajasDisponibles={cajasDisponibles}
-            montoRecepcion={registro.total}
-            handleRefresAll={handleRefresAll}
-            creditoFromCompra={creditoFromCompra}
-            normalizados={normalizados}
-          />
-        </TabsContent>
-      </Tabs>
+    <PageTransition fallbackBackTo="/" titleHeader="Administrar Compra">
+      <ReusableTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        handleTabChange={handleChangeTabs}
+        tabs={tabs}
+      />
       {/* Confirmación (segunda pantalla) */}
       <AdvancedDialog
         type="warning"
@@ -842,6 +738,6 @@ export default function CompraDetalle() {
           else setOpenSendStock(true);
         }}
       />
-    </motion.div>
+    </PageTransition>
   );
 }

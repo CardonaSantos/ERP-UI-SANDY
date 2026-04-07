@@ -1,12 +1,6 @@
 "use client";
 
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -15,338 +9,333 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Info,
-  Eye,
-  User,
+  ArrowUpDown,
+  Building2,
   Calendar,
   DollarSign,
-  Package,
+  ExternalLink,
+  Eye,
   FileText,
-  Building,
+  Hash,
+  Package,
+  User,
 } from "lucide-react";
-import { getEstadoIcon, getEstadoStyles, truncateText } from "./compras.utils";
-import { formattFechaWithMinutes } from "../Utils/Utils";
+import { CompraEstado, CompraListItem } from "@/Types/compras/interfaces";
 import { formattMonedaGT } from "@/utils/formattMoneda";
-import { CompraListItem } from "./Interfaces/Interfaces1";
-import { Link } from "react-router-dom";
+
+export function formatFechaCompra(iso: string | null): {
+  date: string;
+  time: string;
+} {
+  if (!iso) return { date: "—", time: "" };
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { date: "—", time: "" };
+
+  const z = (n: number) => String(n).padStart(2, "0");
+
+  const day = z(d.getDate());
+  const month = z(d.getMonth() + 1);
+  const year = String(d.getFullYear()).slice(-2);
+
+  const hours = d.getHours();
+  const minutes = z(d.getMinutes());
+  const ampm = hours >= 12 ? "pm" : "am";
+  const h12 = hours % 12 === 0 ? 12 : hours % 12;
+
+  return {
+    date: `${day}/${month}/${year}`,
+    time: `${h12}:${minutes} ${ampm}`,
+  };
+}
+
+export function truncate(str: string, max: number): string {
+  return str.length > max ? `${str.slice(0, max)}…` : str;
+}
+
+const ESTADO_CONFIG: Record<
+  CompraEstado,
+  { label: string; className: string }
+> = {
+  RECIBIDO: {
+    label: "Recibido",
+    className:
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800",
+  },
+  RECIBIDO_PARCIAL: {
+    label: "Parcial",
+    className:
+      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800",
+  },
+  ESPERANDO_ENTREGA: {
+    label: "Pendiente",
+    className:
+      "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800",
+  },
+  CANCELADO: {
+    label: "Cancelado",
+    className:
+      "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800",
+  },
+};
+
+export function EstadoBadge({ estado }: { estado: CompraEstado }) {
+  const cfg = ESTADO_CONFIG[estado] ?? {
+    label: estado.replace(/_/g, " "),
+    className: "bg-muted text-muted-foreground border-border",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none ${cfg.className}`}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+export function TipoOrigenBadge({ tipo }: { tipo: string }) {
+  const isRequisicion = tipo === "REQUISICION";
+  return (
+    <span
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none ${
+        isRequisicion
+          ? "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-400 dark:border-violet-800"
+          : "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/30 dark:text-sky-400 dark:border-sky-800"
+      }`}
+    >
+      {tipo.replace(/_/g, " ")}
+    </span>
+  );
+}
+
+declare module "@tanstack/react-table" {
+  interface TableMeta<TData> {
+    onOpenDetalle?: (row: TData) => void;
+  }
+}
 
 const ch = createColumnHelper<CompraListItem>();
 
+function SortableHeader({
+  label,
+  icon: Icon,
+  column,
+}: {
+  label: string;
+  icon?: React.ElementType;
+  column: {
+    toggleSorting: (asc: boolean) => void;
+    getIsSorted: () => false | "asc" | "desc";
+  };
+}) {
+  const sorted = column.getIsSorted();
+  return (
+    <button
+      type="button"
+      className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors select-none"
+      onClick={() => column.toggleSorting(sorted === "asc")}
+    >
+      {Icon && <Icon className="h-3 w-3" />}
+      {label}
+      <ArrowUpDown className="h-2.5 w-2.5 opacity-50" />
+    </button>
+  );
+}
+
 export const comprasColumns: ColumnDef<CompraListItem, any>[] = [
   ch.accessor("id", {
-    header: () => (
-      <div className="flex items-center gap-1">
-        <span className="font-medium text-xs">ID</span>
-      </div>
+    header: ({ column }) => (
+      <SortableHeader label="ID" icon={Hash} column={column} />
     ),
     cell: (info) => (
-      <div className="font-mono text-xs font-medium">#{info.getValue()}</div>
+      <span className="font-mono text-xs tabular-nums text-muted-foreground">
+        #{info.getValue()}
+      </span>
     ),
     enableSorting: true,
     enableColumnFilter: true,
-    size: 50,
+    size: 56,
   }),
 
   ch.accessor("fecha", {
-    header: () => (
-      <div className="flex items-center gap-1">
-        <Calendar className="h-3 w-3" />
-        <span className="font-medium text-xs">Fecha</span>
-      </div>
+    header: ({ column }) => (
+      <SortableHeader label="Fecha" icon={Calendar} column={column} />
     ),
-    cell: (info) => (
-      <div className="text-xs">
-        {info.getValue() ? (
-          <div className="space-y-0.5">
-            <div className="font-medium">
-              {formattFechaWithMinutes(info.getValue<string>()).split(" ")[0]}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {formattFechaWithMinutes(info.getValue<string>()).split(" ")[1]}
-            </div>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </div>
-    ),
+    cell: (info) => {
+      const { date, time } = formatFechaCompra(info.getValue<string | null>());
+      if (date === "—")
+        return <span className="text-xs text-muted-foreground">—</span>;
+      return (
+        <div className="flex flex-col leading-none gap-0.5">
+          <span className="text-xs font-medium tabular-nums">{date}</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {time}
+          </span>
+        </div>
+      );
+    },
     enableSorting: true,
     enableColumnFilter: true,
-    size: 85,
+    size: 80,
   }),
 
   ch.accessor("usuario.nombre", {
-    header: () => (
-      <div className="flex items-center gap-1">
-        <User className="h-3 w-3" />
-        <span className="font-medium text-xs">Usuario</span>
-      </div>
+    header: ({ column }) => (
+      <SortableHeader label="Usuario" icon={User} column={column} />
     ),
     cell: (info) => (
-      <div className="flex items-center gap-1.5">
-        <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
-          <User className="h-2.5 w-2.5 text-primary dark:text-white" />
+      <div className="flex items-center gap-1.5 min-w-0">
+        <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+          <User className="h-2.5 w-2.5 text-muted-foreground" />
         </div>
-        <span className="font-medium text-xs">
-          {truncateText(info.getValue() || "Sin usuario", 12)}
+        <span className="text-xs truncate">
+          {truncate(info.getValue<string>() || "—", 14)}
         </span>
       </div>
     ),
     enableSorting: true,
     enableColumnFilter: true,
-    size: 120,
+    size: 130,
   }),
 
-  ch.accessor("proveedor.nombre", {
-    header: () => (
-      <div className="flex items-center gap-1">
-        <Building className="h-3 w-3" />
-        <span className="font-medium text-xs">Proveedor</span>
-      </div>
+  ch.accessor((row) => row.proveedor?.nombre ?? null, {
+    id: "proveedor",
+    header: ({ column }) => (
+      <SortableHeader label="Proveedor" icon={Building2} column={column} />
     ),
-    cell: (info) => (
-      <div className="text-xs">
-        {info.getValue() ? (
-          <span className="font-medium">
-            {truncateText(info.getValue(), 15)}
-          </span>
-        ) : (
-          <span className="text-muted-foreground italic">Sin proveedor</span>
-        )}
-      </div>
-    ),
+    cell: (info) => {
+      const val = info.getValue<string | null>();
+      return val ? (
+        <span className="text-xs">{truncate(val, 18)}</span>
+      ) : (
+        <span className="text-xs text-muted-foreground italic">
+          Sin proveedor
+        </span>
+      );
+    },
     enableSorting: true,
     enableColumnFilter: true,
-    size: 120,
+    size: 140,
   }),
 
   ch.accessor("folioOrigen", {
-    header: () => (
-      <div className="flex items-center gap-1">
-        <FileText className="h-3 w-3" />
-        <span className="font-medium text-xs">Requisición | Pedido</span>
-      </div>
+    header: ({ column }) => (
+      <SortableHeader label="Folio" icon={FileText} column={column} />
     ),
-    cell: (info) => (
-      <div className="text-xs">
-        {info.getValue() ? (
-          <span className="font-mono font-medium text-blue-600 dark:text-blue-400">
-            {info.getValue()}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </div>
-    ),
+    cell: (info) => {
+      const val = info.getValue<string>();
+      const tipo = info.row.original.tipoOrigen;
+      return val ? (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-mono text-xs font-medium">{val}</span>
+          <TipoOrigenBadge tipo={tipo} />
+        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
+      );
+    },
     enableSorting: true,
     enableColumnFilter: true,
-    size: 100,
+    size: 110,
   }),
 
   ch.accessor("total", {
-    header: () => (
-      <div className="flex items-center gap-1">
-        <DollarSign className="h-3 w-3" />
-        <span className="font-medium text-xs">Total</span>
-      </div>
+    header: ({ column }) => (
+      <SortableHeader label="Total" icon={DollarSign} column={column} />
     ),
     cell: (info) => (
-      <div className="font-mono text-xs font-semibold text-green-600 dark:text-green-400">
-        {formattMonedaGT(info.getValue())}
-      </div>
+      <span className="font-mono text-xs font-semibold tabular-nums">
+        {formattMonedaGT(info.getValue<number>())}
+      </span>
     ),
+    enableSorting: true,
+    size: 100,
+  }),
+
+  ch.accessor("resumen.items", {
+    header: ({ column }) => (
+      <SortableHeader label="Items" icon={Package} column={column} />
+    ),
+    cell: (info) => {
+      const cant = info.row.original.resumen.cantidadTotal;
+      return (
+        <div className="flex flex-col leading-none gap-0.5">
+          <span className="text-xs font-medium tabular-nums">
+            {info.getValue()} líneas
+          </span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {cant} u.
+          </span>
+        </div>
+      );
+    },
+    enableSorting: true,
+    size: 80,
+  }),
+
+  ch.accessor("estado", {
+    header: () => (
+      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+        Estado
+      </span>
+    ),
+    cell: (info) => <EstadoBadge estado={info.getValue<CompraEstado>()} />,
     enableSorting: true,
     enableColumnFilter: true,
     size: 90,
   }),
 
-  ch.accessor("resumen.items", {
-    header: () => (
-      <div className="flex items-center gap-1">
-        <Package className="h-3 w-3" />
-        <span className="font-medium text-xs">Items</span>
-      </div>
-    ),
-    cell: (info) => (
-      <div className="flex items-center justify-center">
-        <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium bg-blue-100 text-blue-800 rounded-full dark:bg-blue-900/20 dark:text-blue-400">
-          {info.getValue()}
-        </span>
-      </div>
-    ),
-    enableSorting: true,
-    enableColumnFilter: true,
-    size: 60,
-  }),
-
-  ch.accessor("resumen.cantidadTotal", {
-    header: () => <span className="font-medium text-xs">Cant.</span>,
-    cell: (info) => (
-      <div className="flex items-center justify-center">
-        <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium bg-purple-100 text-purple-800 rounded-full dark:bg-purple-900/20 dark:text-purple-400">
-          {info.getValue()}
-        </span>
-      </div>
-    ),
-    enableSorting: true,
-    enableColumnFilter: true,
-    size: 60,
-  }),
-
-  ch.accessor("conFactura", {
-    header: () => <span className="font-medium text-xs">Factura</span>,
-    cell: (info) => (
-      <div className="flex items-center justify-center">
-        {info.getValue() ? (
-          <span className="text-green-600 dark:text-green-400">✓</span>
-        ) : (
-          <span className="text-red-600 dark:text-red-400">✗</span>
-        )}
-      </div>
-    ),
-    enableSorting: true,
-    enableColumnFilter: true,
-    size: 60,
-  }),
-
-  ch.accessor("estado", {
-    header: () => <span className="font-medium text-xs">Estado</span>,
-    cell: (info) => (
-      <div className="flex items-center gap-1">
-        <span className="text-xs">{getEstadoIcon(info.getValue())}</span>
-        <span
-          className={`${getEstadoStyles(
-            info.getValue()
-          )} text-xs px-2 py-1 rounded-full font-medium`}
-        >
-          {info.getValue().replace("_", " ")}
-        </span>
-      </div>
-    ),
-    enableSorting: true,
-    enableColumnFilter: true,
-    size: 140,
-  }),
-
-  ch.accessor("tipoOrigen", {
-    header: () => <span className="font-medium text-xs">Tipo</span>,
-    cell: (info) => (
-      <div className="flex items-center gap-1">
-        <span className="text-xs">{getEstadoIcon(info.getValue())}</span>
-        <span
-          className={`${getEstadoStyles(
-            info.getValue()
-          )} text-xs px-2 py-1 rounded-full font-medium`}
-        >
-          {info.getValue().replace("_", " ")}
-        </span>
-      </div>
-    ),
-    enableSorting: true,
-    enableColumnFilter: true,
-    size: 140,
-  }),
-
   ch.display({
     id: "acciones",
-    header: () => <span className="font-medium text-xs">Acciones</span>,
+    header: () => (
+      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+        Acciones
+      </span>
+    ),
     cell: (info) => {
       const compra = info.row.original;
       return (
         <div className="flex items-center gap-1">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 w-6 p-0 bg-transparent"
-              >
-                <Info className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80" align="end">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold">
-                    Compra #{compra.id}
-                  </div>
-                  <span
-                    className={`${getEstadoStyles(
-                      compra.estado
-                    )} text-xs px-2 py-1 rounded-full font-medium`}
-                  >
-                    {compra.estado.replace("_", " ")}
-                  </span>
-                </div>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={`/compra/${compra.id}`}
+                  className="inline-flex items-center justify-center h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label={`Ver compra #${compra.id}`}
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Ver compra completa
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="font-medium">
-                    Usuario: {compra.usuario.nombre}
-                  </div>
-                  <div>Fecha: {formattFechaWithMinutes(compra.fecha)}</div>
-                  {compra.proveedor && (
-                    <div>Proveedor: {compra.proveedor.nombre}</div>
-                  )}
-                  {compra.requisicion && (
-                    <div>
-                      Requisición:{" "}
-                      {compra.requisicion.folio
-                        ? compra.requisicion.folio
-                        : compra.pedido.folio}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="space-y-0.5">
-                    <div className="text-xs text-muted-foreground">Total</div>
-                    <div className="font-semibold text-green-600">
-                      {formattMonedaGT(compra.total)}
-                    </div>
-                  </div>
-                  <div className="space-y-0.5">
-                    <div className="text-xs text-muted-foreground">Items</div>
-                    <div className="font-semibold text-blue-600">
-                      {compra.resumen.items} ({compra.resumen.cantidadTotal}{" "}
-                      unidades)
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between text-xs">
-                  <span>Factura: {compra.conFactura ? "Sí" : "No"}</span>
-                  <span>Detalles: {compra.detalles.length}</span>
-                </div>
-
-                <Link to={`/compra/${compra.id}`}>
-                  <span className="text-xs pt-2 font-semibold text-blue-500 hover:underline hover:text-blue-600">
-                    Ver compra completa
-                  </span>
-                </Link>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <TooltipProvider>
+          {/* Revisión rápida */}
+          <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  size="sm"
-                  className="h-6 px-2 text-xs"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
                   onClick={() =>
                     info.table.options.meta?.onOpenDetalle?.(compra)
                   }
+                  aria-label="Vista rápida"
                 >
-                  <Eye className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Ver</span>
+                  <Eye className="h-3 w-3" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Ver detalle completo</TooltipContent>
+              <TooltipContent side="top" className="text-xs">
+                Vista rápida
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
       );
     },
-    size: 90,
+    size: 72,
   }),
 ];

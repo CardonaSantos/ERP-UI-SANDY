@@ -1,13 +1,8 @@
 import React from "react";
-import {
-  CompraPedidoUI,
-  CompraRegistroUI,
-  CompraRequisicionUI,
-} from "./Interfaces/RegistroCompraInterface";
+
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft,
   Calendar,
   User,
   Building2,
@@ -20,49 +15,65 @@ import {
   AlertCircle,
   Package,
   FileText,
-  Hash,
   Truck,
   ClipboardList,
   Mail,
+  MapPin,
 } from "lucide-react";
 
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formattFechaWithMinutes } from "../Utils/Utils";
-import { useNavigate } from "react-router-dom";
-import { EstadoCompra } from "./API/interfaceQuery";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+
+import { formattFechaWithMinutes } from "../Utils/Utils";
+import { EstadoCompra } from "./API/interfaceQuery";
 import { formattMonedaGT } from "@/utils/formattMoneda";
 import {
   ItemDetallesPayloadParcial,
   PayloadRecepcionParcial,
 } from "./table-select-recepcion/selectedItems";
-import { Label } from "@/components/ui/label";
 import TableRecepcionCompraSelect from "./table-select-recepcion/table-recepcion-compra-select";
 import CardSummary from "./ResumenRecepcionParcial/CardSummary/CardSummary";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { CompraRecepcionableResponse } from "./ResumenRecepcionParcial/Interfaces/detalleRecepcionable";
 import { normalizarDetalles } from "./Credito/helpers/normalizador";
-// Animaciones
+import {
+  CompraPedidoUI,
+  CompraRegistroUI,
+  CompraRequisicionUI,
+} from "@/Types/compras/interfaces";
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+// ─── Animaciones ────────────────────────────────────────────────────────────
+const fade = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
-const tableVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.3, staggerChildren: 0.05 },
+
+// ─── Estado badge config ─────────────────────────────────────────────────────
+const ESTADO_CONFIG: Record<
+  EstadoCompra,
+  {
+    variant: "default" | "secondary" | "outline" | "destructive";
+    icon: React.ElementType;
+    label: string;
+  }
+> = {
+  RECIBIDO: { variant: "default", icon: CheckCircle, label: "Recibido" },
+  CANCELADO: { variant: "destructive", icon: XCircle, label: "Cancelado" },
+  RECIBIDO_PARCIAL: {
+    variant: "secondary",
+    icon: AlertCircle,
+    label: "Parcial",
+  },
+  ESPERANDO_ENTREGA: {
+    variant: "outline",
+    icon: Truck,
+    label: "En camino",
   },
 };
-const rowVariants = {
-  hidden: { opacity: 0, x: -20 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.2 } },
-};
+
 type RecepcionFlow = "NORMAL" | "PARCIAL";
 
 interface PropsPage {
@@ -71,46 +82,37 @@ interface PropsPage {
   setSelectedItems: React.Dispatch<
     React.SetStateAction<PayloadRecepcionParcial>
   >;
-  //   STATES
   isRecibirParcial: boolean;
   setIsRecibirParcial: React.Dispatch<React.SetStateAction<boolean>>;
   isPendingDrp: boolean;
   reFetchDRP: (
-    options?: RefetchOptions | undefined
+    options?: RefetchOptions | undefined,
   ) => Promise<QueryObserverResult<CompraRecepcionableResponse, Error>>;
-
-  //HELPERS
   updateCantidadDetalle: (
     compraDetalleId: number,
-    nuevaCantidad: number
+    nuevaCantidad: number,
   ) => void;
-
   upsserSelectItems: (
     item: ItemDetallesPayloadParcial,
-    checked: boolean
+    checked: boolean,
   ) => void;
-
   selectedIds: Set<number>;
   setOpenFormDialog: React.Dispatch<React.SetStateAction<boolean>>;
-
   openFormDialog: boolean;
   setOpenRecibirParcial: React.Dispatch<React.SetStateAction<boolean>>;
   openRecibirParcial: boolean;
-
   recepcionable: CompraRecepcionableResponse;
   setOpenFormPaymentDialog: React.Dispatch<React.SetStateAction<boolean>>;
   openFormPaymentDialog: boolean;
-
   onOpenPaymentFor: (flow: RecepcionFlow) => void;
-
   updateFechaVencimiento: (
     compraDetalleId: number,
-    nuevaFechaVencimiento: string
+    nuevaFechaVencimiento: string,
   ) => void;
-
   hasCredit: boolean;
 }
 
+// ─── Componente principal ───────────────────────────────────────────────────
 function ComprasMain({
   registro,
   selectedItems,
@@ -126,63 +128,18 @@ function ComprasMain({
   updateFechaVencimiento,
   hasCredit,
 }: PropsPage) {
-  const navigate = useNavigate();
-
-  const onBack = () => navigate(-1);
-  const getEstadoBadge = (estado: EstadoCompra) => {
-    const variants = {
-      RECIBIDO: {
-        variant: "default" as const,
-        icon: CheckCircle,
-        color: "text-green-600",
-      },
-      CANCELADO: {
-        variant: "destructive" as const,
-        icon: XCircle,
-        color: "text-red-600",
-      },
-      RECIBIDO_PARCIAL: {
-        variant: "secondary" as const,
-        icon: AlertCircle,
-        color: "text-orange-600",
-      },
-      ESPERANDO_ENTREGA: {
-        variant: "outline" as const,
-        icon: Truck,
-        color: "text-blue-600",
-      },
-    };
-    const config = variants[estado] || variants.ESPERANDO_ENTREGA;
-    const Icon = config.icon;
-    return (
-      <Badge variant={config.variant} className="gap-1">
-        <Icon className={`h-3 w-3 ${config.color}`} />
-        {estado.replace("_", " ")}
-      </Badge>
-    );
-  };
-
-  // RETORNO EXPLICITO
-
   if (!registro) {
-    return (
-      <div className="">
-        <h2>Sin registro</h2>
-      </div>
-    );
+    return <p className="text-xs text-muted-foreground p-4">Sin registro.</p>;
   }
 
   const normalizados = normalizarDetalles(registro.detalles);
-  console.log("los datos normalizados para ver son: ", normalizados);
-  console.log("el set state es: ", selectedItems);
+  void normalizados;
 
-  //NEW
   const isCompraCompleted = registro.estado === "RECIBIDO";
   const addedToStock = ["RECIBIDO", "RECIBIDO_PARCIAL"].includes(
-    registro.estado
+    registro.estado,
   );
 
-  // Razón para bloquear el switch “recibir parcial”
   const partialDisableReason = React.useMemo(() => {
     if (isCompraCompleted) return "La compra ya fue recibida.";
     if (hasCredit) return "La compra ya tiene un crédito ligado.";
@@ -191,535 +148,550 @@ function ComprasMain({
 
   const isPartialDisabled = !!partialDisableReason;
 
-  // Si aparece una razón de bloqueo y el switch estaba activo, apágalo.
   React.useEffect(() => {
-    if (isPartialDisabled && isRecibirParcial) {
-      setIsRecibirParcial(false);
-    }
+    if (isPartialDisabled && isRecibirParcial) setIsRecibirParcial(false);
   }, [isPartialDisabled, isRecibirParcial, setIsRecibirParcial]);
 
-  // Razón para bloquear el botón de “Confirmar recepción”
   const confirmDisableReason = React.useMemo(() => {
-    if (addedToStock) return "La compra ya está en stock.";
-    if (hasCredit) return "No disponible porque hay crédito ligado.";
-    if (isRecibirParcial) return "Usa el botón ‘Recepcionar parcial’.";
+    if (addedToStock) return "Ya está en stock.";
+    if (hasCredit) return "Hay un crédito ligado.";
+    if (isRecibirParcial) return "Usa 'Recepcionar parcial'.";
     return null;
   }, [addedToStock, hasCredit, isRecibirParcial]);
 
   const confirmDisabled = !!confirmDisableReason;
 
+  const estadoConfig =
+    ESTADO_CONFIG[registro.estado] ?? ESTADO_CONFIG.ESPERANDO_ENTREGA;
+  const EstadoIcon = estadoConfig.icon;
+
   return (
-    <div className="mx-auto space-y-3">
-      {/* Header */}
-      <motion.div variants={itemVariants} className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="h-8 w-8 p-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-xl font-semibold">
-            Registro de Compra #{registro.id}
+    <div className="mx-auto  space-y-4 p-1">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <motion.header
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        className="flex items-center gap-2"
+      >
+        <div className="min-w-0 flex-1">
+          <h1 className="text-sm font-semibold leading-none truncate">
+            Compra{" "}
+            <span className="text-muted-foreground font-normal">
+              #{registro.id}
+            </span>
           </h1>
-          <p className="text-xs text-muted-foreground">
-            {registro.sucursal?.nombre || "Sin sucursal"}
-          </p>
+          {registro.sucursal && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+              <MapPin className="h-3 w-3" />
+              {registro.sucursal.nombre}
+            </p>
+          )}
         </div>
-        <div className="ml-auto">{getEstadoBadge(registro.estado)}</div>
+
+        <Badge
+          variant={estadoConfig.variant}
+          className="gap-1 text-xs shrink-0"
+        >
+          <EstadoIcon className="h-3 w-3" aria-hidden />
+          {estadoConfig.label}
+        </Badge>
+      </motion.header>
+
+      {/* ── Stats row ───────────────────────────────────────────────────── */}
+      <motion.div
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+        role="list"
+        aria-label="Resumen de la compra"
+      >
+        {[
+          {
+            icon: Calendar,
+            label: "Fecha",
+            value: formattFechaWithMinutes(registro.fecha),
+          },
+          {
+            icon: DollarSign,
+            label: "Total",
+            value: formattMonedaGT(registro.total),
+          },
+          {
+            icon: Package,
+            label: "Productos",
+            value: String(registro.resumen.items),
+          },
+          {
+            icon: Receipt,
+            label: "Factura",
+            value: registro.conFactura ? "Sí" : "No",
+          },
+        ].map(({ icon: Icon, label, value }) => (
+          <div
+            key={label}
+            role="listitem"
+            className="border rounded-md px-3 py-2 flex items-center gap-2"
+          >
+            <Icon
+              className="h-3.5 w-3.5 text-muted-foreground shrink-0"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-none">
+                {label}
+              </p>
+              <p className="text-xs font-medium truncate mt-0.5">{value}</p>
+            </div>
+          </div>
+        ))}
       </motion.div>
 
-      {/* Info General */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <motion.div variants={itemVariants}>
-          <Card className="h-full">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium">Fecha de Compra</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {formattFechaWithMinutes(registro.fecha)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      {/* ── Info grid: usuario + proveedor ──────────────────────────────── */}
+      <motion.div
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        className="grid gap-2 sm:grid-cols-2"
+      >
+        {/* Usuario */}
+        <section
+          aria-labelledby="usuario-heading"
+          className="border rounded-md px-3 py-2.5 space-y-1.5"
+        >
+          <h2
+            id="usuario-heading"
+            className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1"
+          >
+            <User className="h-3 w-3" aria-hidden /> Usuario responsable
+          </h2>
+          <Separator />
+          <div className="space-y-1">
+            <InfoRow label="Nombre" value={registro.usuario.nombre} />
+            <InfoRow
+              label="Correo"
+              value={registro.usuario.correo}
+              icon={<Mail className="h-3 w-3 text-muted-foreground" />}
+            />
+          </div>
+        </section>
 
-        <motion.div variants={itemVariants}>
-          <Card className="h-full">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-green-600" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium">Total</p>
-                  <p className="text-sm font-semibold text-green-600">
-                    {formattMonedaGT(registro.total)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* Proveedor */}
+        <section
+          aria-labelledby="proveedor-heading"
+          className="border rounded-md px-3 py-2.5 space-y-1.5"
+        >
+          <h2
+            id="proveedor-heading"
+            className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1"
+          >
+            <Building2 className="h-3 w-3" aria-hidden /> Proveedor
+          </h2>
+          <Separator />
+          <div className="space-y-1">
+            <InfoRow
+              label="Nombre"
+              value={registro.proveedor?.nombre ?? "Sin asignar"}
+            />
+            <InfoRow
+              label="Sucursal"
+              value={registro.sucursal?.nombre ?? "N/A"}
+            />
+          </div>
+        </section>
+      </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="h-full">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-blue-600" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium">Items</p>
-                  <p className="text-sm font-semibold text-blue-600">
-                    {registro.resumen.items}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="h-full">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-purple-600" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium">Con Factura</p>
-                  <p className="text-sm font-semibold text-purple-600">
-                    {registro.conFactura ? "Sí" : "No"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Usuario / Proveedor */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Usuario Responsable
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-xs font-medium">Nombre</p>
-                <p className="text-xs text-muted-foreground">
-                  {registro.usuario.nombre}
-                </p>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-xs font-medium">Correo</p>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-3 w-3 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">
-                    {registro.usuario.correo}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Proveedor
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-xs font-medium">Nombre</p>
-                <p className="text-xs text-muted-foreground">
-                  {registro.proveedor?.nombre || "Sin proveedor asignado"}
-                </p>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-xs font-medium">Sucursal</p>
-                <p className="text-xs text-muted-foreground">
-                  {registro.sucursal?.nombre || "N/A"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Origen */}
+      {/* ── Origen: Requisición ─────────────────────────────────────────── */}
       {registro.origen === "REQUISICION" && registro.requisicion && (
         <RequisicionInfo requisicion={registro.requisicion} />
       )}
+
+      {/* ── Origen: Pedido ──────────────────────────────────────────────── */}
       {registro.origen === "PEDIDO" && registro.pedido && (
         <PedidoInfo pedido={registro.pedido} />
       )}
 
-      {/* Factura */}
+      {/* ── Factura ─────────────────────────────────────────────────────── */}
       {registro.conFactura && registro.factura && (
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Receipt className="h-4 w-4" />
-                Información de Factura
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-xs font-medium">Número de Factura</p>
-                  <p className="text-xs text-muted-foreground">
-                    {registro.factura.numero || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium">Fecha de Factura</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formattFechaWithMinutes(registro.factura.fecha)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <motion.section
+          variants={fade}
+          initial="hidden"
+          animate="visible"
+          aria-labelledby="factura-heading"
+          className="border rounded-md px-3 py-2.5 space-y-1.5"
+        >
+          <h2
+            id="factura-heading"
+            className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1"
+          >
+            <Receipt className="h-3 w-3" aria-hidden /> Factura
+          </h2>
+          <Separator />
+          <div className="grid grid-cols-2 gap-2">
+            <InfoRow label="Número" value={registro.factura.numero ?? "N/A"} />
+            <InfoRow
+              label="Fecha"
+              value={formattFechaWithMinutes(registro.factura.fecha)}
+            />
+          </div>
+        </motion.section>
       )}
 
-      {/* Resumen */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Resumen de Compra
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <Package className="h-6 w-6 mx-auto text-blue-600 mb-1" />
-                <p className="text-lg font-semibold">
-                  {registro.resumen.items}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Productos Únicos
-                </p>
-              </div>
-              <div className="text-center">
-                <Hash className="h-6 w-6 mx-auto text-green-600 mb-1" />
-                <p className="text-lg font-semibold">
-                  {registro.resumen.cantidadTotal}
-                </p>
-                <p className="text-xs text-muted-foreground">Cantidad Total</p>
-              </div>
-              <div className="text-center">
-                <DollarSign className="h-6 w-6 mx-auto text-purple-600 mb-1" />
-                <p className="text-lg font-semibold">
-                  {formattMonedaGT(registro.resumen.subtotal)}
-                </p>
-                <p className="text-xs text-muted-foreground">Subtotal</p>
-              </div>
+      {/* ── Resumen numérico ─────────────────────────────────────────────── */}
+      <motion.section
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        aria-labelledby="resumen-heading"
+        className="border rounded-md px-3 py-2.5 space-y-1.5"
+      >
+        <h2
+          id="resumen-heading"
+          className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1"
+        >
+          <ShoppingCart className="h-3 w-3" aria-hidden /> Resumen
+        </h2>
+        <Separator />
+        <dl className="grid grid-cols-3 divide-x text-center">
+          {[
+            { term: "Productos únicos", value: String(registro.resumen.items) },
+            {
+              term: "Cantidad total",
+              value: String(registro.resumen.cantidadTotal),
+            },
+            {
+              term: "Subtotal",
+              value: formattMonedaGT(registro.resumen.subtotal),
+            },
+          ].map(({ term, value }) => (
+            <div key={term} className="px-2 py-1">
+              <dd className="text-sm font-semibold tabular-nums">{value}</dd>
+              <dt className="text-[11px] text-muted-foreground">{term}</dt>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          ))}
+        </dl>
+      </motion.section>
 
-      {/* Detalles */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Productos Comprados ({registro.detalles.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <motion.div
-              variants={tableVariants}
-              className="space-y-3 max-h-96 overflow-y-auto"
+      {/* ── Detalles / productos ─────────────────────────────────────────── */}
+      <motion.section
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        aria-labelledby="detalles-heading"
+        className="border rounded-md overflow-hidden"
+      >
+        <div className="px-3 py-2 border-b flex items-center gap-1.5">
+          <Package className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+          <h2 id="detalles-heading" className="text-xs font-semibold">
+            Productos comprados
+            <span className="text-muted-foreground font-normal ml-1">
+              ({registro.detalles.length})
+            </span>
+          </h2>
+        </div>
+
+        <div
+          className="max-h-72 overflow-y-auto divide-y"
+          role="list"
+          aria-label="Lista de productos"
+        >
+          {registro.detalles.map((detalle) => (
+            <div
+              key={detalle.id}
+              role="listitem"
+              className="px-3 py-2 hover:bg-muted/40 transition-colors"
             >
-              {registro.detalles.map((detalle) => (
-                <motion.div
-                  key={detalle.id}
-                  variants={rowVariants}
-                  className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="text-xs">
-                        #{detalle.producto.id}
-                      </Badge>
-                      <h4 className="text-sm font-medium">
-                        {detalle.producto.nombre}
-                      </h4>
-
-                      <Badge
-                        variant="secondary"
-                        className="text-xs flex items-center gap-1"
-                      >
-                        <Hash className="h-2 w-2" />
-                        {detalle.producto.codigo}
-                      </Badge>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">
-                        {formattMonedaGT(detalle.subtotal)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Subtotal</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div>
-                      <p className="text-lg font-semibold text-blue-600">
-                        {detalle.cantidad}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Cantidad</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-green-600">
-                        {formattMonedaGT(detalle.costoUnitario)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Costo Unit.
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-purple-600">
-                        {formattMonedaGT(
-                          detalle.producto.precioCostoActual || 0
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Precio Actual
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-orange-600">
-                        {formattMonedaGT(detalle.subtotal)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Total</p>
-                    </div>
-                  </div>
-
-                  {detalle.creadoEn && (
-                    <div className="mt-3 pt-3 border-t">
-                      <p className="text-xs text-muted-foreground">
-                        Agregado: {formattFechaWithMinutes(detalle.creadoEn)}
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </motion.div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Auditoría */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Información de Auditoría
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-xs font-medium">Creado</p>
-                <p className="text-xs text-muted-foreground">
-                  {formattFechaWithMinutes(registro.creadoEn)}
-                </p>
+              {/* producto nombre + código + subtotal */}
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    #{detalle.producto.id}
+                  </span>
+                  <span className="text-xs font-medium truncate">
+                    {detalle.producto.nombre}
+                  </span>
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] px-1 py-0 h-4 shrink-0"
+                  >
+                    {detalle.producto.codigo}
+                  </Badge>
+                </div>
+                <span className="text-xs font-semibold tabular-nums shrink-0">
+                  {formattMonedaGT(detalle.subtotal)}
+                </span>
               </div>
-              <div>
-                <p className="text-xs font-medium">Última Actualización</p>
-                <p className="text-xs text-muted-foreground">
-                  {formattFechaWithMinutes(registro.actualizadoEn)}
+
+              {/* métricas */}
+              <dl className="grid grid-cols-4 gap-1 text-center">
+                {[
+                  { term: "Cant.", value: String(detalle.cantidad) },
+                  {
+                    term: "C. Unit.",
+                    value: formattMonedaGT(detalle.costoUnitario),
+                  },
+                  {
+                    term: "P. Actual",
+                    value: formattMonedaGT(
+                      detalle.producto.precioCostoActual ?? 0,
+                    ),
+                  },
+                  {
+                    term: "Subtotal",
+                    value: formattMonedaGT(detalle.subtotal),
+                  },
+                ].map(({ term, value }) => (
+                  <div key={term} className="bg-muted/30 rounded px-1 py-0.5">
+                    <dd className="text-xs font-medium tabular-nums">
+                      {value}
+                    </dd>
+                    <dt className="text-[10px] text-muted-foreground">
+                      {term}
+                    </dt>
+                  </div>
+                ))}
+              </dl>
+
+              {detalle.creadoEn && (
+                <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
+                  <Clock className="h-2.5 w-2.5" aria-hidden />
+                  {formattFechaWithMinutes(detalle.creadoEn)}
                 </p>
-              </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          ))}
+        </div>
+      </motion.section>
 
-      <motion.div variants={itemVariants}>
-        <div className="flex items-center space-x-2">
+      {/* ── Auditoría ───────────────────────────────────────────────────── */}
+      <motion.section
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        aria-labelledby="auditoria-heading"
+        className="border rounded-md px-3 py-2.5 space-y-1.5"
+      >
+        <h2
+          id="auditoria-heading"
+          className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1"
+        >
+          <Clock className="h-3 w-3" aria-hidden /> Auditoría
+        </h2>
+        <Separator />
+        <div className="grid grid-cols-2 gap-2">
+          <InfoRow
+            label="Creado"
+            value={formattFechaWithMinutes(registro.creadoEn)}
+          />
+          <InfoRow
+            label="Actualizado"
+            value={formattFechaWithMinutes(registro.actualizadoEn)}
+          />
+        </div>
+      </motion.section>
+
+      {/* ── Switch recepción parcial ─────────────────────────────────────── */}
+      <motion.div
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col gap-1"
+      >
+        <div className="flex items-center gap-2">
           <Switch
+            id="recibirParcial"
             disabled={isPartialDisabled}
             checked={isRecibirParcial}
             onCheckedChange={(checked) => {
               setIsRecibirParcial(checked);
               if (checked) reFetchDRP();
             }}
-            id="recibirParcial"
+            aria-describedby={
+              partialDisableReason ? "parcial-reason" : undefined
+            }
           />
-          <Label htmlFor="recibirParcial">
+          <Label
+            htmlFor="recibirParcial"
+            className="text-xs cursor-pointer select-none"
+          >
             {isPartialDisabled
-              ? "Recibir parcial (bloqueado)"
-              : "RECIBIR DE FORMA PARCIAL"}
+              ? "Recepción parcial (bloqueado)"
+              : "Recibir de forma parcial"}
           </Label>
         </div>
         {partialDisableReason && (
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p
+            id="parcial-reason"
+            className="text-[11px] text-muted-foreground pl-8"
+          >
             {partialDisableReason}
           </p>
         )}
       </motion.div>
 
-      {isRecibirParcial ? (
+      {/* ── Tabla parcial ────────────────────────────────────────────────── */}
+      {isRecibirParcial && (
         <motion.div
-          variants={itemVariants}
-          className="mx-auto space-y-3 max-h-80 overflow-y-auto"
+          variants={fade}
+          initial="hidden"
+          animate="visible"
+          className="space-y-3"
         >
           {isPendingDrp ? (
-            <div className="space-y-3">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
             </div>
           ) : (
-            <>
-              <TableRecepcionCompraSelect
-                updateCantidadDetalle={updateCantidadDetalle}
-                selectedIds={selectedIds}
-                selectedItems={selectedItems}
-                detalles={recepcionable.detalles}
-                upsserSelectItems={upsserSelectItems}
-                updateFechaVencimiento={updateFechaVencimiento}
-              />
-            </>
+            <TableRecepcionCompraSelect
+              updateCantidadDetalle={updateCantidadDetalle}
+              selectedIds={selectedIds}
+              selectedItems={selectedItems}
+              detalles={recepcionable.detalles}
+              upsserSelectItems={upsserSelectItems}
+              updateFechaVencimiento={updateFechaVencimiento}
+            />
           )}
-        </motion.div>
-      ) : null}
-
-      {isRecibirParcial ? (
-        <motion.div
-          variants={itemVariants}
-          className="mx-auto space-y-3 max-h-80 overflow-y-auto"
-        >
           <CardSummary selectedItems={selectedItems} />
         </motion.div>
-      ) : null}
+      )}
 
-      <motion.div variants={itemVariants} className="flex gap-2">
+      {/* ── Acciones ─────────────────────────────────────────────────────── */}
+      <motion.div
+        variants={fade}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-wrap items-center gap-2 pt-1"
+      >
         <Button
+          size="sm"
           disabled={confirmDisabled}
           onClick={() => onOpenPaymentFor("NORMAL")}
+          aria-disabled={confirmDisabled}
+          aria-describedby={confirmDisabled ? "confirm-reason" : undefined}
+          className="text-xs"
         >
-          Confirmar recepción y enviar a stock
+          <CheckCircle className="h-3.5 w-3.5 mr-1.5" aria-hidden />
+          Confirmar recepción
         </Button>
-        {confirmDisableReason && (
-          <span className="text-[11px] text-muted-foreground self-center">
-            {confirmDisableReason}
-          </span>
-        )}
+
         {isRecibirParcial && (
-          <Button onClick={() => onOpenPaymentFor("PARCIAL")}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onOpenPaymentFor("PARCIAL")}
+            className="text-xs"
+          >
+            <AlertCircle className="h-3.5 w-3.5 mr-1.5" aria-hidden />
             Recepcionar parcial
           </Button>
+        )}
+
+        {confirmDisableReason && (
+          <p id="confirm-reason" className="text-[11px] text-muted-foreground">
+            {confirmDisableReason}
+          </p>
         )}
       </motion.div>
     </div>
   );
 }
 
+// ─── InfoRow helper ─────────────────────────────────────────────────────────
+function InfoRow({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-baseline gap-1 min-w-0">
+      <span className="text-[11px] text-muted-foreground shrink-0">
+        {label}:
+      </span>
+      <span className="text-xs font-medium truncate flex items-center gap-1">
+        {icon}
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ─── RequisicionInfo ────────────────────────────────────────────────────────
 function RequisicionInfo({
   requisicion,
 }: {
   requisicion: CompraRequisicionUI;
 }) {
   return (
-    <motion.div variants={itemVariants}>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Requisición Asociada
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <Hash className="h-6 w-6 mx-auto text-blue-600 mb-1" />
-              <p className="text-sm font-semibold">{requisicion.folio}</p>
-              <p className="text-xs text-muted-foreground">Folio</p>
-            </div>
-            <div className="text-center">
-              <Badge variant="secondary" className="mb-1">
-                {requisicion.estado}
-              </Badge>
-              <p className="text-xs text-muted-foreground">Estado</p>
-            </div>
-            <div className="text-center">
-              <FileText className="h-6 w-6 mx-auto text-green-600 mb-1" />
-              <p className="text-sm font-semibold">{requisicion.totalLineas}</p>
-              <p className="text-xs text-muted-foreground">Líneas</p>
-            </div>
-            <div className="text-center">
-              <Calendar className="h-6 w-6 mx-auto text-purple-600 mb-1" />
-              <p className="text-sm font-semibold">
-                {formattFechaWithMinutes(requisicion.fecha)}
-              </p>
-              <p className="text-xs text-muted-foreground">Fecha</p>
-            </div>
+    <motion.section
+      variants={fade}
+      initial="hidden"
+      animate="visible"
+      aria-labelledby="req-heading"
+      className="border rounded-md px-3 py-2.5 space-y-1.5"
+    >
+      <h2
+        id="req-heading"
+        className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1"
+      >
+        <ClipboardList className="h-3 w-3" aria-hidden /> Requisición asociada
+      </h2>
+      <Separator />
+      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { term: "Folio", value: requisicion.folio },
+          { term: "Estado", value: requisicion.estado },
+          { term: "Líneas", value: String(requisicion.totalLineas) },
+          { term: "Fecha", value: formattFechaWithMinutes(requisicion.fecha) },
+        ].map(({ term, value }) => (
+          <div key={term}>
+            <dt className="text-[10px] text-muted-foreground">{term}</dt>
+            <dd className="text-xs font-medium">{value}</dd>
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+        ))}
+      </dl>
+    </motion.section>
   );
 }
 
+// ─── PedidoInfo ──────────────────────────────────────────────────────────────
 function PedidoInfo({ pedido }: { pedido: CompraPedidoUI }) {
   return (
-    <motion.div variants={itemVariants}>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Pedido Asociado
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <Hash className="h-6 w-6 mx-auto text-blue-600 mb-1" />
-              <p className="text-sm font-semibold">{pedido.folio}</p>
-              <p className="text-xs text-muted-foreground">Folio</p>
-            </div>
-            <div className="text-center">
-              <Badge variant="secondary" className="mb-1">
-                {pedido.estado}
-              </Badge>
-              <p className="text-xs text-muted-foreground">Estado</p>
-            </div>
-            <div className="text-center">
-              <FileText className="h-6 w-6 mx-auto text-green-600 mb-1" />
-              <p className="text-sm font-semibold">{pedido.tipo}</p>
-              <p className="text-xs text-muted-foreground">Tipo</p>
-            </div>
-            <div className="text-center">
-              <Calendar className="h-6 w-6 mx-auto text-purple-600 mb-1" />
-              <p className="text-sm font-semibold">
-                {formattFechaWithMinutes(pedido.fecha)}
-              </p>
-              <p className="text-xs text-muted-foreground">Fecha</p>
-            </div>
+    <motion.section
+      variants={fade}
+      initial="hidden"
+      animate="visible"
+      aria-labelledby="pedido-heading"
+      className="border rounded-md px-3 py-2.5 space-y-1.5"
+    >
+      <h2
+        id="pedido-heading"
+        className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1"
+      >
+        <FileText className="h-3 w-3" aria-hidden /> Pedido asociado
+      </h2>
+      <Separator />
+      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { term: "Folio", value: pedido.folio },
+          { term: "Estado", value: pedido.estado },
+          { term: "Tipo", value: pedido.tipo },
+          { term: "Fecha", value: formattFechaWithMinutes(pedido.fecha) },
+        ].map(({ term, value }) => (
+          <div key={term}>
+            <dt className="text-[10px] text-muted-foreground">{term}</dt>
+            <dd className="text-xs font-medium">{value}</dd>
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+        ))}
+      </dl>
+    </motion.section>
   );
 }
 

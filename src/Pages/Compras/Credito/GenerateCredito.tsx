@@ -4,14 +4,6 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import "dayjs/locale/es";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,8 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TZGT } from "@/Pages/Utils/Utils"; // ej. "America/Guatemala"
-import { Calendar, Percent, Receipt, Timer, Wallet } from "lucide-react";
+import { TZGT } from "@/Pages/Utils/Utils";
+import { Calendar, Percent, Timer, Wallet } from "lucide-react";
 import { toNumber } from "./helpers/helpers1";
 import {
   CreditoCompraForm,
@@ -34,6 +26,7 @@ import {
   RecepcionValorada,
 } from "./interfaces/types";
 import { buildPlanPreview } from "./helpers/helpers2";
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(localizedFormat);
@@ -43,13 +36,9 @@ interface GenerateProps {
   form: CreditoCompraForm;
   setForm: React.Dispatch<React.SetStateAction<CreditoCompraForm>>;
   proveedores: ProveedorOption[];
-  recepciones?: RecepcionValorada[]; // para modo "POR_RECEPCION"
-  compraTotal: number; // total de la compra (para default)
-
-  cuentasBancarias: {
-    id: number;
-    nombre: string;
-  }[];
+  recepciones?: RecepcionValorada[];
+  compraTotal: number;
+  cuentasBancarias: { id: number; nombre: string }[];
 }
 
 export function GenerateCredito({
@@ -60,7 +49,7 @@ export function GenerateCredito({
   compraTotal,
 }: GenerateProps) {
   const hasRecepciones = recepciones.length > 0;
-  // sincroniza monto base por modo
+
   const baseMonto = useMemo(() => {
     if (form.modo === "POR_RECEPCION" && form.recepcionId) {
       const r = recepciones.find((x) => x.id === form.recepcionId);
@@ -86,7 +75,7 @@ export function GenerateCredito({
     (field: keyof CreditoCompraForm) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       let v = toNumber(e.target.value || 0);
-      if (v > 1) v = v / 100; // si el usuario escribe 2 en lugar de 0.02, lo normalizamos
+      if (v > 1) v = v / 100;
       setForm((p) => ({ ...p, [field]: isFinite(v) ? v : 0 }));
     };
 
@@ -110,94 +99,125 @@ export function GenerateCredito({
             ? form.enganche
             : null,
       }),
-    [baseMonto, form]
+    [baseMonto, form],
   );
-  console.log("El form es: ", form);
-  console.log("El recepciones es: ", recepciones);
+
+  /* ---- field helpers ---- */
+  const Field = ({
+    label,
+    hint,
+    children,
+    colSpan,
+  }: {
+    label: string;
+    hint?: string;
+    children: React.ReactNode;
+    colSpan?: string;
+  }) => (
+    <div className={`space-y-1 ${colSpan ?? ""}`}>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+      {hint && (
+        <p className="text-[11px] text-muted-foreground leading-tight">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Receipt className="h-4 w-4" /> Generar crédito de compra
-        </CardTitle>
-        <CardDescription>
-          Define el plan de cuotas. Los campos avanzados son opcionales.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4 md:grid-cols-3">
+    <section
+      aria-labelledby="gen-credito-title"
+      className="rounded-md border p-3 space-y-3"
+    >
+      <p id="gen-credito-title" className="text-xs font-medium">
+        Generar crédito de compra
+      </p>
+
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
         {/* Modo */}
-        <div className="space-y-2">
-          <Label>Modo</Label>
+        <Field label="Modo">
           <Select
             value={form.modo}
             onValueChange={(v: GeneracionModo) =>
               setForm((p) => ({ ...p, modo: v }))
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Seleccionar modo" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="POR_COMPRA">Por compra</SelectItem>
-                <SelectItem value="POR_RECEPCION" disabled={!hasRecepciones}>
+                <SelectItem value="POR_COMPRA" className="text-xs">
+                  Por compra
+                </SelectItem>
+                <SelectItem
+                  value="POR_RECEPCION"
+                  disabled={!hasRecepciones}
+                  className="text-xs"
+                >
                   Por recepción
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
-          {form.modo === "POR_RECEPCION" && (
-            <div className="mt-2">
-              <Label>Recepción</Label>
-              <Select
-                value={form.recepcionId ? String(form.recepcionId) : undefined}
-                onValueChange={(v) =>
-                  setForm((p) => ({ ...p, recepcionId: Number(v) }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una recepción" />
-                </SelectTrigger>
-                <SelectContent>
-                  {recepciones.map((r) => (
-                    <SelectItem key={r.id} value={String(r.id)}>
-                      #{r.id} • {r.folio ?? "REC"}-{r.id} • Q{" "}
-                      {r.valor.toFixed(2)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
+        </Field>
+
+        {/* Recepción (condicional) */}
+        {form.modo === "POR_RECEPCION" && (
+          <Field label="Recepción">
+            <Select
+              value={form.recepcionId ? String(form.recepcionId) : undefined}
+              onValueChange={(v) =>
+                setForm((p) => ({ ...p, recepcionId: Number(v) }))
+              }
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Selecciona una recepción" />
+              </SelectTrigger>
+              <SelectContent>
+                {recepciones.map((r) => (
+                  <SelectItem
+                    key={r.id}
+                    value={String(r.id)}
+                    className="text-xs"
+                  >
+                    #{r.id} · {r.folio ?? "REC"}-{r.id} · Q {r.valor.toFixed(2)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
 
         {/* Proveedor */}
-        <div className="space-y-2">
-          <Label>Proveedor</Label>
+        <Field label="Proveedor">
           <Select
             value={String(form.proveedorId)}
             onValueChange={(v) =>
               setForm((p) => ({ ...p, proveedorId: Number(v) }))
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Seleccionar proveedor" />
             </SelectTrigger>
             <SelectContent>
               {proveedores.map((p) => (
-                <SelectItem key={p.id} value={String(p.id)}>
+                <SelectItem key={p.id} value={String(p.id)} className="text-xs">
                   {p.nombre}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </Field>
 
-        {/* Monto base */}
-        <div className="space-y-2">
-          <Label>Monto a financiar (Q)</Label>
+        {/* Monto */}
+        <Field
+          label="Monto a financiar (Q)"
+          hint="Default: total de compra o valor de la recepción."
+        >
           <Input
+            className="h-8 text-xs"
             inputMode="decimal"
             value={String(form.montoOriginal ?? baseMonto)}
             onChange={(e) =>
@@ -207,20 +227,17 @@ export function GenerateCredito({
               }))
             }
           />
-          <p className="text-[11px] text-muted-foreground">
-            Default: total de compra o valor de la recepción.
-          </p>
-        </div>
+        </Field>
 
-        {/* Fechas y frecuencia */}
-        <div className="space-y-2">
-          <Label>Fecha de emisión</Label>
+        {/* Fecha de emisión */}
+        <Field label="Fecha de emisión">
           <Input
+            className="h-8 text-xs"
             type="date"
             value={
               form.fechaEmisionISO
                 ? dayjs(form.fechaEmisionISO).tz(TZGT).format("YYYY-MM-DD")
-                : dayjs().tz(TZGT).format("YYYY-MM-DD") // fallback: hoy
+                : dayjs().tz(TZGT).format("YYYY-MM-DD")
             }
             onChange={(e) => {
               const raw = e.target.value;
@@ -228,58 +245,65 @@ export function GenerateCredito({
                 ...p,
                 fechaEmisionISO: raw
                   ? dayjs.tz(raw, TZGT).toISOString()
-                  : dayjs().tz(TZGT).toISOString(), // si borra, vuelve a hoy
+                  : dayjs().tz(TZGT).toISOString(),
               }));
             }}
           />
-        </div>
+        </Field>
 
-        <div className="space-y-2">
-          <Label>Días entre pagos</Label>
+        {/* Días entre pagos */}
+        <Field label="Días entre pagos">
           <Input
+            className="h-8 text-xs"
             inputMode="numeric"
             value={form.diasEntrePagos}
             onChange={onNumber("diasEntrePagos")}
           />
-        </div>
+        </Field>
 
-        {/* Cuotas */}
-        <div className="space-y-2">
-          <Label>Cantidad de cuotas (sin contar enganche)</Label>
+        {/* Cantidad de cuotas */}
+        <Field label="Cuotas (sin contar enganche)">
           <Input
+            className="h-8 text-xs"
             inputMode="numeric"
             value={form.cantidadCuotas}
             onChange={onNumber("cantidadCuotas")}
           />
-        </div>
+        </Field>
 
-        {/* Interés */}
-        <div className="space-y-2">
-          <Label>Tipo de interés</Label>
+        {/* Tipo de interés */}
+        <Field label="Tipo de interés">
           <Select
             value={form.interesTipo}
             onValueChange={(v: InteresTipo) =>
               setForm((p) => ({ ...p, interesTipo: v }))
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Seleccionar" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value={InteresTipo.NONE}>Sin interés</SelectItem>
-                <SelectItem value={InteresTipo.SIMPLE}>
+                <SelectItem value={InteresTipo.NONE} className="text-xs">
+                  Sin interés
+                </SelectItem>
+                <SelectItem value={InteresTipo.SIMPLE} className="text-xs">
                   Simple (sobre saldo)
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Interés</Label>
-          <div className="flex items-center gap-2">
-            <Percent className="h-4 w-4 text-muted-foreground" />
+        </Field>
+
+        {/* Interés */}
+        <Field
+          label="Interés"
+          hint="Tasa por periodo. Acepta 0.02 o 2 (se normaliza a 0.02)."
+        >
+          <div className="relative flex items-center">
+            <Percent className="absolute left-2 h-3 w-3 text-muted-foreground pointer-events-none" />
             <Input
+              className="h-8 text-xs pl-6"
               inputMode="decimal"
               placeholder="0.02 = 2%"
               value={String(form.interes)}
@@ -287,78 +311,71 @@ export function GenerateCredito({
               disabled={form.interesTipo === InteresTipo.NONE}
             />
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Tasa por periodo (coincide con los días entre pagos). Acepta 0.02 o
-            2 (se normaliza a 0.02).
-          </p>
-        </div>
+        </Field>
 
         {/* Modo de generación */}
-        <div className="space-y-2">
-          <Label>Modo de generación</Label>
+        <Field label="Modo de generación">
           <Select
             value={form.planCuotaModo}
             onValueChange={(v: PlanCuotaModo) =>
               setForm((p) => ({ ...p, planCuotaModo: v }))
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Seleccionar modo" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value={PlanCuotaModo.IGUALES}>
+                <SelectItem value={PlanCuotaModo.IGUALES} className="text-xs">
                   Iguales (ajuste final)
                 </SelectItem>
-                <SelectItem value={PlanCuotaModo.PRIMERA_MAYOR}>
+                <SelectItem
+                  value={PlanCuotaModo.PRIMERA_MAYOR}
+                  className="text-xs"
+                >
                   Primera mayor (enganche)
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
-        </div>
+        </Field>
 
-        {/* Enganche (solo si PRIMERA_MAYOR) */}
+        {/* Enganche */}
         {form.planCuotaModo === PlanCuotaModo.PRIMERA_MAYOR && (
-          <div className="space-y-2 md:col-span-2">
-            <Label>Enganche / primera mayor</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <Input
-                inputMode="decimal"
-                value={String(form.enganche?.valor ?? 0)}
-                onChange={(e) =>
-                  onEngancheChange(
-                    form.enganche?.tipo ?? "Q",
-                    toNumber(e.target.value || 0)
-                  )
-                }
-              />
-            </div>
-          </div>
+          <Field label="Enganche / primera mayor" colSpan="sm:col-span-2">
+            <Input
+              className="h-8 text-xs"
+              inputMode="decimal"
+              value={String(form.enganche?.valor ?? 0)}
+              onChange={(e) =>
+                onEngancheChange(
+                  form.enganche?.tipo ?? "Q",
+                  toNumber(e.target.value || 0),
+                )
+              }
+            />
+          </Field>
         )}
-      </CardContent>
+      </div>
 
-      <CardFooter className="flex flex-col items-start gap-2">
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <Calendar className="h-4 w-4" />
-          <span>
-            1ra cuota:{" "}
-            {dayjs(preview.cuotas[0]?.fechaISO).tz(TZGT).format("DD/MM/YYYY")} •
-            Q {preview.cuotas[0]?.monto.toFixed(2)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <Timer className="h-4 w-4" />{" "}
-          <span>Cuotas: {preview.cuotas.length}</span>
-        </div>
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <Wallet className="h-4 w-4" />{" "}
-          <span>
-            Total a pagar: Q {preview.totalAPagar.toFixed(2)} (interés: Q{" "}
-            {preview.interesTotal.toFixed(2)})
-          </span>
-        </div>
-      </CardFooter>
-    </Card>
+      {/* Footer compacto */}
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground border-t pt-2">
+        <span className="inline-flex items-center gap-1">
+          <Calendar className="h-3 w-3" />
+          1ra cuota:{" "}
+          {dayjs(preview.cuotas[0]?.fechaISO).tz(TZGT).format("DD/MM/YYYY")} · Q{" "}
+          {preview.cuotas[0]?.monto.toFixed(2)}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Timer className="h-3 w-3" />
+          {preview.cuotas.length} cuotas
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Wallet className="h-3 w-3" />
+          Total: Q {preview.totalAPagar.toFixed(2)} (interés: Q{" "}
+          {preview.interesTotal.toFixed(2)})
+        </span>
+      </div>
+    </section>
   );
 }

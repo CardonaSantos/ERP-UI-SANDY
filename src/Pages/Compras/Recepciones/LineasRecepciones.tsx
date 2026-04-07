@@ -1,303 +1,245 @@
 "use client";
 
-import { motion } from "framer-motion";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import {
+  Box,
   CalendarDays,
-  UserRound,
+  CheckCircle2,
   ClipboardList,
+  MessageSquare,
   PackageOpen,
   Tag,
-  CheckCircle2,
-  Box,
+  UserRound,
 } from "lucide-react";
-
 import type { RecepcionParcialUI } from "./interfaces/recepcionesInterfaces";
-import {
-  formattFecha,
-  formattFechaWithMinutes,
-  formattMoneda,
-} from "@/Pages/Utils/Utils";
 
-interface PropsLineas {
+// ---- stub formatters ----
+const fmt = (d?: string) =>
+  d
+    ? new Date(d).toLocaleString("es-GT", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : "—";
+const fmtDate = (d?: string) =>
+  d ? new Date(d).toLocaleDateString("es-GT", { dateStyle: "short" }) : "—";
+const fmtM = (n?: number) =>
+  n != null
+    ? `Q${Number(n).toLocaleString("es-GT", { minimumFractionDigits: 2 })}`
+    : "—";
+
+interface Props {
   lineas: RecepcionParcialUI[];
 }
 
-export default function LineasRecepciones({ lineas }: PropsLineas) {
+export default function LineasRecepciones({ lineas }: Props) {
   const recepciones = Array.isArray(lineas) ? lineas : [];
 
   if (recepciones.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Recepciones parciales</CardTitle>
-          <CardDescription>Líneas de recepciones parciales</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center gap-2 text-muted-foreground">
-          <PackageOpen className="h-5 w-5" />
-          <span>No hay recepciones registradas.</span>
-        </CardContent>
-        <CardFooter className="text-sm text-muted-foreground">
-          Recepciones registradas: 0
-        </CardFooter>
-      </Card>
+      <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-6 text-xs text-muted-foreground">
+        <PackageOpen className="h-4 w-4 shrink-0" />
+        <span>No hay recepciones registradas.</span>
+      </div>
     );
   }
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Recepciones parciales</CardTitle>
-        <CardDescription>Líneas de recepciones parciales</CardDescription>
-      </CardHeader>
+    <div className="rounded-lg border bg-card shadow-sm">
+      <div className="flex items-center justify-between px-4 py-2.5">
+        <span className="text-xs font-medium">Recepciones parciales</span>
+        <span className="text-xs text-muted-foreground">
+          {recepciones.length} registradas
+        </span>
+      </div>
 
       <Separator />
 
-      <CardContent className="pt-4">
-        <div className="space-y-4">
-          {recepciones.map((r) => {
-            const unidadesOrdenadas = r.lineas.reduce(
-              (acc, li) => acc + (li.cantidadOrdenada ?? 0),
-              0
-            );
-            const unidadesRecibidas = r.totales.unidadesRecibidas ?? 0;
-            const pct =
-              unidadesOrdenadas > 0
-                ? Math.min(
-                    100,
-                    Math.round((unidadesRecibidas / unidadesOrdenadas) * 100)
-                  )
-                : 0;
+      <div className="divide-y">
+        {recepciones.map((r) => {
+          const ordenadas = r.lineas.reduce(
+            (a, l) => a + (l.cantidadOrdenada ?? 0),
+            0,
+          );
+          const recibidas = r.totales.unidadesRecibidas ?? 0;
+          const pct =
+            ordenadas > 0
+              ? Math.min(100, Math.round((recibidas / ordenadas) * 100))
+              : 0;
 
-            return (
-              <motion.div
-                key={r.recepcionId}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="rounded-2xl border"
-              >
-                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge className="gap-1" variant="secondary">
-                        <ClipboardList className="h-4 w-4" />
-                        Recepción #{r.recepcionId}
-                      </Badge>
-
-                      <Badge variant="outline" className="gap-1">
-                        <CalendarDays className="h-4 w-4" />
-                        {formattFechaWithMinutes(r.fecha)}
-                      </Badge>
-
-                      <Badge variant="outline" className="gap-1">
-                        <UserRound className="h-4 w-4" />
-                        {r.usuario?.nombre ?? "—"}
-                      </Badge>
-
-                      <Badge variant="outline" className="gap-1">
-                        <PackageOpen className="h-4 w-4" />
-                        {r.totales.lineas} líneas
-                      </Badge>
-
-                      <Badge variant="default" className="gap-1">
-                        <CheckCircle2 className="h-4 w-4" />
-                        {unidadesRecibidas} unid.
-                      </Badge>
-                    </div>
-
-                    {r.observaciones ? (
-                      <p className="text-sm text-muted-foreground">
-                        {r.observaciones}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {/* Panel de progreso por recepción */}
-                  <div className="shrink-0 rounded-2xl border bg-card p-4 sm:w-80">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs uppercase text-muted-foreground">
-                        Avance
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {unidadesRecibidas}/{unidadesOrdenadas} unid.
-                      </span>
-                    </div>
-                    <Progress value={pct} className="h-2" />
-                    <div className="mt-1 text-right text-xs text-muted-foreground">
-                      {pct}% recibido
-                    </div>
-                  </div>
+          return (
+            <div key={r.recepcionId}>
+              {/* Recepción header */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge
+                    variant="secondary"
+                    className="h-5 gap-1 px-1.5 text-xs"
+                  >
+                    <ClipboardList className="h-3 w-3" />#{r.recepcionId}
+                  </Badge>
+                  <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs">
+                    <CalendarDays className="h-3 w-3" />
+                    {fmt(r.fecha)}
+                  </Badge>
+                  <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs">
+                    <UserRound className="h-3 w-3" />
+                    {r.usuario?.nombre ?? "—"}
+                  </Badge>
+                  <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs">
+                    <PackageOpen className="h-3 w-3" />
+                    {r.totales.lineas} líneas
+                  </Badge>
+                  <Badge variant="default" className="h-5 gap-1 px-1.5 text-xs">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {recibidas} unid.
+                  </Badge>
+                  {r.observaciones && (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <MessageSquare className="h-3 w-3 shrink-0" />
+                      {r.observaciones}
+                    </span>
+                  )}
                 </div>
 
-                <Separator />
+                {/* Mini progress */}
+                <div className="flex w-32 shrink-0 items-center gap-2">
+                  <Progress value={pct} className="h-1.5 flex-1" />
+                  <span className="w-8 text-right text-[10px] text-muted-foreground">
+                    {pct}%
+                  </span>
+                </div>
+              </div>
 
-                {/* Líneas */}
-                <div className="p-4">
-                  <div className="grid grid-cols-1 gap-2">
-                    {r.lineas.map((l) => (
-                      <div
-                        key={l.lineaId}
-                        className="grid grid-cols-1 items-center gap-2 rounded-xl border p-3 sm:grid-cols-12"
-                      >
-                        {/* Item + tipo */}
-                        <div className="sm:col-span-4">
-                          <div className="flex items-start gap-3">
-                            <ItemThumb
-                              src={l.item?.imagenUrl}
-                              alt={l.item?.nombre}
-                            />
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="truncate text-sm font-medium">
-                                  {l.item?.nombre ?? "—"}
-                                </span>
-                                <Badge
-                                  variant="secondary"
-                                  className="h-5 px-2 text-[10px]"
-                                >
-                                  {l.item?.itemTipo ?? "ITEM"}
-                                </Badge>
-                              </div>
-                              <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                                <Tag className="h-3.5 w-3.5" />
-                                <span className="truncate">
-                                  {l.item?.codigo ?? "—"}
-                                </span>
+              {/* Líneas table */}
+              <div className="px-4 pb-3">
+                <table
+                  className="w-full text-xs"
+                  aria-label={`Líneas recepción #${r.recepcionId}`}
+                >
+                  <thead>
+                    <tr className="border-b text-[10px] text-muted-foreground">
+                      <th className="pb-1 pr-3 text-left font-medium">
+                        Artículo
+                      </th>
+                      <th className="pb-1 px-2 text-right font-medium">
+                        Ordenado
+                      </th>
+                      <th className="pb-1 px-2 text-right font-medium">
+                        Recibido
+                      </th>
+                      <th className="pb-1 px-2 text-right font-medium">
+                        Pendiente
+                      </th>
+                      <th className="pb-1 px-2 text-right font-medium">
+                        Costo U.
+                      </th>
+                      <th className="pb-1 pl-2 text-right font-medium">
+                        Vence
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {r.lineas.map((l) => {
+                      const pendiente = Math.max(
+                        0,
+                        (l.cantidadOrdenada ?? 0) - (l.cantidadRecibida ?? 0),
+                      );
+                      return (
+                        <tr key={l.lineaId} className="align-middle">
+                          {/* Item */}
+                          <td className="py-1.5 pr-3">
+                            <div className="flex items-center gap-2">
+                              <ItemThumb
+                                src={l.item?.imagenUrl}
+                                alt={l.item?.nombre}
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="truncate font-medium">
+                                    {l.item?.nombre ?? "—"}
+                                  </span>
+                                  {l.item?.itemTipo && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="h-4 px-1 text-[9px]"
+                                    >
+                                      {l.item.itemTipo}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Tag className="h-2.5 w-2.5" />
+                                  <span className="truncate">
+                                    {l.item?.codigo ?? "—"}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
+                          </td>
 
-                        {/* Cantidades */}
-                        <div className="sm:col-span-4">
-                          <div className="grid grid-cols-3 gap-2">
-                            <KpiSm
-                              label="Ordenado"
-                              value={l.cantidadOrdenada}
-                            />
-                            <KpiSm
-                              label="Recibido"
-                              value={l.cantidadRecibida}
-                            />
-                            <KpiSm
-                              label="Pendiente"
-                              value={Math.max(
-                                0,
-                                (l.cantidadOrdenada ?? 0) -
-                                  (l.cantidadRecibida ?? 0)
-                              )}
-                              highlight={
-                                (l.cantidadOrdenada ?? 0) -
-                                  (l.cantidadRecibida ?? 0) >
-                                0
-                              }
-                            />
-                          </div>
-                        </div>
-
-                        {/* Costos / tiempos */}
-                        <div className="sm:col-span-4">
-                          <div className="grid grid-cols-2 gap-2">
-                            <KpiSm
-                              label="Costo U."
-                              value={formattMoneda(l.costoUnitario)}
-                            />
-                            <KpiSm
-                              label="Vence"
-                              value={
-                                l.fechaExpiracion
-                                  ? formattFecha(l.fechaExpiracion)
-                                  : "—"
-                              }
-                            />
-                            <MetaTime label="Creado" iso={l.createdAt} />
-                            <MetaTime label="Actualizado" iso={l.updatedAt} />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </CardContent>
-
-      <CardFooter className="text-sm text-muted-foreground">
-        Recepciones registradas: {recepciones.length}
-      </CardFooter>
-    </Card>
+                          {/* Qty columns */}
+                          <td className="px-2 text-right tabular-nums">
+                            {l.cantidadOrdenada ?? "—"}
+                          </td>
+                          <td className="px-2 text-right tabular-nums">
+                            {l.cantidadRecibida ?? "—"}
+                          </td>
+                          <td className="px-2 text-right tabular-nums">
+                            {pendiente > 0 ? (
+                              <span className="font-medium text-amber-600 dark:text-amber-400">
+                                {pendiente}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">0</span>
+                            )}
+                          </td>
+                          <td className="px-2 text-right tabular-nums">
+                            {fmtM(l.costoUnitario)}
+                          </td>
+                          <td className="pl-2 text-right tabular-nums text-muted-foreground">
+                            {fmtDate(
+                              l.fechaExpiracion ?? new Date().toISOString(),
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
-/* -------------------- Subcomponentes -------------------- */
+/* ---------- sub-components ---------- */
 
 function ItemThumb({ src, alt }: { src?: string | null; alt?: string | null }) {
   if (!src) {
     return (
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted/40">
-        <Box className="h-5 w-5 text-muted-foreground" />
+      <div
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded border bg-muted/40"
+        aria-hidden="true"
+      >
+        <Box className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
     );
   }
   return (
-    <div className="h-10 w-10 overflow-hidden rounded-lg border">
+    <div className="h-7 w-7 shrink-0 overflow-hidden rounded border">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
-        alt={alt ?? "Item"}
+        alt={alt ?? "Artículo"}
         className="h-full w-full object-cover"
         loading="lazy"
       />
     </div>
   );
 }
-
-function KpiSm({
-  label,
-  value,
-  highlight = false,
-}: {
-  label: string;
-  value: number | string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={[
-        "rounded-lg border p-2",
-        highlight
-          ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900"
-          : "",
-      ].join(" ")}
-    >
-      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
-      <div className="text-sm font-semibold">{String(value ?? "—")}</div>
-    </div>
-  );
-}
-
-function MetaTime({ label, iso }: { label: string; iso?: string }) {
-  return (
-    <div className="rounded-lg border p-2">
-      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
-      <div className="truncate text-xs">
-        {iso ? formattFechaWithMinutes(iso) : "—"}
-      </div>
-    </div>
-  );
-}
-
-/* -------------------- Utils -------------------- */

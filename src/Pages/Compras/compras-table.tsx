@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import {
   type ColumnFiltersState,
   flexRender,
@@ -9,71 +9,210 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  Search,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   Filter,
+  Package,
+  Search,
   X,
 } from "lucide-react";
+import { CompraListItem } from "@/Types/compras/interfaces";
 import { comprasColumns } from "./columns";
 import { ComprasDetailDialog } from "./compras-detail-dialog";
-import { CompraListItem } from "./Interfaces/Interfaces1";
 
-type PropsComprasTable = {
+type ComprasTableProps = {
   data: CompraListItem[];
-  page: number; // 1-based
+  page: number;
   limit: number;
-  pages: number; // total de páginas (server)
-  total: number; // total de registros (server)
+  pages: number;
+  total: number;
   loading?: boolean;
   onChangePage: (p: number) => void;
   onChangeLimit: (l: number) => void;
+  onOpenDetalle?: (compra: CompraListItem) => void;
 };
 
-const tableVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.3, staggerChildren: 0.05 },
-  },
-};
+function LoadingBar() {
+  return (
+    <div className="h-px w-full overflow-hidden bg-border">
+      <div className="h-px animate-[shimmer_1.2s_ease-in-out_infinite] bg-primary/50 w-1/3" />
+    </div>
+  );
+}
 
-const rowVariants = {
-  hidden: { opacity: 0, x: -20 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.2 } },
-  exit: { opacity: 0, x: 20, transition: { duration: 0.15 } },
-};
+function SortIndicator({ sorted }: { sorted: false | "asc" | "desc" }) {
+  if (sorted === "asc")
+    return <span className="text-primary text-[10px] leading-none">↑</span>;
+  if (sorted === "desc")
+    return <span className="text-primary text-[10px] leading-none">↓</span>;
+  return (
+    <span className="text-muted-foreground/40 text-[10px] leading-none">↕</span>
+  );
+}
+
+function EmptyState({ hasFilters }: { hasFilters: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+      <Package className="h-8 w-8 opacity-30" />
+      <p className="text-sm font-medium">Sin resultados</p>
+      <p className="text-xs">
+        {hasFilters
+          ? "Intenta ajustar los filtros activos"
+          : "No hay compras registradas"}
+      </p>
+    </div>
+  );
+}
+
+function Pagination({
+  page,
+  pages,
+  limit,
+  total,
+  loading,
+  onChangePage,
+  onChangeLimit,
+}: {
+  page: number;
+  pages: number;
+  limit: number;
+  total: number;
+  loading?: boolean;
+  onChangePage: (p: number) => void;
+  onChangeLimit: (l: number) => void;
+}) {
+  const from = total === 0 ? 0 : (page - 1) * limit + 1;
+  const to = Math.min(page * limit, total);
+
+  // Ventana de páginas numeradas
+  const windowSize = 5;
+  const halfWindow = Math.floor(windowSize / 2);
+  let startPage = Math.max(1, page - halfWindow);
+  const endPage = Math.min(pages, startPage + windowSize - 1);
+  if (endPage - startPage < windowSize - 1) {
+    startPage = Math.max(1, endPage - windowSize + 1);
+  }
+  const pageNumbers = Array.from(
+    { length: endPage - startPage + 1 },
+    (_, i) => startPage + i,
+  );
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-3 py-2 border-t text-xs text-muted-foreground">
+      {/* Rango + selector */}
+      <div className="flex items-center gap-2">
+        <span>
+          {from}–{to} de {total}
+        </span>
+        <select
+          className="h-6 rounded border border-input bg-background px-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          value={limit}
+          onChange={(e) => onChangeLimit(Number(e.target.value))}
+          disabled={loading}
+          aria-label="Registros por página"
+        >
+          {[5, 10, 15, 25, 50].map((s) => (
+            <option key={s} value={s}>
+              {s} / pág.
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Botones de navegación */}
+      <div className="flex items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onChangePage(1)}
+          disabled={page <= 1 || loading}
+          aria-label="Primera página"
+        >
+          <ChevronsLeft className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onChangePage(page - 1)}
+          disabled={page <= 1 || loading}
+          aria-label="Página anterior"
+        >
+          <ChevronLeft className="h-3 w-3" />
+        </Button>
+
+        {startPage > 1 && (
+          <span className="px-1 text-muted-foreground/50">…</span>
+        )}
+
+        {pageNumbers.map((n) => (
+          <Button
+            key={n}
+            variant={n === page ? "default" : "ghost"}
+            size="icon"
+            className="h-6 w-6 text-xs"
+            onClick={() => onChangePage(n)}
+            disabled={loading}
+            aria-label={`Página ${n}`}
+            aria-current={n === page ? "page" : undefined}
+          >
+            {n}
+          </Button>
+        ))}
+
+        {endPage < pages && (
+          <span className="px-1 text-muted-foreground/50">…</span>
+        )}
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onChangePage(page + 1)}
+          disabled={page >= pages || loading}
+          aria-label="Página siguiente"
+        >
+          <ChevronRight className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onChangePage(pages)}
+          disabled={page >= pages || loading}
+          aria-label="Última página"
+        >
+          <ChevronsRight className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function ComprasTable({
   data,
-  limit,
-  onChangeLimit,
-  onChangePage,
   page,
+  limit,
   pages,
   total,
   loading,
-}: PropsComprasTable) {
-  const [selected, setSelected] = React.useState<CompraListItem | null>(null);
-  const [openDetalle, setOpenDetalle] = React.useState(false);
+  onChangePage,
+  onChangeLimit,
+}: ComprasTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    [],
   );
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [showFilters, setShowFilters] = React.useState(false);
-
-  // Memo data para no recrear referencias en renders
+  const [selected, setSelected] = React.useState<CompraListItem | null>(null);
+  const [openDetalle, setOpenDetalle] = React.useState(false);
   const tableData = React.useMemo(() => data, [data]);
 
   const table = useReactTable<CompraListItem>({
@@ -84,7 +223,7 @@ export function ComprasTable({
       columnFilters,
       globalFilter,
       pagination: {
-        pageIndex: Math.max(0, page - 1), // TanStack usa base 0
+        pageIndex: Math.max(0, page - 1),
         pageSize: limit,
       },
     },
@@ -96,21 +235,15 @@ export function ComprasTable({
         typeof updater === "function"
           ? updater({ pageIndex: Math.max(0, page - 1), pageSize: limit })
           : updater;
-
       if (next.pageSize !== limit) onChangeLimit(next.pageSize);
       if (next.pageIndex !== Math.max(0, page - 1))
         onChangePage(next.pageIndex + 1);
     },
-
-    // Paginación server-side
     manualPagination: true,
     pageCount: pages,
-
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-
-    // callback para abrir detalle desde las celdas/acciones en columns
     meta: {
       onOpenDetalle: (row: CompraListItem) => {
         setSelected(row);
@@ -120,293 +253,167 @@ export function ComprasTable({
   });
 
   const activeFiltersCount = columnFilters.length + (globalFilter ? 1 : 0);
+  const hasFilters = activeFiltersCount > 0;
 
-  const clearAllFilters = () => {
+  const clearFilters = () => {
     setGlobalFilter("");
     setColumnFilters([]);
   };
 
   return (
-    <motion.div
-      className="space-y-3"
-      initial="hidden"
-      animate="visible"
-      variants={tableVariants}
-    >
-      {/* Header */}
-      <Card>
-        <CardHeader className="pb-2 pt-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                {" "}
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />{" "}
-                <Input
-                  placeholder="Buscar compras..."
-                  value={globalFilter ?? ""}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-7 h-8 text-xs"
-                />{" "}
-              </div>
+    <div className="flex flex-col gap-2">
+      {/* Barra de búsqueda y filtros */}
+      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Buscar compras..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="pl-7 h-7 text-xs"
+            aria-label="Buscar compras"
+          />
+        </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="relative h-8 text-xs"
-                aria-expanded={showFilters}
-                aria-controls="compras-filters"
-              >
-                <Filter className="h-3 w-3 mr-1" />
-                Filtros
-                {activeFiltersCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="ml-1 h-4 w-4 p-0 text-xs"
-                  >
-                    {activeFiltersCount}
-                  </Badge>
-                )}
-              </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() => setShowFilters((v) => !v)}
+            aria-expanded={showFilters}
+          >
+            <Filter className="h-3 w-3" />
+            Filtros
+            {activeFiltersCount > 0 && (
+              <span className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-medium text-primary-foreground">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
 
-              {activeFiltersCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="text-muted-foreground hover:text-foreground h-8 text-xs"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Limpiar
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground gap-1"
+              onClick={clearFilters}
+              aria-label="Limpiar filtros"
+            >
+              <X className="h-3 w-3" />
+              Limpiar
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Tabla */}
-      <Card aria-busy={!!loading}>
-        {/* Barra de carga sutil cuando loading=true */}
-        {loading && (
-          <div className="h-0.5 w-full bg-primary/10">
-            <div className="h-0.5 w-1/2 animate-[shimmer_1.2s_infinite] bg-primary/60" />
-          </div>
-        )}
+      <div
+        className="rounded-md border overflow-hidden"
+        aria-busy={!!loading}
+        aria-label="Tabla de compras"
+      >
+        {loading && <LoadingBar />}
 
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <motion.table className="w-full text-xs" variants={tableVariants}>
-              <thead className="bg-muted/50">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id} className="border-b">
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id} className="border-b bg-muted/40">
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      scope="col"
+                      className="px-2 py-2 text-left font-medium"
+                      style={{ width: header.getSize() }}
+                    >
+                      <div
+                        className="flex items-center gap-1 cursor-pointer select-none"
                         onClick={header.column.getToggleSortingHandler()}
-                        className="text-left py-2 px-2 font-medium cursor-pointer select-none hover:bg-muted/80 transition-colors text-xs"
-                        style={{ width: header.getSize() }}
-                        scope="col"
                       >
-                        <div className="flex items-center gap-1">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          <div className="flex flex-col">
-                            {(
-                              {
-                                asc: (
-                                  <span className="text-primary text-xs">
-                                    ↑
-                                  </span>
-                                ),
-                                desc: (
-                                  <span className="text-primary text-xs">
-                                    ↓
-                                  </span>
-                                ),
-                              } as Record<string, React.ReactNode>
-                            )[header.column.getIsSorted() as string] ?? (
-                              <span className="text-muted-foreground opacity-50 text-xs">
-                                ↕
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {header.column.getCanSort() && (
+                          <SortIndicator sorted={header.column.getIsSorted()} />
+                        )}
+                      </div>
 
-                        <AnimatePresence>
-                          {showFilters && header.column.getCanFilter() && (
-                            <motion.div
-                              id="compras-filters"
-                              className="mt-1"
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.2 }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Input
-                                value={
-                                  (header.column.getFilterValue() as string) ??
-                                  ""
-                                }
-                                onChange={(e) =>
-                                  header.column.setFilterValue(e.target.value)
-                                }
-                                placeholder="Filtrar columna…"
-                                className="h-6 text-xs"
-                              />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </th>
+                      {/* Filtros por columna (visibles con toggle) */}
+                      {showFilters && header.column.getCanFilter() && (
+                        <div
+                          className="mt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Input
+                            value={
+                              (header.column.getFilterValue() as string) ?? ""
+                            }
+                            onChange={(e) =>
+                              header.column.setFilterValue(e.target.value)
+                            }
+                            placeholder="Filtrar…"
+                            className="h-6 text-xs"
+                          />
+                        </div>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+
+            <tbody>
+              {table.getRowModel().rows.length === 0 ? (
+                <tr>
+                  <td colSpan={comprasColumns.length} className="text-center">
+                    <EmptyState hasFilters={hasFilters} />
+                  </td>
+                </tr>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-b last:border-0 hover:bg-muted/40 transition-colors"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className="px-2 py-1.5"
+                        style={{ width: cell.column.getSize() }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
                     ))}
                   </tr>
-                ))}
-              </thead>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-              <tbody>
-                <AnimatePresence mode="popLayout">
-                  {table.getRowModel().rows.map((row, index) => (
-                    <motion.tr
-                      key={row.id}
-                      variants={rowVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      layout
-                      className="border-b hover:bg-muted/50 transition-colors"
-                      style={{ animationDelay: `${index * 0.03}s` }}
-                      data-rowid={(row.original as CompraListItem).id}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="py-1.5 px-2"
-                          style={{ width: cell.column.getSize() }}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
-                      ))}
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </tbody>
-            </motion.table>
-          </div>
-
-          {table.getRowModel().rows.length === 0 && (
-            <motion.div
-              className="text-center py-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="text-muted-foreground">
-                <div className="text-2xl mb-2">📦</div>
-                <div className="text-sm font-medium">
-                  No se encontraron compras
-                </div>
-                <div className="text-xs">
-                  {globalFilter || columnFilters.length > 0
-                    ? "Intenta ajustar los filtros"
-                    : "No hay registros disponibles"}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Paginación */}
-      {data.length > 0 && (
-        <Card>
-          <CardContent className="py-2">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>
-                  {total === 0 ? "0-0" : (page - 1) * limit + 1} -{" "}
-                  {Math.min(page * limit, total)} de {total}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="flex items-center gap-0.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onChangePage(1)}
-                    disabled={page <= 1 || loading}
-                    className="h-7 w-7 p-0"
-                    aria-label="Primera página"
-                  >
-                    <ChevronsLeft className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onChangePage(page - 1)}
-                    disabled={page <= 1 || loading}
-                    className="h-7 w-7 p-0"
-                    aria-label="Página anterior"
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                  </Button>
-                  <div className="flex items-center gap-1 mx-2">
-                    <span className="text-xs">Pág.</span>
-                    <Badge variant="outline" className="text-xs px-1">
-                      {page}/{Math.max(1, pages)}
-                    </Badge>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onChangePage(page + 1)}
-                    disabled={page >= pages || loading}
-                    className="h-7 w-7 p-0"
-                    aria-label="Página siguiente"
-                  >
-                    <ChevronRight className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onChangePage(pages)}
-                    disabled={page >= pages || loading}
-                    className="h-7 w-7 p-0"
-                    aria-label="Última página"
-                  >
-                    <ChevronsRight className="h-3 w-3" />
-                  </Button>
-                </div>
-
-                <select
-                  className="border rounded px-1 py-0.5 text-xs bg-background h-7"
-                  value={limit}
-                  onChange={(e) => onChangeLimit(Number(e.target.value))}
-                  disabled={loading}
-                  aria-label="Tamaño de página"
-                >
-                  {[5, 10, 15, 25, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
+        {/* Paginación integrada al borde inferior de la tabla */}
+        {total > 0 && (
+          <Pagination
+            page={page}
+            pages={pages}
+            limit={limit}
+            total={total}
+            loading={loading}
+            onChangePage={onChangePage}
+            onChangeLimit={onChangeLimit}
+          />
+        )}
+      </div>
       <ComprasDetailDialog
         open={openDetalle}
         onOpenChange={setOpenDetalle}
         compra={selected}
       />
-    </motion.div>
+    </div>
   );
 }

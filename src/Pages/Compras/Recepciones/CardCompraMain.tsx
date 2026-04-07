@@ -1,202 +1,179 @@
 "use client";
 
-import { motion } from "framer-motion";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import {
-  CalendarDays,
-  UserRound,
-  DollarSign,
-  Truck,
-  FileText,
-  CheckCircle2,
   AlertTriangle,
-  XCircle,
+  CalendarDays,
+  CheckCircle2,
   ClipboardList,
+  DollarSign,
+  FileText,
   PackageOpen,
+  Truck,
+  UserRound,
+  XCircle,
 } from "lucide-react";
-
 import type { CompraResumenUI } from "./interfaces/recepcionesInterfaces";
-import { formattFechaWithMinutes } from "@/Pages/Utils/Utils";
-import { formattMonedaGT } from "@/utils/formattMoneda";
 
-interface PropsCompraMain {
+// ---- stub formatters (replace with real ones) ----
+const fmt = (d?: string) =>
+  d
+    ? new Date(d).toLocaleString("es-GT", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : "—";
+const fmtM = (n?: number) =>
+  n != null
+    ? `Q${Number(n).toLocaleString("es-GT", { minimumFractionDigits: 2 })}`
+    : "—";
+
+interface Props {
   compra: CompraResumenUI;
 }
 
-export default function CardCompraMain({ compra }: PropsCompraMain) {
+export default function CardCompraMain({ compra }: Props) {
   const { id, fecha, estado, origen, conFactura, total, usuario, totales } =
     compra;
-
   const pct =
     totales.unidadesOrdenadas > 0
       ? Math.min(
           100,
           Math.round(
-            (totales.unidadesRecibidas / totales.unidadesOrdenadas) * 100
-          )
+            (totales.unidadesRecibidas / totales.unidadesOrdenadas) * 100,
+          ),
         )
       : 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-    >
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-lg leading-none">
-                Compra #{id}
-              </CardTitle>
-              <CardDescription>Detalles de la compra principal</CardDescription>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <EstadoBadge estado={estado} />
-                <Badge variant="outline" className="gap-1">
-                  <Truck className="h-4 w-4" />
-                  {origen}
-                </Badge>
-                <Badge
-                  variant={conFactura ? "default" : "secondary"}
-                  className="gap-1"
-                >
-                  <FileText className="h-4 w-4" />
-                  {conFactura ? "Con factura" : "Sin factura"}
-                </Badge>
-                <Badge variant="outline" className="gap-1">
-                  <CalendarDays className="h-4 w-4" />
-                  {formattFechaWithMinutes(fecha)}
-                </Badge>
-                <Badge variant="outline" className="gap-1">
-                  <UserRound className="h-4 w-4" />
-                  {usuario?.nombre ?? "—"}
-                </Badge>
-              </div>
-            </div>
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-sm font-semibold">Compra #{id}</span>
+          <EstadoBadge estado={estado} />
+          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs">
+            <Truck className="h-3 w-3" />
+            {origen}
+          </Badge>
+          <Badge
+            variant={conFactura ? "secondary" : "outline"}
+            className="h-5 gap-1 px-1.5 text-xs"
+          >
+            <FileText className="h-3 w-3" />
+            {conFactura ? "Con factura" : "Sin factura"}
+          </Badge>
+          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs">
+            <CalendarDays className="h-3 w-3" />
+            {fmt(fecha)}
+          </Badge>
+          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs">
+            <UserRound className="h-3 w-3" />
+            {usuario?.nombre ?? "—"}
+          </Badge>
+        </div>
 
-            <div className="shrink-0 rounded-2xl border bg-card p-4 text-right">
-              <div className="text-xs uppercase text-muted-foreground">
-                Total
-              </div>
-              <div className="flex items-center justify-end gap-1">
-                <DollarSign className="h-5 w-5" />
-                <span className="text-2xl font-semibold leading-none">
-                  {formattMonedaGT(total)}
-                </span>
-              </div>
-            </div>
+        {/* Total */}
+        <div className="flex items-center gap-1 text-sm font-semibold">
+          <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+          <span>{fmtM(total)}</span>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* KPIs + progress */}
+      <div className="px-4 py-3 space-y-3">
+        {/* Progress bar */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              Avance de recepción
+            </span>
+            <span>
+              {totales.unidadesRecibidas}/{totales.unidadesOrdenadas} unid. ·{" "}
+              {pct}%
+            </span>
           </div>
-        </CardHeader>
+          <Progress value={pct} className="h-1.5" />
+        </div>
 
-        <Separator />
-
-        <CardContent className="pt-4">
-          {/* Avance de recepción */}
-          <div className="mb-4 rounded-xl border p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="text-sm font-medium">Avance de recepción</span>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {totales.unidadesRecibidas}/{totales.unidadesOrdenadas} unid.
-              </span>
-            </div>
-            <Progress value={pct} className="h-2" />
-            <div className="mt-1 text-right text-xs text-muted-foreground">
-              {pct}% recibido
-            </div>
-          </div>
-
-          {/* KPIs */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <Stat
-              icon={<ClipboardList className="h-5 w-5" />}
-              label="Líneas ordenadas"
-              value={totales.lineasOrdenadas}
-            />
-            <Stat
-              icon={<PackageOpen className="h-5 w-5" />}
-              label="Unid. ordenadas"
-              value={totales.unidadesOrdenadas}
-            />
-            <Stat
-              icon={<CheckCircle2 className="h-5 w-5" />}
-              label="Unid. recibidas"
-              value={totales.unidadesRecibidas}
-            />
-            <Stat
-              icon={<AlertTriangle className="h-5 w-5" />}
-              label="Pendientes"
-              value={totales.unidadesPendientes}
-              highlight={totales.unidadesPendientes > 0}
-            />
-            <Stat
-              icon={<Truck className="h-5 w-5" />}
-              label="Recepciones"
-              value={totales.recepcionesCount}
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <Stat
+            icon={<ClipboardList className="h-3.5 w-3.5" />}
+            label="Líneas"
+            value={totales.lineasOrdenadas}
+          />
+          <Stat
+            icon={<PackageOpen className="h-3.5 w-3.5" />}
+            label="Ordenadas"
+            value={totales.unidadesOrdenadas}
+          />
+          <Stat
+            icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+            label="Recibidas"
+            value={totales.unidadesRecibidas}
+          />
+          <Stat
+            icon={<AlertTriangle className="h-3.5 w-3.5" />}
+            label="Pendientes"
+            value={totales.unidadesPendientes}
+            warn={totales.unidadesPendientes > 0}
+          />
+          <Stat
+            icon={<Truck className="h-3.5 w-3.5" />}
+            label="Recepciones"
+            value={totales.recepcionesCount}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
-/* -------------------- Subcomponentes & utils -------------------- */
+/* ---------- sub-components ---------- */
 
 function EstadoBadge({ estado }: { estado: string }) {
-  // mapea tu catálogo real de estados si tienes más
-  const map: Record<
-    string,
-    {
-      label: string;
-      variant: "default" | "secondary" | "destructive" | "outline";
-      icon: JSX.Element;
-    }
-  > = {
+  type Cfg = {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+    icon: React.ReactNode;
+  };
+  const map: Record<string, Cfg> = {
     RECIBIDO: {
       label: "Recibido",
       variant: "default",
-      icon: <CheckCircle2 className="h-4 w-4" />,
+      icon: <CheckCircle2 className="h-3 w-3" />,
     },
     ESPERANDO_ENTREGA: {
       label: "Esperando entrega",
       variant: "secondary",
-      icon: <Truck className="h-4 w-4" />,
+      icon: <Truck className="h-3 w-3" />,
     },
     PARCIAL: {
-      label: "Recepción parcial",
+      label: "Parcial",
       variant: "secondary",
-      icon: <AlertTriangle className="h-4 w-4" />,
+      icon: <AlertTriangle className="h-3 w-3" />,
     },
     ANULADO: {
       label: "Anulado",
       variant: "destructive",
-      icon: <XCircle className="h-4 w-4" />,
+      icon: <XCircle className="h-3 w-3" />,
     },
   };
-
-  const def = map[estado] ?? {
+  const cfg = map[estado] ?? {
     label: estado,
     variant: "outline" as const,
-    icon: <ClipboardList className="h-4 w-4" />,
+    icon: <ClipboardList className="h-3 w-3" />,
   };
-
   return (
-    <Badge variant={def.variant} className="gap-1">
-      {def.icon}
-      {def.label}
+    <Badge variant={cfg.variant} className="h-5 gap-1 px-1.5 text-xs">
+      {cfg.icon}
+      {cfg.label}
     </Badge>
   );
 }
@@ -205,27 +182,27 @@ function Stat({
   icon,
   label,
   value,
-  highlight = false,
+  warn = false,
 }: {
-  icon: JSX.Element;
+  icon: React.ReactNode;
   label: string;
   value: number | string;
-  highlight?: boolean;
+  warn?: boolean;
 }) {
   return (
     <div
       className={[
-        "rounded-xl border p-3",
-        highlight
-          ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900"
-          : "",
+        "rounded-md border px-2 py-1.5",
+        warn
+          ? "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20"
+          : "bg-muted/30",
       ].join(" ")}
     >
-      <div className="flex items-center gap-2 text-muted-foreground">
+      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
         {icon}
-        <span className="text-xs">{label}</span>
+        {label}
       </div>
-      <div className="mt-1 text-xl font-semibold">{value}</div>
+      <div className="text-sm font-semibold leading-tight">{value}</div>
     </div>
   );
 }

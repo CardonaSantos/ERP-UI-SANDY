@@ -105,7 +105,7 @@ export default function CreditoCompraMainPage({
 
   const [isManual, setIsManual] = useState(false);
   const [cuotasOverride, setCuotasOverride] = useState<PlanCuotaFila[] | null>(
-    null
+    null,
   );
   const [cuentaBancariaSelected, setCuentaBancariaSelected] =
     useState<string>("");
@@ -122,8 +122,8 @@ export default function CreditoCompraMainPage({
     const base =
       form.montoOriginal ??
       (form.modo === "POR_RECEPCION" && form.recepcionId
-        ? recepciones.find((r) => r.id === form.recepcionId)?.valor ??
-          compraTotal
+        ? (recepciones.find((r) => r.id === form.recepcionId)?.valor ??
+          compraTotal)
         : compraTotal);
     return base > 0 && form.cantidadCuotas >= 1 && form.diasEntrePagos > 0;
   }, [form, compraTotal, recepciones]);
@@ -144,7 +144,7 @@ export default function CreditoCompraMainPage({
             ? form.enganche
             : null,
       }),
-    [form, compraTotal, recepciones]
+    [form, compraTotal, recepciones],
   );
 
   const isValidMovimientoFinanciero =
@@ -162,7 +162,7 @@ export default function CreditoCompraMainPage({
         cuotasOverride,
         form,
         compraTotal,
-        recepciones
+        recepciones,
       );
 
       const engancheMonto =
@@ -171,7 +171,7 @@ export default function CreditoCompraMainPage({
           : undefined;
 
       const needsAccount = ["TRANSFERENCIA", "TARJETA", "CHEQUE"].includes(
-        String(metodoPago)
+        String(metodoPago),
       );
 
       const cuentaIdSafe =
@@ -270,16 +270,16 @@ export default function CreditoCompraMainPage({
                 (prev ?? preview.cuotas.map(ensureId)).map((c) =>
                   c.id === id
                     ? { ...c, fechaISO: dayjs(ymd).toDate().toISOString() }
-                    : c
-                )
+                    : c,
+                ),
               );
             }}
             editCuotaMonto={(id, monto) => {
               if (!isManual || !cuotasOverride) adoptPreview();
               setCuotasOverride((prev) =>
                 (prev ?? preview.cuotas.map(ensureId)).map((c) =>
-                  c.id === id ? { ...c, monto } : c
-                )
+                  c.id === id ? { ...c, monto } : c,
+                ),
               );
             }}
             onSubmit={onSubmit}

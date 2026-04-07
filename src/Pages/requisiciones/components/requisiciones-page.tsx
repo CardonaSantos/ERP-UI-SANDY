@@ -78,14 +78,7 @@ export function RequisicionesPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div>
-        <h1 className="text-base font-semibold">Requisiciones</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Gestión y seguimiento de requisiciones de compra
-        </p>
-      </div>
-
+    <div className="">
       <RequisitionsTable
         data={requisiciones}
         isLoading={isLoadingRequisiciones}

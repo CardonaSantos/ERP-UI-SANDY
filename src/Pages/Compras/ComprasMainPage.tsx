@@ -7,12 +7,12 @@ import { Package, AlertCircle } from "lucide-react";
 import { ComprasTable } from "./compras-table";
 
 // ⬇️ types
-import type { PaginatedComprasResponse } from "./Interfaces/Interfaces1"; // <-- o donde moviste tus types
 import type { GetRegistrosComprasQuery } from "./API/interfaceQuery";
 import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
 import { keepPreviousData } from "@tanstack/react-query";
 
 import { PageTransition } from "@/components/Transition/layout-transition";
+import { PaginatedComprasResponse } from "@/Types/compras/interfaces";
 
 // ⬇️ hook genérico
 

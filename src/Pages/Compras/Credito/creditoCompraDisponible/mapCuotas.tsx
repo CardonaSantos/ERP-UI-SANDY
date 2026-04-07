@@ -18,7 +18,6 @@ import {
 } from "@/hooks/genericoCall/genericoCallHook";
 import { getApiErrorMessageAxios } from "@/Pages/Utils/UtilsErrorApi";
 import { formattMonedaGT } from "@/utils/formattMoneda";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -62,7 +61,7 @@ import CostosAsociadosDialog from "../../components/Costos Asociados Dialog";
 import {
   MovimientoFinancieroDraft,
   ProrrateoMeta,
-} from "../../CostoAsociadoTypes";
+} from "../../costo-asociado-types";
 
 dayjs.extend(customParseFormat);
 dayjs.extend(utc);
@@ -72,7 +71,7 @@ dayjs.extend(isSameOrAfter);
 dayjs.locale("es");
 
 // ============================
-// Tipos y Props
+// Tipos
 // ============================
 type CuentaBancaria = { id: number; nombre: string };
 type ProveedorLite = { id: number; nombre: string };
@@ -84,7 +83,7 @@ interface PropsCuotas {
   documentoId: number;
   sucursalId: number;
   cajasDisponibles: CajaConSaldo[];
-  compraId: number; // para crear recepción y asociar
+  compraId: number;
   cuentasBancarias?: CuentaBancaria[];
   proveedores?: ProveedorLite[];
   normalizados: DetalleNormalizado[];
@@ -98,33 +97,36 @@ interface PayloadDeletePago {
 }
 
 // ============================
-// Helpers puros (fuera del componente)
+// Helpers puros
 // ============================
+const estadoCuotaMap: Record<string, { label: string; className: string }> = {
+  PENDIENTE: {
+    label: "Pendiente",
+    className: "bg-amber-100 text-amber-800 border-amber-200",
+  },
+  PARCIAL: {
+    label: "Parcial",
+    className: "bg-blue-100 text-blue-800 border-blue-200",
+  },
+  PAGADA: {
+    label: "Pagada",
+    className: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  },
+  VENCIDA: {
+    label: "Vencida",
+    className: "bg-rose-100 text-rose-800 border-rose-200",
+  },
+};
+
 const EstadoCuotaBadge = ({ estado }: { estado: string }) => {
-  const map: Record<string, { label: string; className: string }> = {
-    PENDIENTE: {
-      label: "Pendiente",
-      className: "bg-amber-100 text-amber-800 border-amber-200",
-    },
-    PARCIAL: {
-      label: "Parcial",
-      className: "bg-blue-100 text-blue-800 border-blue-200",
-    },
-    PAGADA: {
-      label: "Pagada",
-      className: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    },
-    VENCIDA: {
-      label: "Vencida",
-      className: "bg-rose-100 text-rose-800 border-rose-200",
-    },
-  };
-  const v = map[estado] ?? {
+  const v = estadoCuotaMap[estado] ?? {
     label: estado,
     className: "bg-muted text-foreground/80 border-border",
   };
   return (
-    <Badge className={cn("rounded-full px-2.5 py-0.5 border", v.className)}>
+    <Badge
+      className={cn("rounded-full px-2 py-0.5 text-[10px] border", v.className)}
+    >
       {v.label}
     </Badge>
   );
@@ -136,10 +138,10 @@ const leftStripeByEstado = (estado: string) =>
     PARCIAL: "before:bg-blue-500",
     PAGADA: "before:bg-emerald-500",
     VENCIDA: "before:bg-rose-500",
-  }[estado] ?? "before:bg-muted-foreground/40");
+  })[estado] ?? "before:bg-muted-foreground/40";
 
 function normalizeMetodoPagoUIToBackend(
-  value: string
+  value: string,
 ): "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "CHEQUE" | "CREDITO" | "OTRO" {
   const v = (value || "").toUpperCase();
   if (v === "CONTADO") return "EFECTIVO";
@@ -199,9 +201,6 @@ function MapCuotasCreditoCompra({
   proveedores = [],
   compraId,
 }: PropsCuotas) {
-  // -----------------------------------------
-  // React Query: client + util invalidación
-  // -----------------------------------------
   const qc = useQueryClient();
 
   const invalidateCreditoData = async () => {
@@ -213,26 +212,22 @@ function MapCuotasCreditoCompra({
     ]);
   };
 
-  // -----------------------------------------
-  // UI State
-  // -----------------------------------------
-
-  // === Prorrateo/Costo asociado (solo si hay recepción) =======================
+  // UI state
   const [openCostoDialog, setOpenCostoDialog] = useState(false);
   const [mfDraft, setMfDraft] = useState<MovimientoFinancieroDraft | null>(
-    null
+    null,
   );
   const [prorrateoMeta, setProrrateoMeta] = useState<
     ProrrateoMeta | null | undefined
   >(null);
-  const [costoStepDone, setCostoStepDone] = useState(false); // marcamos si el usuario completó el paso de costos
+  const [costoStepDone, setCostoStepDone] = useState(false);
 
-  const [openPay, setOpenPay] = useState(false); // dialog de pago
-  const [openPicker, setOpenPicker] = useState(false); // dialog de recepción
-  const [openDelete, setOpenDelete] = useState(false); // dialog de eliminar pago
+  const [openPay, setOpenPay] = useState(false);
+  const [openPicker, setOpenPicker] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
 
   const [cuotaSeleccionada, setCuotaSeleccionada] = useState<UICuota | null>(
-    null
+    null,
   );
   const [picked, setPicked] = useState<PickedItem[]>([]);
   const [cuentaBancariaSelected, setCuentaBancariaSelected] =
@@ -253,9 +248,7 @@ function MapCuotasCreditoCompra({
     referencia: "",
   });
 
-  // -----------------------------------------
-  // Queries (fresh-first policies)
-  // -----------------------------------------
+  // Queries
   const { data: products = [], refetch: refetchProducts } = useApiQuery<
     DetalleNormalizado[]
   >(
@@ -263,50 +256,43 @@ function MapCuotasCreditoCompra({
     `compras-pagos-creditos/get-detalles-productos-recepcion/${compraId}`,
     undefined,
     {
-      enabled: !!compraId && openPicker, // carga cuando abres el picker
-      refetchOnWindowFocus: true, // siempre refrescar al enfocar
-      refetchOnMount: "always", // y al montar
-      refetchOnReconnect: "always", // y al reconectar
+      enabled: !!compraId && openPicker,
+      refetchOnWindowFocus: true,
+      refetchOnMount: "always",
+      refetchOnReconnect: "always",
       placeholderData: keepPreviousData,
-    }
+    },
   );
 
-  // -----------------------------------------
-  // Mutations (todas invalidan los mismos QKs)
-  // -----------------------------------------
+  // Mutations
   const postPago = useApiMutation(
     "post",
     "/compras-pagos-creditos/",
     undefined,
     {
       onSuccess: invalidateCreditoData,
-    }
+    },
   );
 
   const deletePagoCuota = useApiMutation<any, PayloadDeletePago>(
     "post",
     "compras-pagos-creditos/delete-cuota-payed",
     undefined,
-    {
-      onSuccess: invalidateCreditoData,
-    }
+    { onSuccess: invalidateCreditoData },
   );
 
-  // -----------------------------------------
-  // Derived values
-  // -----------------------------------------
+  // Derived
   const saldoCuota = useMemo(
     () => cuotaSeleccionada?.saldo ?? cuotaSeleccionada?.monto ?? 0,
-    [cuotaSeleccionada]
+    [cuotaSeleccionada],
   );
 
   const montoN = useMemo(
     () => parseFloat(String(payloadPayment.monto || 0)),
-    [payloadPayment.monto]
+    [payloadPayment.monto],
   );
 
   const montoOk = !isNaN(montoN) && montoN > 0 && montoN <= (saldoCuota || 0);
-
   const fechaOk =
     !!payloadPayment.fechaPago &&
     dayjs(payloadPayment.fechaPago, "YYYY-MM-DD", true).isValid();
@@ -314,28 +300,22 @@ function MapCuotasCreditoCompra({
   const extraDisableReason = !fechaOk
     ? "Seleccione una fecha válida."
     : !montoOk
-    ? `Monto inválido. Máximo permitido: ${formattMonedaGT(saldoCuota)}.`
-    : null;
+      ? `Monto inválido. Máximo permitido: ${formattMonedaGT(saldoCuota)}.`
+      : null;
 
   const allReceived = (rows: DetalleNormalizado[] = []) =>
     rows.every((n) => getPendiente(n) === 0);
 
-  // -----------------------------------------
   // Handlers
-  // -----------------------------------------
   const resetPaymentState = () => {
     setCuentaBancariaSelected("");
     setCajaSelected(null);
   };
 
-  // Abre flujo de pago (o picker si hay pendiente)
   const handleOpenPayFlow = async (cuota: UICuota) => {
     setCuotaSeleccionada(cuota);
     setPicked([]);
-
-    // Estado fresco ANTES de decidir
     const { data: fresh = [] } = await refetchProducts();
-
     if (allReceived(fresh)) {
       setPayloadPayment((prev) => ({
         ...prev,
@@ -355,22 +335,18 @@ function MapCuotasCreditoCompra({
 
   const handlePickerConfirm = (items: PickedItem[]) => {
     setPicked(items);
-
-    // si hay algo para recepcionar, pasamos antes por el diálogo de costo/prorrateo
     if (items.length > 0) {
       setOpenPicker(false);
-      setCostoStepDone(false); // resetea bandera de paso completado
-      setOpenCostoDialog(true); // 👉 abre costo asociado
+      setCostoStepDone(false);
+      setOpenCostoDialog(true);
       return;
     }
-
-    // (fallback) si no hay nada seleccionado, vamos directo al pago como antes
     if (cuotaSeleccionada) {
       setPayloadPayment((prev) => ({
         ...prev,
         documentoId,
         monto: toAmountString(
-          cuotaSeleccionada.saldo ?? cuotaSeleccionada.monto ?? 0
+          cuotaSeleccionada.saldo ?? cuotaSeleccionada.monto ?? 0,
         ),
         fechaPago: dayjs().format("YYYY-MM-DD"),
         metodoPago: "EFECTIVO",
@@ -383,11 +359,9 @@ function MapCuotasCreditoCompra({
     }
   };
 
-  //PAGAR CUOTA
-
   const handleRegistPayment = async () => {
     if (!cuotaSeleccionada) return;
-    // --- bloque de recepción (como ya lo tienes) ---
+
     let recepcionBlock: CreateRecepcionBlock | undefined = undefined;
     if ((picked?.length ?? 0) > 0) {
       if (!compraId) {
@@ -406,12 +380,9 @@ function MapCuotasCreditoCompra({
       };
     }
 
-    // --- método/canales del pago de la cuota ---
     const metodo = normalizeMetodoPagoUIToBackend(
-      String(payloadPayment.metodoPago)
+      String(payloadPayment.metodoPago),
     );
-
-    // --- NUEVO: prorrateo + mf (solo si hubo recepción Y el usuario confirmó el paso de costos) ---
     const includeCostAndProrr =
       !!recepcionBlock &&
       !!prorrateoMeta?.aplicar &&
@@ -427,11 +398,7 @@ function MapCuotasCreditoCompra({
                   base: prorrateoMeta?.base ?? "",
                   incluirAntiguos: prorrateoMeta?.incluirAntiguos ?? false,
                 },
-                mf: {
-                  ...mfDraft!,
-                  // por si acaso, garantiza sucursalId
-                  sucursalId,
-                },
+                mf: { ...mfDraft!, sucursalId },
               }
             : {}),
         }
@@ -448,8 +415,6 @@ function MapCuotasCreditoCompra({
       observaciones: payloadPayment.observaciones?.trim() || undefined,
       referencia: payloadPayment.referencia?.trim() || undefined,
       expectedCuotaSaldo: toAmountString(cuotaSeleccionada.saldo ?? 0),
-
-      // canal del PAGO de la cuota
       cajaId:
         metodo === "EFECTIVO"
           ? cajaSelected
@@ -462,8 +427,6 @@ function MapCuotasCreditoCompra({
             ? Number(cuentaBancariaSelected)
             : undefined
           : undefined,
-
-      // recepción (con o sin costo/prorrateo embebido)
       recepcion: recepcionPayload,
     };
 
@@ -517,26 +480,25 @@ function MapCuotasCreditoCompra({
 
   const handleChangeEvent = <K extends keyof PagoCxPPayload>(
     keyName: K,
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const newValue = e.target.value;
     setPayloadPayment((prev) => ({ ...prev, [keyName]: newValue as any }));
   };
+
   if (!Array.isArray(cuotas) || cuotas.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         No hay cuotas disponibles.
       </p>
     );
   }
-  console.log("Los pickeados son: ", picked);
-  console.log("los productos fetcheados son: ", products);
 
-  // —— Resumen para el confirmador —— //
+  // Resumen para confirmación
   const willReceive = (picked?.length ?? 0) > 0;
   const totalRecibir = (picked ?? []).reduce(
     (s, x) => s + (Number(x.cantidad) || 0),
-    0
+    0,
   );
   const lineasRecibir = picked?.length ?? 0;
 
@@ -554,133 +516,131 @@ function MapCuotasCreditoCompra({
         ? ` · Caja #${cajaSelected}`
         : ""
       : cuentaBancariaSelected
-      ? ` · Cta. #${cuentaBancariaSelected}`
-      : "";
+        ? ` · Cta. #${cuentaBancariaSelected}`
+        : "";
 
   const fechaLabel = payloadPayment.fechaPago || dayjs().format("YYYY-MM-DD");
   const montoPagoN = Number(payloadPayment.monto || 0);
   const saldoPostPago = Math.max(
     0,
-    (saldoCuota || 0) - (isNaN(montoPagoN) ? 0 : montoPagoN)
+    (saldoCuota || 0) - (isNaN(montoPagoN) ? 0 : montoPagoN),
   );
 
-  // texto multilinea (solo string)
   const confirmText = [
     "Se realizará lo siguiente:",
     willReceive
       ? `• Recepción: ${totalRecibir} unidad(es) en ${lineasRecibir} línea(s). [IRREVERSIBLE]`
       : "• No se crearán recepciones de productos.",
     includeCostAndProrr
-      ? `• Costo asociado: ${formattMonedaGT(
-          mfDraft!.monto
-        )} y prorrateo por unidades. [IRREVERSIBLE AUTOMÁTICAMENTE]`
+      ? `• Costo asociado: ${formattMonedaGT(mfDraft!.monto)} y prorrateo por unidades. [IRREVERSIBLE AUTOMÁTICAMENTE]`
       : null,
-    `• Pago: ${formattMonedaGT(
-      montoPagoN
-    )} (${metodoLabel}${canalLabel}) con fecha ${fechaLabel}.`,
+    `• Pago: ${formattMonedaGT(montoPagoN)} (${metodoLabel}${canalLabel}) con fecha ${fechaLabel}.`,
     `  Saldo de la cuota tras el pago: ${formattMonedaGT(saldoPostPago)}.`,
-    "Nota: “Deshacer pago” revierte solo el pago; no afecta stock ni prorrateos.",
   ]
     .filter(Boolean)
     .join("\n");
 
   return (
     <div className="space-y-2">
-      {/* Cards de cuotas */}
       {cuotas.map((c) => {
         const isPayed = c.estado === "PAGADA";
         const vence = dayjs(c.fechaVencimientoISO).format("DD MMM YYYY");
         return (
-          <Card
+          <div
             key={c.id}
             className={cn(
-              "relative overflow-hidden border",
-              "before:absolute before:left-0 before:top-0 before:h-full before:w-1",
-              leftStripeByEstado(c.estado)
+              "relative rounded-md border overflow-hidden",
+              "before:absolute before:left-0 before:top-0 before:h-full before:w-0.5",
+              leftStripeByEstado(c.estado),
             )}
           >
-            <div className="p-3 md:p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-0.5">
+            <div className="p-2.5 pl-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                {/* Info cuota */}
+                <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-base md:text-lg font-medium">
+                    <span className="text-xs font-medium">
                       Cuota #{c.numero ?? c.id}
-                    </h4>
+                    </span>
                     <EstadoCuotaBadge estado={c.estado} />
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      <CircleDollarSign className="h-4 w-4" /> Monto:{" "}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <CircleDollarSign className="h-3 w-3" />
                       {formattMonedaGT(c.monto)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Banknote className="h-4 w-4" /> Saldo:{" "}
-                      {formattMonedaGT(c.saldo)}
+                    <span className="inline-flex items-center gap-1">
+                      <Banknote className="h-3 w-3" />
+                      Saldo: {formattMonedaGT(c.saldo)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <CalendarDays className="h-4 w-4" /> Vence: {vence}
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarDays className="h-3 w-3" />
+                      {vence}
                     </span>
-                    {c.pagadaEnISO ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4" /> Pagada:{" "}
-                        {dayjs(c.pagadaEnISO).format("DD MMM YYYY")}
+                    {c.pagadaEnISO && (
+                      <span className="inline-flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Pagada: {dayjs(c.pagadaEnISO).format("DD MMM YYYY")}
                       </span>
-                    ) : null}
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Acciones */}
+                <div className="flex items-center gap-1.5">
                   <Button
                     variant={isPayed ? "secondary" : "default"}
                     size="sm"
+                    className="h-7 text-xs gap-1"
                     disabled={isPayed}
                     onClick={() => handleOpenPayFlow(c)}
-                    className="gap-1.5"
                   >
-                    <ReceiptText className="h-4 w-4" />
-                    {isPayed ? "Pagada" : "Pagar cuota"}
+                    <ReceiptText className="h-3 w-3" />
+                    {isPayed ? "Pagada" : "Pagar"}
                   </Button>
-
-                  {isPayed ? (
+                  {isPayed && (
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="h-7 text-xs gap-1"
                       onClick={() => handleOpenDelete(c)}
-                      className="gap-1.5"
                     >
-                      <RotateCcw className="h-4 w-4" />
-                      Deshacer pago
+                      <RotateCcw className="h-3 w-3" />
+                      Deshacer
                     </Button>
-                  ) : null}
+                  )}
                 </div>
               </div>
 
-              {/* Pagos */}
-              <div className="mt-3">
+              {/* Pagos acordeón */}
+              <div className="mt-2">
                 {Array.isArray(c.pagos) && c.pagos.length > 0 ? (
                   <Accordion type="single" collapsible>
-                    <AccordionItem value={`pagos-${c.id}`}>
-                      <AccordionTrigger className="text-sm">
-                        Ver pagos registrados ({c.pagos.length})
+                    <AccordionItem
+                      value={`pagos-${c.id}`}
+                      className="border-none"
+                    >
+                      <AccordionTrigger className="text-[11px] text-muted-foreground py-0.5 hover:no-underline">
+                        Ver pagos ({c.pagos.length})
                       </AccordionTrigger>
-                      <AccordionContent>
+                      <AccordionContent className="pt-1">
                         <PagosList pagos={c.pagos} />
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
                 ) : (
-                  <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    No hay pagos registrados aún…
-                  </div>
+                  <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Sin pagos registrados
+                  </span>
                 )}
               </div>
             </div>
-          </Card>
+          </div>
         );
       })}
 
-      {/* Picker de recepción (solo si hay pendiente) */}
+      {/* Picker de recepción */}
       <ReceptionPicker
         open={openPicker}
         onOpenChange={setOpenPicker}
@@ -690,7 +650,7 @@ function MapCuotasCreditoCompra({
         onConfirm={(items) => handlePickerConfirm(items)}
       />
 
-      {/* Dialog de pago (igual que hoy) */}
+      {/* Dialog de pago */}
       <PurchasePaymentFormDialog
         layout="two-column"
         flow="OUT"
@@ -735,10 +695,11 @@ function MapCuotasCreditoCompra({
         continueLabel={postPago.isPending ? "Registrando…" : "Registrar pago"}
         onContinue={() => setOpenConfirmPayment(true)}
       >
-        {/* Campos extra (Monto / Fecha / Referencia) */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="monto">Monto</Label>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="monto" className="text-xs">
+              Monto
+            </Label>
             <Input
               id="monto"
               type="number"
@@ -746,18 +707,22 @@ function MapCuotasCreditoCompra({
               step="0.01"
               min={0}
               max={saldoCuota}
+              className="h-8 text-xs"
               value={payloadPayment.monto}
               onChange={(e) => handleChangeEvent("monto", e)}
             />
-            <div className="text-[11px] text-muted-foreground">
-              Saldo de la cuota: {formattMonedaGT(saldoCuota)}
-            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Saldo: {formattMonedaGT(saldoCuota)}
+            </p>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="referencia">Referencia / Voucher (opcional)</Label>
+          <div className="space-y-1">
+            <Label htmlFor="referencia" className="text-xs">
+              Referencia / Voucher{" "}
+              <span className="text-muted-foreground">(opcional)</span>
+            </Label>
             <Input
               id="referencia"
+              className="h-8 text-xs"
               value={payloadPayment.referencia}
               onChange={(e) => handleChangeEvent("referencia", e)}
               placeholder="OP-928374, Ticket, #Cheque…"
@@ -765,9 +730,11 @@ function MapCuotasCreditoCompra({
           </div>
         </div>
       </PurchasePaymentFormDialog>
+
+      {/* Confirmación pago */}
       <AdvancedDialog
         title="Confirmación de pago de cuota"
-        description={confirmText} // 👈 string multilinea
+        description={confirmText}
         question="¿Seguro que deseas continuar?"
         open={openConfirmPayment}
         onOpenChange={setOpenConfirmPayment}
@@ -811,22 +778,20 @@ function MapCuotasCreditoCompra({
         }}
       />
 
+      {/* Costos asociados */}
       <CostosAsociadosDialog
         open={openCostoDialog}
         onOpenChange={(v) => {
           setOpenCostoDialog(v);
           if (!v && !costoStepDone && picked.length > 0) {
-            // si cerró sin confirmar y SÍ había ítems, permitimos seguir sin costo/prorrateo
-            // (flujo: recepción sin costo adicional)
             setMfDraft(null);
             setProrrateoMeta(null);
-            // abrimos el pago
             if (cuotaSeleccionada) {
               setPayloadPayment((prev) => ({
                 ...prev,
                 documentoId,
                 monto: toAmountString(
-                  cuotaSeleccionada.saldo ?? cuotaSeleccionada.monto ?? 0
+                  cuotaSeleccionada.saldo ?? cuotaSeleccionada.monto ?? 0,
                 ),
                 fechaPago: dayjs().format("YYYY-MM-DD"),
                 metodoPago: "EFECTIVO",
@@ -839,26 +804,20 @@ function MapCuotasCreditoCompra({
           }
         }}
         sucursalId={sucursalId}
-        proveedorId={
-          undefined /* si no lo tienes aquí, déjalo undefined y que el server resuelva por compra */
-        }
+        proveedorId={undefined}
         compraId={compraId}
         compraSubtotal={
-          // opcional: un estimado para mostrar en el diálogo
           Array.isArray(products)
             ? products.reduce(
                 (acc, r) =>
                   acc + Number(r.costoUnitario || 0) * Number(r.cantidad || 0),
-                0
+                0,
               )
             : undefined
         }
-        // mapea tus cajas/cuentas a las opciones que espera el dialog
         cajasDisponibles={(cajasDisponibles ?? []).map((c) => ({
           id: c.id,
-          label: `Caja #${c.id} · Disponible ${formattMonedaGT(
-            c.disponibleEnCaja
-          )}`,
+          label: `Caja #${c.id} · Disponible ${formattMonedaGT(c.disponibleEnCaja)}`,
           disponibleEnCaja: Number(c.disponibleEnCaja),
         }))}
         cuentasBancarias={(cuentasBancarias ?? []).map((c) => ({
@@ -870,14 +829,12 @@ function MapCuotasCreditoCompra({
           setProrrateoMeta(prorrateo);
           setCostoStepDone(true);
           setOpenCostoDialog(false);
-
-          // ahora sí abrimos el diálogo de pago con defaults
           if (cuotaSeleccionada) {
             setPayloadPayment((prev) => ({
               ...prev,
               documentoId,
               monto: toAmountString(
-                cuotaSeleccionada.saldo ?? cuotaSeleccionada.monto ?? 0
+                cuotaSeleccionada.saldo ?? cuotaSeleccionada.monto ?? 0,
               ),
               fechaPago: dayjs().format("YYYY-MM-DD"),
               metodoPago: "EFECTIVO",
@@ -893,112 +850,121 @@ function MapCuotasCreditoCompra({
   );
 }
 
-// -----------------------------------------
-// Lista de pagos (igual que tenías)
-// -----------------------------------------
+// ============================
+// Lista de pagos
+// ============================
 function PagosList({ pagos }: { pagos: UIPagoEnCuota[] }) {
   if (!Array.isArray(pagos) || pagos.length === 0) return null;
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {pagos.map((p) => {
         const f = dayjs(p.fechaPagoISO).format("DD MMM YYYY");
         return (
-          <div key={p.id} className="rounded-lg border p-3">
+          <div key={p.id} className="rounded border p-2 space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-sm">
-                <ReceiptText className="h-4 w-4" />
-                <span className="font-medium">{formattMonedaGT(p.monto)}</span>
+              <div className="flex items-center gap-1.5 text-xs font-medium">
+                <ReceiptText className="h-3 w-3 text-muted-foreground" />
+                {formattMonedaGT(p.monto)}
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock4 className="h-3.5 w-3.5" /> {f}
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Clock4 className="h-3 w-3" /> {f}
                 </span>
-                {p.metodoPago ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Banknote className="h-3.5 w-3.5" /> {p.metodoPago}
+                {p.metodoPago && (
+                  <span className="inline-flex items-center gap-1">
+                    <Banknote className="h-3 w-3" /> {p.metodoPago}
                   </span>
-                ) : null}
-                {p.referencia ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <ReceiptText className="h-3.5 w-3.5" /> Ref: {p.referencia}
+                )}
+                {p.referencia && (
+                  <span className="inline-flex items-center gap-1">
+                    <ReceiptText className="h-3 w-3" /> Ref: {p.referencia}
                   </span>
-                ) : null}
+                )}
               </div>
             </div>
 
             {(p.observaciones || p.movimiento || p.registradoPor) && (
-              <Separator className="my-2" />
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-              {p.observaciones ? (
-                <div className="rounded-md bg-muted p-2">{p.observaciones}</div>
-              ) : null}
-
-              {p.movimiento ? (
-                <div className="rounded-md border p-2">
-                  <div className="font-medium mb-1">Movimiento</div>
-                  <div className="space-y-0.5">
-                    {typeof p.movimiento.deltaBanco === "number" &&
-                      p.movimiento.deltaBanco !== 0 && (
-                        <div className="flex justify-between">
-                          <span>Banco:</span>
-                          <span>
-                            {formattMonedaGT(p.movimiento.deltaBanco)}
+              <>
+                <Separator />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+                  {p.observaciones && (
+                    <div className="rounded bg-muted px-2 py-1">
+                      {p.observaciones}
+                    </div>
+                  )}
+                  {p.movimiento && (
+                    <div className="rounded border px-2 py-1 space-y-0.5">
+                      <p className="text-[10px] font-medium text-muted-foreground">
+                        Movimiento
+                      </p>
+                      {typeof p.movimiento.deltaBanco === "number" &&
+                        p.movimiento.deltaBanco !== 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Banco:
+                            </span>
+                            <span>
+                              {formattMonedaGT(p.movimiento.deltaBanco)}
+                            </span>
+                          </div>
+                        )}
+                      {typeof p.movimiento.deltaCaja === "number" &&
+                        p.movimiento.deltaCaja !== 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Caja:</span>
+                            <span>
+                              {formattMonedaGT(p.movimiento.deltaCaja)}
+                            </span>
+                          </div>
+                        )}
+                      {p.movimiento.motivo && (
+                        <div className="flex justify-between gap-2">
+                          <span className="text-muted-foreground">Motivo:</span>
+                          <span className="truncate">
+                            {p.movimiento.motivo}
                           </span>
                         </div>
                       )}
-                    {typeof p.movimiento.deltaCaja === "number" &&
-                      p.movimiento.deltaCaja !== 0 && (
-                        <div className="flex justify-between">
-                          <span>Caja:</span>
-                          <span>{formattMonedaGT(p.movimiento.deltaCaja)}</span>
+                      {p.movimiento.clasificacion && (
+                        <div className="flex justify-between gap-2">
+                          <span className="text-muted-foreground">
+                            Clasif.:
+                          </span>
+                          <span className="truncate">
+                            {p.movimiento.clasificacion}
+                          </span>
                         </div>
                       )}
-                    {p.movimiento.motivo ? (
-                      <div className="flex justify-between">
-                        <span>Motivo:</span>
-                        <span className="truncate">{p.movimiento.motivo}</span>
-                      </div>
-                    ) : null}
-                    {p.movimiento.clasificacion ? (
-                      <div className="flex justify-between">
-                        <span>Clasif.:</span>
+                    </div>
+                  )}
+                  {p.registradoPor && (
+                    <div className="rounded border px-2 py-1 space-y-0.5">
+                      <p className="text-[10px] font-medium text-muted-foreground">
+                        Registrado por
+                      </p>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Nombre:</span>
                         <span className="truncate">
-                          {p.movimiento.clasificacion}
+                          {p.registradoPor.nombre ?? "—"}
                         </span>
                       </div>
-                    ) : null}
-                  </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Correo:</span>
+                        <span className="truncate">
+                          {p.registradoPor.correo ?? "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Rol:</span>
+                        <span className="truncate">
+                          {p.registradoPor.rol ?? "—"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : null}
-
-              {p.registradoPor ? (
-                <div className="rounded-md border p-2">
-                  <div className="font-medium mb-1">Registrado por</div>
-                  <div className="space-y-0.5">
-                    <div className="flex justify-between">
-                      <span>Nombre:</span>
-                      <span className="truncate">
-                        {p.registradoPor.nombre ?? "—"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Correo:</span>
-                      <span className="truncate">
-                        {p.registradoPor.correo ?? "—"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Rol:</span>
-                      <span className="truncate">
-                        {p.registradoPor.rol ?? "—"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
+              </>
+            )}
           </div>
         );
       })}

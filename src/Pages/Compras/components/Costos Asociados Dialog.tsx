@@ -34,7 +34,7 @@ import {
   CuentaBancariaOption,
   MovimientoFinancieroDraft,
   ProrrateoMeta,
-} from "../CostoAsociadoTypes";
+} from "../costo-asociado-types";
 
 type Props = {
   open: boolean;
@@ -89,7 +89,7 @@ export function CostosAsociadosDialog({
   // --- Inputs vigentes ---
   const [monto, setMonto] = useState<string>("");
   const [metodoPago, setMetodoPago] = useState<MetodoPagoMainPOS | "">(
-    defaultMetodoPago
+    defaultMetodoPago,
   );
   const [descripcion, setDescripcion] = useState<string>("");
 

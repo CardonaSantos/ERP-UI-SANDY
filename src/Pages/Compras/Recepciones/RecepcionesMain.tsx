@@ -1,21 +1,17 @@
-import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
-import {
+"use client";
+
+import CardCompraMain from "./CardCompraMain";
+import LineasRecepciones from "./LineasRecepciones";
+import { Skeleton } from "@/components/ui/skeleton";
+import type {
   CompraRecepcionesParcialesUI,
   CompraResumenUI,
   UsuarioMinUI,
 } from "./interfaces/recepcionesInterfaces";
-import { motion } from "framer-motion";
-import { DesvanecerHaciaArriba } from "@/Pages/movimientos-cajas/utils/animations";
-import CardCompraMain from "./CardCompraMain";
-import LineasRecepciones from "./LineasRecepciones";
-import { Skeleton } from "@/components/ui/skeleton";
-const EMPTY_USER: UsuarioMinUI = {
-  id: 0,
-  nombre: "",
-  correo: "",
-  rol: undefined,
-};
+import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
 
+/* ---- defaults ---- */
+const EMPTY_USER: UsuarioMinUI = { id: 0, nombre: "", correo: "" };
 const EMPTY_COMPRA: CompraResumenUI = {
   id: 0,
   fecha: "",
@@ -33,55 +29,52 @@ const EMPTY_COMPRA: CompraResumenUI = {
   },
   detalles: [],
 };
-
 export const DEFAULT_RECEPCIONES_DATA: CompraRecepcionesParcialesUI = {
   compra: EMPTY_COMPRA,
   recepciones: [],
   lineasFlat: [],
-} as const;
+};
 
-interface PropsRecepciones {
-  compraId: number;
-}
-
-function RecepcionesMain({ compraId }: PropsRecepciones) {
-  const {
-    data: dataRecepciones = DEFAULT_RECEPCIONES_DATA,
-    isPending: isPendingRecepciones,
-  } = useApiQuery<CompraRecepcionesParcialesUI>(
-    ["compra-recepciones", compraId],
-    `/recepciones/get-recepciones-parciales`,
-    {
-      params: {
-        compraId: compraId,
+export default function RecepcionesMain({
+  compraId = 1042,
+}: {
+  compraId?: number;
+}) {
+  const isPending = false;
+  const { data: dataRecepciones = DEFAULT_RECEPCIONES_DATA } =
+    useApiQuery<CompraRecepcionesParcialesUI>(
+      ["compra-recepciones", compraId],
+      `/recepciones/get-recepciones-parciales`,
+      {
+        params: {
+          compraId: compraId,
+        },
       },
-    },
-    {
-      placeholderData: DEFAULT_RECEPCIONES_DATA,
-      retry: true,
-    }
-  );
+      {
+        placeholderData: DEFAULT_RECEPCIONES_DATA,
+        retry: true,
+      },
+    );
 
-  function SkeletonLoading() {
+  if (isPending) {
     return (
-      <div className="flex items-center space-x-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[250px]" />
-          <Skeleton className="h-4 w-[200px]" />
+      <div className="space-y-3 p-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-3 w-48" />
+            <Skeleton className="h-3 w-32" />
+          </div>
         </div>
+        <Skeleton className="h-24 w-full rounded-lg" />
       </div>
     );
   }
 
-  return isPendingRecepciones ? (
-    <SkeletonLoading />
-  ) : (
-    <motion.div {...DesvanecerHaciaArriba} className="space-y-3">
+  return (
+    <div className="space-y-2 p-4">
       <CardCompraMain compra={dataRecepciones.compra} />
       <LineasRecepciones lineas={dataRecepciones.recepciones} />
-    </motion.div>
+    </div>
   );
 }
-
-export default RecepcionesMain;

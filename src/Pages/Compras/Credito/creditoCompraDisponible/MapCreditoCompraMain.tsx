@@ -3,28 +3,11 @@
 
 import { UICreditoCompra } from "./interfaces/interfaces";
 import { motion } from "framer-motion";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import {
-  AlarmClock,
-  AlertCircle,
-  Banknote,
-  CalendarDays,
-  CircleDollarSign,
-  FileText,
-  Percent as PercentIcon,
-  RefreshCw,
-  TimerReset,
-} from "lucide-react";
+import { AlertCircle, CalendarDays, RefreshCw } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import MapCuotasCreditoCompra from "./mapCuotas";
@@ -41,15 +24,13 @@ interface CreditoAvaliableProps {
   documentoId: number;
   sucursalId: number;
   cajasDisponibles: CajaConSaldo[];
-
   cuentasBancarias: Array<{ id: number; nombre: string }>;
   proveedores: Array<{ id: number; nombre: string }>;
   normalizados: DetalleNormalizado[];
   compraId: number;
 }
 
-// ————— helpers —————
-const formatMoney = (n?: number) =>
+const fmt = (n?: number) =>
   typeof n === "number"
     ? new Intl.NumberFormat("es-GT", {
         style: "currency",
@@ -57,62 +38,56 @@ const formatMoney = (n?: number) =>
       }).format(n)
     : "—";
 
+const estadoMap: Record<string, { label: string; className: string }> = {
+  PENDIENTE: {
+    label: "Pendiente",
+    className: "bg-amber-100 text-amber-800 border-amber-200",
+  },
+  PARCIAL: {
+    label: "Parcial",
+    className: "bg-blue-100 text-blue-800 border-blue-200",
+  },
+  PAGADO: {
+    label: "Pagado",
+    className: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  },
+  ANULADO: {
+    label: "Anulado",
+    className: "bg-rose-100 text-rose-800 border-rose-200",
+  },
+};
+
 const EstadoBadge = ({ estado }: { estado: string }) => {
-  const map: Record<string, { label: string; className: string }> = {
-    PENDIENTE: {
-      label: "Pendiente",
-      className: "bg-amber-100 text-amber-800 border-amber-200",
-    },
-    PARCIAL: {
-      label: "Parcial",
-      className: "bg-blue-100 text-blue-800 border-blue-200",
-    },
-    PAGADO: {
-      label: "Pagado",
-      className: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    },
-    ANULADO: {
-      label: "Anulado",
-      className: "bg-rose-100 text-rose-800 border-rose-200",
-    },
-  };
-  const v = map[estado] ?? {
+  const v = estadoMap[estado] ?? {
     label: estado,
     className: "bg-muted text-foreground/80 border-border",
   };
   return (
-    <Badge className={`rounded-full px-2.5 py-0.5 border ${v.className}`}>
+    <Badge
+      className={`rounded-full px-2 py-0.5 text-[10px] border ${v.className}`}
+    >
       {v.label}
     </Badge>
   );
 };
 
-const Stat = ({
-  icon: Icon,
+/** Pair label / value compacto */
+const InfoPair = ({
   label,
   value,
   hint,
 }: {
-  icon: React.ComponentType<any>;
   label: string;
   value: string;
   hint?: string;
 }) => (
-  <div className="flex items-start gap-3 rounded-2xl border p-3 md:p-4">
-    <div className="mt-0.5">
-      <Icon className="h-5 w-5" />
-    </div>
-    <div className="flex-1">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-base md:text-lg font-medium">{value}</div>
-      {hint ? (
-        <div className="text-[11px] text-muted-foreground/80">{hint}</div>
-      ) : null}
-    </div>
+  <div className="space-y-0.5">
+    <p className="text-[10px] text-muted-foreground">{label}</p>
+    <p className="text-xs font-medium">{value}</p>
+    {hint && <p className="text-[10px] text-muted-foreground/70">{hint}</p>}
   </div>
 );
 
-// ————— component —————
 function MapCreditoCompraMain({
   creditoFromCompra,
   userId,
@@ -155,125 +130,119 @@ function MapCreditoCompraMain({
       : 0;
 
   return (
-    <motion.div {...DesvanecerHaciaArriba}>
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+    <motion.div {...DesvanecerHaciaArriba} className="space-y-3">
+      {/* Header */}
+      <section
+        aria-labelledby="credito-title"
+        className="rounded-md border p-3 space-y-2"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
-              <FileText className="h-5 w-5" />
-              Registro de crédito por compra
+            <div className="flex flex-wrap items-center gap-2">
+              <span id="credito-title" className="text-sm font-medium">
+                Crédito por compra
+              </span>
               <EstadoBadge estado={estado} />
-            </CardTitle>
-            <CardDescription className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays className="h-4 w-4" />
+              {condicionPago?.nombre && (
+                <Badge
+                  variant="outline"
+                  className="rounded-full text-[10px] px-2 py-0.5"
+                >
+                  {condicionPago.nombre}
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" />
                 Emisión: {dayjs(fechaEmisionISO).format("DD MMM YYYY")}
               </span>
-              {fechaVencimientoISO ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <AlarmClock className="h-4 w-4" />
+              {fechaVencimientoISO && (
+                <span className="inline-flex items-center gap-1">
                   Vence: {dayjs(fechaVencimientoISO).format("DD MMM YYYY")}
                 </span>
-              ) : null}
-              {folioProveedor ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <TimerReset className="h-4 w-4" />
+              )}
+              {folioProveedor && (
+                <span className="inline-flex items-center gap-1">
                   Folio: {folioProveedor}
                 </span>
-              ) : null}
-            </CardDescription>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {condicionPago?.nombre ? (
-              <Badge variant="outline" className="rounded-full">
-                {condicionPago.nombre}
-              </Badge>
-            ) : null}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresAll}
-              className="gap-1.5"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Actualizar
-            </Button>
-          </div>
-        </CardHeader>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={handleRefresAll}
+          >
+            <RefreshCw className="h-3 w-3" />
+            Actualizar
+          </Button>
+        </div>
 
-        <CardContent className="space-y-4">
-          {/* resumen compacto */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            <Stat
-              icon={CircleDollarSign}
-              label="Monto original"
-              value={formatMoney(montoOriginal)}
-              hint={`Interés total: ${formatMoney(interesTotal)}`}
-            />
-            <Stat
-              icon={Banknote}
-              label="Total pagado"
-              value={formatMoney(totalPagado)}
-              hint={`${porcentajePagado}% pagado`}
-            />
-            <Stat
-              icon={AlertCircle}
-              label="Saldo pendiente"
-              value={formatMoney(saldoPendiente)}
-            />
-            <Stat
-              icon={PercentIcon}
-              label="Cuotas"
-              value={`${cuotasPagadas}/${totalCuotas} pagadas`}
-              hint={`${cuotasPendientes} pendientes`}
-            />
-          </div>
-
-          {/* chips de condición */}
-          {condicionPago ? (
-            <>
-              <Separator />
-              <div className="flex flex-wrap gap-2 text-xs">
-                <Badge variant="secondary" className="rounded-full">
-                  Modo: {condicionPago.modoGeneracion ?? "—"}
-                </Badge>
-                <Badge variant="secondary" className="rounded-full">
-                  Interés: {condicionPago.tipoInteres ?? "—"}
-                </Badge>
-                <Badge variant="secondary" className="rounded-full">
-                  %: {condicionPago.interes ?? 0}
-                </Badge>
-                <Badge variant="secondary" className="rounded-full">
-                  Días crédito: {condicionPago.diasCredito ?? 0}
-                </Badge>
-                <Badge variant="secondary" className="rounded-full">
-                  Cada: {condicionPago.diasEntreCuotas ?? 0} días
-                </Badge>
-                <Badge variant="secondary" className="rounded-full">
-                  # Cuotas: {condicionPago.cantidadCuotas ?? totalCuotas}
-                </Badge>
-              </div>
-            </>
-          ) : null}
-
-          <Separator className="my-2" />
-
-          {/* detalle de cuotas */}
-          <MapCuotasCreditoCompra
-            normalizados={normalizados}
-            cuentasBancarias={cuentasBancarias}
-            proveedores={proveedores}
-            cajasDisponibles={cajasDisponibles}
-            sucursalId={sucursalId}
-            documentoId={documentoId}
-            userId={userId}
-            handleRefresAll={handleRefresAll}
-            cuotas={creditoFromCompra.cuotas} // ver fix #3
-            compraId={compraId} // ✅ pásalo aquí también
+        {/* Stats compactas */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t">
+          <InfoPair
+            label="Monto original"
+            value={fmt(montoOriginal)}
+            hint={`Interés: ${fmt(interesTotal)}`}
           />
-        </CardContent>
-      </Card>
+          <InfoPair
+            label="Total pagado"
+            value={fmt(totalPagado)}
+            hint={`${porcentajePagado}% pagado`}
+          />
+          <InfoPair label="Saldo pendiente" value={fmt(saldoPendiente)} />
+          <InfoPair
+            label="Cuotas"
+            value={`${cuotasPagadas}/${totalCuotas} pagadas`}
+            hint={`${cuotasPendientes} pendientes`}
+          />
+        </div>
+
+        {/* Condición de pago chips */}
+        {condicionPago && (
+          <>
+            <Separator />
+            <div className="flex flex-wrap gap-1.5 text-[10px]">
+              {[
+                ["Modo", condicionPago.modoGeneracion ?? "—"],
+                ["Interés", condicionPago.tipoInteres ?? "—"],
+                ["%", String(condicionPago.interes ?? 0)],
+                ["Días crédito", String(condicionPago.diasCredito ?? 0)],
+                ["Cada", `${condicionPago.diasEntreCuotas ?? 0} días`],
+                [
+                  "# Cuotas",
+                  String(condicionPago.cantidadCuotas ?? totalCuotas),
+                ],
+              ].map(([k, v]) => (
+                <span
+                  key={k}
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5"
+                >
+                  <span className="text-muted-foreground">{k}:</span>
+                  <span className="font-medium text-foreground">{v}</span>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Detalle de cuotas */}
+      <MapCuotasCreditoCompra
+        normalizados={normalizados}
+        cuentasBancarias={cuentasBancarias}
+        proveedores={proveedores}
+        cajasDisponibles={cajasDisponibles}
+        sucursalId={sucursalId}
+        documentoId={documentoId}
+        userId={userId}
+        handleRefresAll={handleRefresAll}
+        cuotas={creditoFromCompra.cuotas}
+        compraId={compraId}
+      />
     </motion.div>
   );
 }

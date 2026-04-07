@@ -32,6 +32,29 @@ export const erpEndpoints = {
     candidates: `/requisicion/candidatos-requisicion`,
   },
 
+  //COMPRAS
+  compras: {
+    get_compras: `/compra-requisicion/get-registros-compras-con-detalle`,
+    get_compra_details: (id: number) =>
+      `/compra-requisicion/get-registro/${id}`,
+
+    detalles: (id: number) => `/compra-requisicion/get-registro/${id}`,
+    recepcionable: "compras/get-data-compra-parcial",
+    recepcionar: (id: number) => `/compra-requisicion/${id}/recepcionar`,
+    recepcionar_parcial: "compras/create-recepcion-parcial",
+  },
+
+  proveedores: "/proveedor",
+  cuentas_bancarias: "cuentas-bancarias/get-simple-select",
+  cajas: {
+    disponibles: (sucursalId: number) =>
+      `/caja/cajas-disponibles/${sucursalId}`,
+  },
+
+  creditos: {
+    documento_compra: (id: number) => `/credito-documento-compra/${id}`,
+  },
+
   tickets_boleta: {
     byId: (id: number) => `/tickets-soporte/get-ticket-boleta/${id}`,
   },
