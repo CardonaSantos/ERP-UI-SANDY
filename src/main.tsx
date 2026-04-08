@@ -4,7 +4,6 @@ import App from "./App.tsx";
 import "./index.css";
 import { ThemeProvider } from "./components/theme-provider.tsx";
 import { GoogleMapsProvider } from "./Crm/CrmRutas/CrmRutasCobro/GoogleMapsProvider .tsx";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { QueryProvider } from "./Server/QueryProvider.tsx";
 import { SocketProvider } from "./Web/realtime/SocketProvider.tsx";
 const VITE_WS_URL = import.meta.env.VITE_WS_URL;
@@ -13,16 +12,6 @@ const VITE_WS_PATH = "/socket.io";
 
 const getToken = () => localStorage.getItem("authTokenPos");
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 30,
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      refetchOnMount: "always",
-    },
-  },
-});
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
     <StrictMode>
@@ -35,11 +24,9 @@ createRoot(document.getElementById("root")!).render(
         withCredentials={false}
       >
         <GoogleMapsProvider>
-          <QueryClientProvider client={queryClient}>
-            <QueryProvider>
-              <App />
-            </QueryProvider>
-          </QueryClientProvider>
+          <QueryProvider>
+            <App />
+          </QueryProvider>
         </GoogleMapsProvider>
       </SocketProvider>
     </StrictMode>

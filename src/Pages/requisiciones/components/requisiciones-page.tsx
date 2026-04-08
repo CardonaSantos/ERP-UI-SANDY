@@ -50,8 +50,8 @@ export function RequisicionesPage() {
     if (
       !dto.requisicionID ||
       !dto.userID ||
-      !dto.proveedorId ||
-      !dto.presupuestoId
+      !dto.proveedorId
+      // !dto.presupuestoId
     ) {
       toast.warning("Faltan datos para el envío");
       return;
@@ -59,7 +59,7 @@ export function RequisicionesPage() {
 
     await toast.promise(mutationSendToCompras.mutateAsync(dto), {
       loading: "Enviando a módulo de compras...",
-      success: "Requisición enviada y saldo comprometido correctamente",
+      success: "Requisición enviada a compras",
       error: (err) => getApiErrorMessageAxios(err),
     });
   };

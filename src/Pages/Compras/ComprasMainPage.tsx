@@ -5,42 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, AlertCircle } from "lucide-react";
 import { ComprasTable } from "./compras-table";
-
-// ⬇️ types
-import type { GetRegistrosComprasQuery } from "./API/interfaceQuery";
-import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
-import { keepPreviousData } from "@tanstack/react-query";
-
 import { PageTransition } from "@/components/Transition/layout-transition";
-import { PaginatedComprasResponse } from "@/Types/compras/interfaces";
-
-// ⬇️ hook genérico
-
-// Endpoint REST del backend
-const ENDPOINT = "/compra-requisicion/get-registros-compras-con-detalle";
+import type { GetRegistrosComprasQuery } from "./API/interfaceQuery";
+import { useGetCompras } from "@/hooks/use-compras/use-compras";
 
 export function ComprasMainPage() {
-  // Filtros / paginación controlados por estado local
   const [queryParams, setQueryParams] = useState<GetRegistrosComprasQuery>({
     page: 1,
     limit: 10,
     withDetalles: true,
   });
 
-  // GET via React Query + Axios (usa axiosClient base)
   const { data, isLoading, isFetching, isError, error } =
-    useApiQuery<PaginatedComprasResponse>(
-      ["compras", queryParams], // 🔑 cache y refetch cuando cambien params
-      ENDPOINT,
-      { params: queryParams }, // 🔎 server ya soporta withDetalles
-      {
-        placeholderData: keepPreviousData, // 🧈 paginación suave sin “parpadeo”
-        staleTime: 0,
-        refetchOnWindowFocus: "always",
-      },
-    );
+    useGetCompras(queryParams);
 
-  // Derivados seguros para no romper la UI
   const items = data?.items ?? [];
   const page = data?.page ?? queryParams.page!;
   const limit = data?.limit ?? queryParams.limit!;
@@ -92,6 +70,8 @@ export function ComprasMainPage() {
       </Card>
     );
   }
+
+  console.log("la data query de la tabla es: ", data);
 
   return (
     <PageTransition fallbackBackTo="/" titleHeader="Compras">

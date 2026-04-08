@@ -1,63 +1,44 @@
-import { erp } from "@/API/erpApi";
-import { erpEndpoints } from "@/API/routes/endpoints";
-import { GetRegistrosComprasQuery } from "@/Pages/Compras/API/interfaceQuery";
-import { comprasQkeys } from "./Qk";
+// === QUERIES ================================================================
+
 import {
-  PaginatedComprasResponse,
-  CompraRegistroUI,
-} from "@/Types/compras/interfaces";
-import {
-  UseQueryOptions,
   keepPreviousData,
   useQueryClient,
+  UseQueryOptions,
 } from "@tanstack/react-query";
+import { comprasQkeys } from "./Qk";
+import { erp } from "@/API/erpApi";
+import { erpEndpoints } from "@/API/routes/endpoints";
+import {
+  CompraRegistroUI,
+  PaginatedComprasResponse,
+} from "@/Types/compras/interfaces";
+import { GetRegistrosComprasQuery } from "@/Pages/Compras/API/interfaceQuery";
 
 export function useGetCompras(
   query: GetRegistrosComprasQuery,
-  options?: Partial<UseQueryOptions<PaginatedComprasResponse>>,
+  // options?: Partial<UseQueryOptions<PaginatedComprasResponse>>,
 ) {
   return erp.useQueryApi<PaginatedComprasResponse>(
-    comprasQkeys.all(query),
+    comprasQkeys.list(query),
     erpEndpoints.compras.get_compras,
     { params: query },
-    {
-      placeholderData: keepPreviousData,
-      staleTime: 0,
-      refetchOnWindowFocus: "always",
-      ...options,
-    },
+    undefined,
   );
 }
 
 export function useGetCompraDetails(
   id: number,
-  options?: Partial<UseQueryOptions<CompraRegistroUI>>,
+  // options?: Partial<UseQueryOptions<CompraRegistroUI>>,
 ) {
   return erp.useQueryApi<CompraRegistroUI>(
-    comprasQkeys.specific(id),
+    comprasQkeys.detail(id),
     erpEndpoints.compras.get_compra_details(id),
     undefined,
-    {
-      enabled: Number.isFinite(id) && id > 0,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-      ...options,
-    },
+    undefined,
   );
 }
 
-export function useGetCompraRegistro(compraId: number) {
-  return erp.useQueryApi<CompraRegistroUI>(
-    comprasQkeys.details(compraId),
-    erpEndpoints.compras.detalles(compraId),
-    undefined,
-    {
-      enabled: Number.isFinite(compraId) && compraId > 0,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-    },
-  );
-}
+// === MUTATIONS ==============================================================
 
 export function useRecepcionarCompraTotal(compraId: number) {
   const queryClient = useQueryClient();
@@ -69,9 +50,13 @@ export function useRecepcionarCompraTotal(compraId: number) {
     {
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: comprasQkeys.details(compraId),
+          queryKey: comprasQkeys.lists(),
+          refetchType: "all",
         });
-        queryClient.invalidateQueries({ queryKey: comprasQkeys.all_clean });
+
+        queryClient.invalidateQueries({
+          queryKey: comprasQkeys.detail(compraId),
+        });
       },
     },
   );
@@ -87,10 +72,16 @@ export function useRecepcionarCompraParcial(compraId: number) {
     {
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: comprasQkeys.details(compraId),
+          queryKey: comprasQkeys.detail(compraId),
         });
         queryClient.invalidateQueries({
           queryKey: comprasQkeys.recepcionable(compraId),
+        });
+
+        // Aplícalo también aquí
+        queryClient.invalidateQueries({
+          queryKey: comprasQkeys.lists(),
+          refetchType: "all",
         });
       },
     },

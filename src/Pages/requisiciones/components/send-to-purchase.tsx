@@ -64,7 +64,9 @@ export function SendToPurchasesDialog({
   const [proveedorId, setProveedorId] = useState<string>("");
   const [partidaId, setPartidaId] = useState<string>("");
 
-  const canConfirm = !!proveedorId && !!partidaId && !isPending;
+  // const canConfirm = !!proveedorId && !!partidaId && !isPending;
+
+  const canConfirm = !!proveedorId && !isPending;
 
   const handleConfirm = () => {
     if (!requisicion || !canConfirm) return;

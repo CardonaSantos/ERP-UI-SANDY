@@ -33,7 +33,7 @@ import {
 import ComprasMain from "./comprasMain";
 import PaymentMethodCompraDialogConfirm from "./payment-compra-dialog";
 import {
-  useGetCompraRegistro,
+  useGetCompraDetails,
   useRecepcionarCompraParcial,
   useRecepcionarCompraTotal,
 } from "@/hooks/use-compras/use-compras";
@@ -82,7 +82,7 @@ export default function CompraDetalle() {
     isError: isErrorRegistro,
     error: errorRegistro,
     refetch: reFetchRegistro,
-  } = useGetCompraRegistro(compraId);
+  } = useGetCompraDetails(compraId);
 
   const { data: creditoFromCompra, refetch: refetchCredito } =
     useGetCreditoCompra(compraId);
@@ -617,14 +617,16 @@ export default function CompraDetalle() {
         type="warning"
         onOpenChange={setOpenSendStock}
         open={openSendStock}
-        title="Recepción de productos"
-        description="Se añadirá el stock de estos productos en la sucursal donde fueron solicitados."
-        question="¿Estás seguro de que deseas continuar? Esta acción no se puede deshacer."
+        title="Confirmar recepción de compra"
+        description="Los productos serán ingresados al stock de la sucursal correspondiente."
+        question="¿Deseas continuar con la recepción? Esta acción registrará la entrada al inventario y no se puede revertir.
+
+Si la compra está vinculada a un presupuesto, el monto previamente comprometido será ejecutado y descontado del saldo disponible."
         confirmButton={{
-          label: "Sí, confirmar entrada de stock",
+          label: "Confirmar y enviar a stock",
           disabled: recepcionarM.isPending,
           loading: recepcionarM.isPending,
-          loadingText: "Añadiendo productos al stock...",
+          loadingText: "Procesando recepción...",
           onClick: sendtToStock,
         }}
         cancelButton={{
@@ -639,14 +641,18 @@ export default function CompraDetalle() {
         type="confirmation"
         onOpenChange={setOpenRecibirParcial}
         open={openRecibirParcial}
-        title="Recepción parcial de la compra"
-        description="Solo se ingresarán al stock los productos seleccionados. El resto quedará pendiente para una entrega posterior. Los montos y totales se recalcularán según tu selección."
-        question="¿Confirmas la recepción parcial? Esta acción no se puede deshacer."
+        title="Confirmar recepción parcial"
+        description="Solo se ingresarán al stock los productos seleccionados. El resto permanecerá pendiente."
+        question="¿Deseas continuar con la recepción parcial? Esta acción registrará únicamente los productos seleccionados y no se puede revertir.
+
+Si existe un presupuesto asociado, el monto correspondiente a esta recepción será ejecutado y descontado del saldo disponible."
+        children={<></>}
+        maxWidth="lg"
         confirmButton={{
           label: "Confirmar recepción parcial",
           disabled: handleRecepcionarParcial.isPending,
           loading: handleRecepcionarParcial.isPending,
-          loadingText: "Ingresando productos al stock...",
+          loadingText: "Procesando recepción...",
           onClick: handleCreateRecepcionParcial,
         }}
         cancelButton={{
