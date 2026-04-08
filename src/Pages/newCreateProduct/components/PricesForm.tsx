@@ -1,13 +1,9 @@
-// PricesForm.tsx
-// ----------------------------------------
-// Componente para gestionar los precios de un producto:
-// - Stateless: recibe `precios` y `setPrecios` desde el padre
-// - Permite agregar/quitar filas de precio y editar precio, orden y rol de cliente
-
 "use client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectTrigger,
@@ -15,10 +11,9 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { Coins, Trash2, Plus } from "lucide-react";
-import { PrecioProductoInventario } from "@/Pages/producto/interfaces/preciosCreateInterfaces";
-import { RolPrecio } from "@/Pages/InventarioYStock/interfaces/InventaryInterfaces";
+import { DollarSign, X, Plus, Hash } from "lucide-react";
 import { PrecioProducto } from "../interfaces/DomainProdPressTypes";
+import { RolPrecio } from "@/Pages/InventarioYStock/interfaces/InventaryInterfaces";
 
 interface Props {
   precios: PrecioProducto[];
@@ -33,11 +28,11 @@ const ROLES: { label: string; value: RolPrecio }[] = [
   { label: "Promoción", value: RolPrecio.PROMOCION },
 ];
 
-export default function PricesForm({ precios, setPrecios }: Props) {
-  const updateField = <K extends keyof PrecioProductoInventario>(
+export function PricesForm({ precios, setPrecios }: Props) {
+  const updateField = <K extends keyof PrecioProducto>(
     idx: number,
     key: K,
-    value: PrecioProductoInventario[K],
+    value: PrecioProducto[K],
   ) => {
     const next = precios.map((item, i) =>
       i === idx ? { ...item, [key]: value } : item,
@@ -58,16 +53,32 @@ export default function PricesForm({ precios, setPrecios }: Props) {
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-base">Precios</CardTitle>
+      <CardHeader className="pb-2">
+        <h3 className="text-sm font-medium">Precios</h3>
+        <p className="text-xs text-muted-foreground">
+          Configure los precios por rol de cliente
+        </p>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+
+      <CardContent className="pt-3">
+        <div className="space-y-2">
+          {precios.length > 0 && (
+            <div className="grid grid-cols-12 gap-2 pb-1">
+              <Label className="col-span-5 text-xs text-muted-foreground">
+                Precio
+              </Label>
+              <Label className="col-span-2 text-xs text-muted-foreground">
+                Orden
+              </Label>
+              <Label className="col-span-4 text-xs text-muted-foreground">
+                Rol
+              </Label>
+            </div>
+          )}
+
           {precios.map((p, idx) => (
-            <div key={idx} className="grid grid-cols-12 gap-3 items-center">
-              {/* Precio */}
+            <div key={idx} className="grid grid-cols-12 gap-2 items-center">
               <div className="col-span-5 relative">
-                <Coins className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="number"
                   inputMode="decimal"
@@ -75,11 +86,12 @@ export default function PricesForm({ precios, setPrecios }: Props) {
                   value={p.precio}
                   onChange={(e) => updateField(idx, "precio", e.target.value)}
                   placeholder="0.00"
-                  className="pl-10"
+                  className="text-sm pl-7"
                 />
+                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground h-3 w-3" />
               </div>
-              {/* Orden */}
-              <div className="col-span-2">
+
+              <div className="col-span-2 relative">
                 <Input
                   type="number"
                   value={p.orden}
@@ -87,35 +99,42 @@ export default function PricesForm({ precios, setPrecios }: Props) {
                     updateField(idx, "orden", Number(e.target.value) || 0)
                   }
                   placeholder="1"
+                  className="text-sm pl-6"
                 />
+                <Hash className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground h-3 w-3" />
               </div>
-              {/* Rol */}
+
               <div className="col-span-4">
                 <Select
                   value={p.rol}
                   onValueChange={(v) => updateField(idx, "rol", v as RolPrecio)}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full text-sm h-9">
                     <SelectValue placeholder="Rol" />
                   </SelectTrigger>
                   <SelectContent>
                     {ROLES.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
+                      <SelectItem
+                        key={r.value}
+                        value={r.value}
+                        className="text-sm"
+                      >
                         {r.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              {/* Eliminar */}
+
               <div className="col-span-1 flex justify-center">
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={() => removePrecio(idx)}
                   aria-label="Eliminar precio"
+                  className="h-8 w-8 p-0"
                 >
-                  <Trash2 />
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
             </div>
@@ -123,11 +142,11 @@ export default function PricesForm({ precios, setPrecios }: Props) {
 
           <Button
             variant="outline"
-            className="w-full border-dashed"
+            className="w-full border-dashed text-xs h-8"
             onClick={addPrecio}
             type="button"
           >
-            <Plus className="mr-2" /> Agregar precio
+            <Plus className="h-3 w-3 mr-1" /> Agregar precio
           </Button>
         </div>
       </CardContent>

@@ -1,45 +1,41 @@
-// DescriptionForm.tsx
-// ----------------------------------------
-// Componente para la sección de descripción de un producto:
-// - Stateless: recibe la descripción actual y un callback onChange
-// - Renderiza un textarea controlado
-
 "use client";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Text } from "lucide-react";
+import { FileText } from "lucide-react";
 
 interface Props {
   value: string;
   onChange: (next: string) => void;
 }
 
-export default function DescriptionForm({ value, onChange }: Props) {
+export function DescriptionForm({ value, onChange }: Props) {
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-base">Descripción</CardTitle>
-        <CardDescription>Información detallada del producto</CardDescription>
+    <Card className="w-full h-full">
+      <CardHeader className="pb-2">
+        <h3 className="text-sm font-medium">Descripción</h3>
+        <p className="text-xs text-muted-foreground">
+          Información detallada del producto
+        </p>
       </CardHeader>
 
-      <CardContent>
-        <div className="grid gap-2 relative">
-          <Label htmlFor="descripcion">Descripción</Label>
-          <Text className="absolute right-3 top-9 text-gray-400 h-5 w-5" />
-          <Textarea
-            id="descripcion"
-            rows={4}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Describa el producto"
-          />
+      <CardContent className="pt-3">
+        <div className="space-y-1">
+          <Label htmlFor="descripcion" className="text-xs">
+            Descripción
+          </Label>
+          <div className="relative">
+            <Textarea
+              id="descripcion"
+              rows={4}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Describa el producto"
+              className="text-sm resize-none pr-8"
+            />
+            <FileText className="absolute right-2 top-2 text-muted-foreground h-4 w-4" />
+          </div>
         </div>
       </CardContent>
     </Card>

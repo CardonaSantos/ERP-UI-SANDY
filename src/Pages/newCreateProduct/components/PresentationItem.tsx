@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Trash2, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
-import PricesForm from "./PricesForm";
-import ImageUploader from "./ImageUploader";
 import {
   Categoria,
   Presentacion,
   TipoPresentacion,
 } from "../interfaces/DomainProdPressTypes";
 import { ReusableSelect } from "@/utils/components/ReactSelectComponent/ReusableSelect";
+import { PricesForm } from "./PricesForm";
+import { ImageUploader } from "./ImageUploader";
 
 interface Props {
   index: number;

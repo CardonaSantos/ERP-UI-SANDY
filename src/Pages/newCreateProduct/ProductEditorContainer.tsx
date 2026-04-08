@@ -6,11 +6,6 @@ import {
   useApiMutation,
 } from "@/hooks/genericoCall/genericoCallHook";
 import { toast } from "sonner";
-import BasicInfoForm from "./components/BasicInfoForm";
-import DescriptionForm from "./components/DescriptionForm";
-import ImageUploader from "./components/ImageUploader";
-import PricesForm from "./components/PricesForm";
-import PresentationsForm from "./components/PresentationsForm";
 import { PaginatedResponse } from "../tipos-presentaciones/Interfaces/tiposPresentaciones.interfaces";
 import {
   ProductCreateDTO,
@@ -26,8 +21,13 @@ import { buildFormData, debugFormData } from "./builder";
 import { QueryKey, useQueryClient } from "@tanstack/react-query";
 import { validateBeforeSubmit } from "./helpers/validators";
 import { PageTransition } from "@/components/Transition/layout-transition";
+import { GeneradorQR } from "./Qr/generate-qr";
+import { Switch } from "@/components/ui/switch";
+import { BasicInfoForm } from "./components/BasicInfoForm";
+import { DescriptionForm } from "./components/DescriptionForm";
+import { ImageUploader } from "./components/ImageUploader";
+import { PricesForm } from "./components/PricesForm";
 
-// Estado inicial
 const initialProduct: ProductCreateDTO = {
   basicInfo: {
     nombre: "",
@@ -45,9 +45,6 @@ const initialProduct: ProductCreateDTO = {
   presentations: [],
 };
 
-// -----------------------------
-// Query Keys centralizados
-// -----------------------------
 export const QK = {
   CATEGORIES: ["categorias"] as const,
   PACKAGING_TYPES: ["empaques"] as const,
@@ -57,7 +54,6 @@ export const QK = {
   PRESENTATION_DETAIL: (id: number) => ["presentation", id] as const,
 };
 
-// Opciones comunes
 const QUERY_OPTIONS = {
   staleTime: 0,
   refetchOnWindowFocus: true as const,
@@ -71,7 +67,7 @@ export default function ProductEditorContainer({
 }) {
   const userId = useStore((s) => s.userId) ?? 0;
   const queryClient = useQueryClient();
-
+  const [includeLogo, setIncludeLogo] = useState<boolean>(false);
   // Params / estado edición
   const params = useParams<{ productId?: string; presentationId?: string }>();
   const idParam = mode === "product" ? params.productId : params.presentationId;
@@ -209,50 +205,83 @@ export default function ProductEditorContainer({
       fallbackBackTo="/"
       titleHeader="Creación y Edición de Producto"
     >
-      {/* Secciones solo en modo producto */}
       {mode === "product" && (
-        <>
-          <BasicInfoForm
-            value={formState.basicInfo}
-            categories={categories}
-            packagingTypes={packagingTypes} // ✅ nuevo
-            onChange={(val) => updateField("basicInfo", val)}
-          />
+        <div className="space-y-8">
+          {" "}
+          {/* Espaciado consistente entre secciones */}
+          {/* SECCIÓN 1: Información Básica y QR */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <BasicInfoForm
+                value={formState.basicInfo}
+                categories={categories}
+                packagingTypes={packagingTypes}
+                onChange={(val) => updateField("basicInfo", val)}
+              />
+            </div>
 
-          <DescriptionForm
-            value={formState.description}
-            onChange={(val) => updateField("description", val)}
-          />
+            {/* TARJETA DE CÓDIGO QR */}
+            <div className="flex flex-col p-6 border rounded-xl bg-card shadow-sm items-center justify-center space-y-4">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Código QR del Producto
+                </h3>
+                <p className="text-xs text-slate-400 mb-4">
+                  {formState.basicInfo.codigoProducto || "Sin código asignado"}
+                </p>
+              </div>
 
-          <ImageUploader
-            files={formState.images}
-            onDone={(files) => updateField("images", files)}
-          />
+              <div className="p-4 bg-white rounded-lg shadow-inner">
+                <GeneradorQR
+                  valor={formState.basicInfo.codigoProducto || "placeholder"}
+                  includeLogo={includeLogo}
+                />
+              </div>
 
+              <div className="flex items-center space-x-2 pt-2">
+                <Switch
+                  id="logo-qr"
+                  onCheckedChange={setIncludeLogo}
+                  checked={includeLogo}
+                />
+                <label htmlFor="logo-qr" className="text-sm cursor-pointer">
+                  Incluir mi logo
+                </label>
+              </div>
+            </div>
+          </div>
+          {/* SECCIÓN 2: Descripción y Multimedia */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <DescriptionForm
+              value={formState.description}
+              onChange={(val) => updateField("description", val)}
+            />
+            <ImageUploader
+              files={formState.images}
+              onDone={(files) => updateField("images", files)}
+            />
+          </div>
+          {/* SECCIÓN 3: Precios */}
           <PricesForm
             precios={formState.prices}
             setPrecios={(prices) => updateField("prices", prices)}
           />
-        </>
+        </div>
       )}
 
-      {/* Presentaciones en ambos modos */}
-      <PresentationsForm
-        items={formState.presentations}
-        setItems={(items) => updateField("presentations", items)}
-        packagingTypes={packagingTypes}
-        categories={categories}
-      />
-
-      <div className="flex justify-end">
+      {/* Footer de Acción */}
+      <div className="flex justify-end pt-4 border-t">
         <Button
-          className="btn btn-primary"
+          size={"sm"}
+          className=" disabled:bg-gray-400 "
           onClick={handleSubmit}
           disabled={mutation.isPending}
         >
-          {isEditing
-            ? `Actualizar ${mode === "product" ? "Producto" : "Presentación"}`
-            : `Crear ${mode === "product" ? "Producto" : "Presentación"}`}
+          {mutation.isPending
+            ? "Procesando..."
+            : isEditing
+              ? `Guardar Cambios`
+              : `Crear ${mode === "product" ? "Producto" : "Presentación"}`}
         </Button>
       </div>
     </PageTransition>

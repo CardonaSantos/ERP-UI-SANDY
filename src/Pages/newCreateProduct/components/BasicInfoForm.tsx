@@ -1,14 +1,8 @@
 "use client";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Box, Barcode, Asterisk, SquareMinus } from "lucide-react";
+import { Box, Barcode, Asterisk, SquareMinus, DollarSign } from "lucide-react";
 import { ReusableSelect } from "@/utils/components/ReactSelectComponent/ReusableSelect";
 import {
   BasicInfo,
@@ -22,97 +16,116 @@ interface Props {
   packagingTypes: TipoPresentacion[];
   onChange: (next: BasicInfo) => void;
 }
-
-export default function BasicInfoForm({
+export function BasicInfoForm({
   value,
   categories,
   packagingTypes,
   onChange,
 }: Props) {
-  // helper para hacer un solo patch
   const patch = (partial: Partial<BasicInfo>) =>
     onChange({ ...value, ...partial });
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-base">Datos básicos</CardTitle>
-        <CardDescription>Información esencial del producto</CardDescription>
+      <CardHeader className="pb-2">
+        <h3 className="text-sm font-medium">Datos básicos</h3>
+        <p className="text-xs text-muted-foreground">
+          Información esencial del producto
+        </p>
       </CardHeader>
 
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Nombre */}
-          <div className="grid gap-2 relative">
-            <Label htmlFor="nombre">Nombre</Label>
-            <Box className="absolute right-3 top-9 text-gray-400 h-5 w-5" />
-            <Input
-              id="nombre"
-              type="text"
-              value={value.nombre}
-              onChange={(e) => patch({ nombre: e.target.value })}
-              placeholder="Nombre de producto"
-            />
+      <CardContent className="pt-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="nombre" className="text-xs">
+              Nombre
+            </Label>
+            <div className="relative">
+              <Input
+                id="nombre"
+                type="text"
+                value={value.nombre}
+                onChange={(e) => patch({ nombre: e.target.value })}
+                placeholder="Nombre de producto"
+                className="text-sm pr-8"
+              />
+              <Box className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            </div>
           </div>
 
-          {/* Código Producto */}
-          <div className="grid gap-2 relative">
-            <Label htmlFor="codigoProducto">Código Producto</Label>
-            <Barcode className="absolute right-3 top-9 text-gray-400 h-5 w-5" />
-            <Input
-              id="codigoProducto"
-              type="text"
-              value={value.codigoProducto}
-              onChange={(e) => patch({ codigoProducto: e.target.value })}
-              placeholder="Código único por producto"
-            />
+          <div className="space-y-1">
+            <Label htmlFor="codigoProducto" className="text-xs">
+              Código Producto
+            </Label>
+            <div className="relative">
+              <Input
+                id="codigoProducto"
+                type="text"
+                value={value.codigoProducto}
+                onChange={(e) => patch({ codigoProducto: e.target.value })}
+                placeholder="Código único"
+                className="text-sm pr-8"
+              />
+              <Barcode className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            </div>
           </div>
 
-          {/* Código Proveedor */}
-          <div className="grid gap-2 relative">
-            <Label htmlFor="codigoProveedor">Código del proveedor</Label>
-            <Asterisk className="absolute right-3 top-9 text-gray-400 h-5 w-5" />
-            <Input
-              id="codigoProveedor"
-              type="text"
-              value={value.codigoProveedor || ""}
-              onChange={(e) => patch({ codigoProveedor: e.target.value })}
-              placeholder="(Opcional) Código proveedor"
-            />
+          <div className="space-y-1">
+            <Label htmlFor="codigoProveedor" className="text-xs">
+              Código Proveedor
+            </Label>
+            <div className="relative">
+              <Input
+                id="codigoProveedor"
+                type="text"
+                value={value.codigoProveedor || ""}
+                onChange={(e) => patch({ codigoProveedor: e.target.value })}
+                placeholder="Opcional"
+                className="text-sm pr-8"
+              />
+              <Asterisk className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            </div>
           </div>
 
-          {/* Stock Mínimo */}
-          <div className="grid gap-2 relative">
-            <Label htmlFor="stockMinimo">Stock Mínimo</Label>
-            <SquareMinus className="absolute right-3 top-9 text-gray-400 h-5 w-5" />
-            <Input
-              id="stockMinimo"
-              type="number"
-              value={value.stockMinimo}
-              onChange={(e) => patch({ stockMinimo: Number(e.target.value) })}
-              placeholder="Cantidad mínima"
-            />
+          <div className="space-y-1">
+            <Label htmlFor="stockMinimo" className="text-xs">
+              Stock Mínimo
+            </Label>
+            <div className="relative">
+              <Input
+                id="stockMinimo"
+                type="number"
+                value={value.stockMinimo}
+                onChange={(e) => patch({ stockMinimo: Number(e.target.value) })}
+                placeholder="0"
+                className="text-sm pr-8"
+              />
+              <SquareMinus className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            </div>
           </div>
 
-          {/* Precio Costo */}
-          <div className="grid gap-2 relative">
-            <Label htmlFor="precioCostoActual">Precio Costo</Label>
-            <SquareMinus className="absolute right-3 top-9 text-gray-400 h-5 w-5" />
-            <Input
-              id="precioCostoActual"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              value={value.precioCostoActual}
-              onChange={(e) =>
-                patch({ precioCostoActual: Number(e.target.value) })
-              }
-              placeholder="0.00"
-            />
+          <div className="space-y-1">
+            <Label htmlFor="precioCostoActual" className="text-xs">
+              Precio Costo
+            </Label>
+            <div className="relative">
+              <Input
+                id="precioCostoActual"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={value.precioCostoActual}
+                onChange={(e) =>
+                  patch({ precioCostoActual: Number(e.target.value) })
+                }
+                placeholder="0.00"
+                className="text-sm pr-8"
+              />
+              <DollarSign className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            </div>
           </div>
 
-          {/* Tipo de presentación (relación flexible) - usando ReusableSelect */}
-          <div className="grid gap-2">
+          <div className="space-y-1">
             <Label>Tipo de presentación (opcional)</Label>
             <ReusableSelect<TipoPresentacion>
               items={packagingTypes}
@@ -135,16 +148,17 @@ export default function BasicInfoForm({
             />
           </div>
 
-          {/* Categorías */}
-          <div className="grid gap-2 md:col-span-2">
-            <Label htmlFor="categorias">Categorías</Label>
+          <div className="space-y-1 md:col-span-2">
+            <Label htmlFor="categorias" className="text-xs">
+              Categorías
+            </Label>
             <ReusableSelect<Categoria>
               isMulti
               items={categories}
               getLabel={(c) => c.nombre}
               getValue={(c) => c.id}
               value={value.categorias}
-              onChange={(cats) => patch({ categorias: cats })}
+              onChange={(cats) => patch({ categorias: cats as Categoria[] })}
               placeholder="Seleccione categorías"
               selectProps={{ isSearchable: true, closeMenuOnSelect: false }}
             />
