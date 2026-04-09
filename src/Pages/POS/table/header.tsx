@@ -561,11 +561,8 @@ export default function TablePOS({
           <AnimatePresence initial={false}>
             {data.map((p) => {
               const precios = p.precios ?? [];
-              // const stockTotal = (p.stocks ?? []).reduce(
-              //   (a, s) => a + s.cantidad,
-              //   0
-              // );
-              const remaining = getRemainingFor(p); // 👈 usar el cálculo que viene del padre
+
+              const remaining = getRemainingFor(p);
 
               return (
                 <motion.div
