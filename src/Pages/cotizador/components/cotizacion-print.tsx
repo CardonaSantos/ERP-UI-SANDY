@@ -1,7 +1,7 @@
-import { CartItem } from "@/Pages/POS/PuntoVenta";
 import { forwardRef } from "react";
 import { costoAdicional } from "../page";
 import logo from "@/assets/NOVAPOSPNG.png";
+import { CartItem } from "@/Types/POS/interfaces";
 
 interface Props {
   cart: CartItem[];
