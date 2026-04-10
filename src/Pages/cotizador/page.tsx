@@ -1,12 +1,17 @@
 import { PageTransition } from "@/components/Transition/layout-transition";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import TablePOS from "../POS/table/header";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ProductoData, Stock } from "../POS/interfaces/newProductsPOSResponse";
 import { toast } from "sonner";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 import { MetodoPagoMainPOS } from "../POS/interfaces/methodPayment";
 import { TipoComprobante } from "../POS/interfaces";
-import { CartItem, imagenesProducto, Precios } from "../POS/PuntoVenta";
+import { imagenesProducto, Precios } from "../POS/PuntoVenta";
 import { useStore } from "@/components/Context/ContextSucursal";
 import { NewQueryDTO } from "../POS/interfaces/interfaces";
 import { NewQueryPOS, useFetchVentas } from "@/hooks/use-ventas/use-ventas";
@@ -21,7 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatMonedaGT } from "../Compras/compras.utils";
-import CartCheckout from "../POS/CartCheckout";
+import CartCheckout, { CartItem } from "../POS/CartCheckout";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -44,6 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import DialogImages from "../DialogImages";
 import CotizacionPrint from "./components/cotizacion-print";
 import { useReactToPrint } from "react-to-print";
+import TablePOS from "../POS/table/header";
 type SourceType = "producto" | "presentacion";
 
 type ProductoPOS = {
@@ -94,6 +100,10 @@ function useDebounce<T>(value: T, delay = 400) {
 }
 
 function CotizadorMainPage() {
+  const [isScannerMode, setIsScannerMode] = useState(true);
+  const [scanInput, setScanInput] = useState("");
+  /** Ref al input del escáner para poder darle focus desde el padre */
+  const scanInputRef = useRef<HTMLInputElement>(null);
   // STORE
   // ─────────────────────────────────────────────────────────────
   const userRol = useStore((state) => state.userRol) ?? "";
@@ -381,6 +391,16 @@ function CotizadorMainPage() {
       ),
     );
 
+  const handleToggleScannerMode = useCallback(() => {
+    setIsScannerMode((prev) => {
+      const next = !prev;
+      if (next) {
+        setTimeout(() => scanInputRef.current?.focus(), 50);
+      }
+      return next;
+    });
+  }, []);
+
   const removeFromCartByUid = (uid: string) =>
     setCart((prev) => prev.filter((i) => i.uid !== uid));
 
@@ -501,6 +521,16 @@ function CotizadorMainPage() {
 "
       >
         <TablePOS
+          isScannerMode={isScannerMode}
+          scanInput={scanInput}
+          onToggleScannerMode={handleToggleScannerMode}
+          onScanInputChange={(value) => {
+            setScanInput(value);
+            // Sincronizar con el estado de búsqueda para que la tabla filtre
+            setSearch(value);
+            setPage(1);
+          }}
+          scanInputRef={scanInputRef}
           categorias={categorias}
           tiposPresentacion={tiposPresentacion}
           searchValue={search}
