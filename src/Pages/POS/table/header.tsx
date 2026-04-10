@@ -1,80 +1,56 @@
-// TablePOS.tsx
 "use client";
+
+import React from "react";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   getSortedRowModel,
+  SortingState,
 } from "@tanstack/react-table";
-import { ProductoData } from "../interfaces/newProductsPOSResponse";
-import { columnsTablePos } from "./colums";
-import { Input } from "@/components/ui/input";
-import { NewQueryDTO } from "../interfaces/interfaces";
 import { AnimatePresence, motion } from "framer-motion";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SortingState } from "@tanstack/react-table";
-import React from "react";
+import { Search, ScanLine, Zap } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+
+import { columnsTablePos } from "./colums";
 import { ReusableSelect } from "@/utils/components/ReactSelectComponent/ReusableSelect";
 import { TipoPresentacion } from "@/Pages/newCreateProduct/interfaces/DomainProdPressTypes";
 import { CategoriaWithCount } from "@/Pages/Categorias/CategoriasMainPage";
-import { Search } from "lucide-react";
-import { imagenesProducto } from "../PuntoVenta";
+import { ProductoData } from "../interfaces/newProductsPOSResponse";
+import type { NewQueryDTO } from "../interfaces/interfaces";
+import { ProductoPOS } from "@/Types/POS/interfaces";
 
-enum RolPrecio {
-  PUBLICO = "PUBLICO",
-  MAYORISTA = "MAYORISTA",
-  ESPECIAL = "ESPECIAL",
-  DISTRIBUIDOR = "DISTRIBUIDOR",
-  PROMOCION = "PROMOCION",
-  CLIENTE_ESPECIAL = "CLIENTE_ESPECIAL",
-}
+// ---------------------------------------------------------------------------
+// Sub-tipos locales (no duplican los de pos.types.ts)
+// ---------------------------------------------------------------------------
 
-type Stock = {
-  id: number;
-  cantidad: number;
-  fechaIngreso: string;
-  fechaVencimiento: string;
-};
-
-export type Precios = {
-  id: number;
-  precio: number;
-  rol: RolPrecio;
-};
-
-type SourceType = "producto" | "presentacion";
-
-type ProductoPOS = {
-  id: number;
-  source: SourceType;
-  nombre: string;
-  descripcion: string;
-  precioVenta: number;
-  codigoProducto: string;
-  creadoEn: string;
-  actualizadoEn: string;
-  stock: Stock[];
-  precios: Precios[];
-  imagenesProducto: imagenesProducto[];
-};
-
-interface Props {
-  categorias: CategoriaWithCount[];
-  setQueryOptions: React.Dispatch<React.SetStateAction<NewQueryDTO>>;
-  searchValue: string;
-  handleImageClick: (images: string[]) => void;
-  addToCart: (product: ProductoPOS) => void;
+interface TablePOSProps {
+  // Data
   data: ProductoData[];
   isLoadingProducts: boolean;
-  queryOptions: NewQueryDTO;
+
+  // Search & filters
+  searchValue: string;
   handleSearchItemsInput: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  defaultMapToCartProduct(p: ProductoData): ProductoPOS;
+  queryOptions: NewQueryDTO;
+  setQueryOptions: React.Dispatch<React.SetStateAction<NewQueryDTO>>;
+  categorias: CategoriaWithCount[];
+  tiposPresentacion: TipoPresentacion[];
+
+  // Cart
+  addToCart: (product: ProductoPOS) => void;
+  defaultMapToCartProduct: (p: ProductoData) => ProductoPOS;
   mapToCartProduct?: (p: ProductoData) => ProductoPOS;
+  getRemainingFor: (p: ProductoData) => number;
 
-  getRemainingFor: (p: ProductoData) => number; // 👈 NUEVO
+  // Image preview
+  handleImageClick: (images: string[]) => void;
 
-  // server-side pagination props
+  // Pagination (server-side)
   page: number;
   limit: number;
   totalPages: number;
@@ -82,13 +58,43 @@ interface Props {
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
 
-  /** opcional: si quieres forzar una altura máxima concreta (px) */
+  // Optional height overrides
   maxDesktopHeightPx?: number;
   maxMobileHeightPx?: number;
-  tiposPresentacion: TipoPresentacion[];
+
+  // ── Modo Rápido / Escáner ──────────────────────────────────────────────
+  /** ¿Está activo el modo rápido? */
+  isScannerMode: boolean;
+  /** Valor controlado del input del escáner */
+  scanInput: string;
+  /** Toggle del modo rápido (viene del padre) */
+  onToggleScannerMode: () => void;
+  /** Cambio de texto en el input del escáner */
+  onScanInputChange: (value: string) => void;
+  /**
+   * El padre expone un ref al input del escáner para que PuntoVenta
+   * pueda darle focus cuando lo necesite (al completar una venta, etc.)
+   */
+  scanInputRef: React.RefObject<HTMLInputElement>;
 }
 
-/** Barra de paginación compacta (usada arriba y abajo) */
+// ---------------------------------------------------------------------------
+// PaginationBar (local, compacta)
+// ---------------------------------------------------------------------------
+interface PaginationBarProps {
+  page: number;
+  totalPages: number;
+  totalCount: number;
+  from: number;
+  to: number;
+  limit: number;
+  onPageChange: (p: number) => void;
+  onLimitChange: (n: number) => void;
+  isDisabled: boolean;
+  showPageSize?: boolean;
+  className?: string;
+}
+
 function PaginationBar({
   page,
   totalPages,
@@ -101,92 +107,75 @@ function PaginationBar({
   isDisabled,
   showPageSize = true,
   className = "",
-}: {
-  page: number;
-  totalPages: number;
-  totalCount: number;
-  from: number;
-  to: number;
-  limit: number;
-  onPageChange: (p: number) => void;
-  onLimitChange: (n: number) => void;
-  isDisabled: boolean;
-  showPageSize?: boolean;
-  className?: string;
-}) {
+}: PaginationBarProps) {
+  const btnCls =
+    "h-6 min-w-[24px] rounded border px-1.5 text-[10px] tabular-nums disabled:opacity-40 hover:bg-muted transition-colors";
+
   return (
     <div
       role="navigation"
-      className={`flex flex-wrap items-center justify-between gap-2 p-2 border-t bg-muted/30 ${className}`}
+      className={`flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 border-t bg-muted/20 ${className}`}
     >
-      <div className="text-xs text-muted-foreground">
-        Mostrando <span className="font-medium">{from}</span>–
-        <span className="font-medium">{to}</span> de{" "}
-        <span className="font-medium">{totalCount}</span>
-      </div>
+      <span className="text-[10px] text-muted-foreground tabular-nums">
+        {from}–{to}{" "}
+        <span className="text-muted-foreground/60">/ {totalCount}</span>
+      </span>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {showPageSize && (
           <>
-            <label className="text-xs">Filas:</label>
             <select
-              className="h-8 rounded-md border px-2 text-sm text-black"
+              className="h-6 rounded border px-1 text-[10px] bg-background text-foreground"
               value={limit}
               onChange={(e) => onLimitChange(Number(e.target.value))}
               disabled={isDisabled}
+              aria-label="Filas por página"
             >
               {[5, 10, 20, 30, 50, 100].map((n) => (
                 <option key={n} value={n}>
-                  {n}
+                  {n} filas
                 </option>
               ))}
             </select>
-            <span className="mx-1 text-muted-foreground">|</span>
+            <span className="text-muted-foreground/40 text-[10px]">|</span>
           </>
         )}
-
         <button
           type="button"
-          className="h-8 rounded-md border px-2 text-sm disabled:opacity-50"
+          className={btnCls}
           onClick={() => onPageChange(1)}
           disabled={isDisabled || page <= 1}
           aria-label="Primera página"
-          title="Primera"
         >
           «
         </button>
         <button
           type="button"
-          className="h-8 rounded-md border px-3 text-sm disabled:opacity-50"
+          className={btnCls}
           onClick={() => onPageChange(page - 1)}
           disabled={isDisabled || page <= 1}
           aria-label="Página anterior"
-          title="Anterior"
         >
-          ←
+          ‹
         </button>
-
-        <span className="text-sm tabular-nums">
-          {page} / {Math.max(totalPages, 1)}
+        <span className="text-[10px] tabular-nums px-1 text-muted-foreground">
+          {page}/{Math.max(totalPages, 1)}
         </span>
-
         <button
           type="button"
-          className="h-8 rounded-md border px-3 text-sm disabled:opacity-50"
+          className={btnCls}
           onClick={() => onPageChange(page + 1)}
           disabled={isDisabled || page >= totalPages}
-          aria-label="Página siguiente"
-          title="Siguiente"
+          aria-label="Siguiente página"
         >
-          →
+          ›
         </button>
         <button
           type="button"
-          className="h-8 rounded-md border px-2 text-sm disabled:opacity-50"
+          className={btnCls}
           onClick={() => onPageChange(totalPages)}
           disabled={isDisabled || page >= totalPages}
           aria-label="Última página"
-          title="Última"
         >
           »
         </button>
@@ -195,109 +184,40 @@ function PaginationBar({
   );
 }
 
-export default function TablePOS({
-  data,
-  handleSearchItemsInput,
-  // queryOptions,
-  addToCart,
-  handleImageClick,
-  isLoadingProducts,
-  mapToCartProduct,
-  defaultMapToCartProduct,
-  limit,
-  onLimitChange,
-  onPageChange,
-  page,
-  totalCount,
-  totalPages,
-  maxDesktopHeightPx,
-  maxMobileHeightPx,
-  getRemainingFor,
+// ---------------------------------------------------------------------------
+// FilterBar – extraído para mantener TablePOS compacto
+// ---------------------------------------------------------------------------
+interface FilterBarProps {
+  searchValue: string;
+  handleSearchItemsInput: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  tiposPresentacion: TipoPresentacion[];
+  categorias: CategoriaWithCount[];
+  queryOptions: NewQueryDTO;
+  setQueryOptions: React.Dispatch<React.SetStateAction<NewQueryDTO>>;
+  // Modo escáner
+  isScannerMode: boolean;
+  scanInput: string;
+  onToggleScannerMode: () => void;
+  onScanInputChange: (value: string) => void;
+  scanInputRef: React.RefObject<HTMLInputElement>;
+  /** Llamado por el padre cuando hay un Enter en el escáner */
+  onScanEnter: () => void;
+}
+
+function FilterBar({
   searchValue,
+  handleSearchItemsInput,
   tiposPresentacion,
+  categorias,
   queryOptions,
   setQueryOptions,
-  categorias,
-}: Props) {
-  const [sorting, setSorting] = React.useState<SortingState>([
-    { id: "nombre", desc: false },
-  ]);
-
-  const table = useReactTable({
-    data,
-    getRowId: (row) => `${row.__source}-${row.id}`,
-    columns: columnsTablePos,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    meta: {
-      onAddToCart: (p: ProductoData) => {
-        const mapper = mapToCartProduct ?? defaultMapToCartProduct;
-        addToCart(mapper(p));
-      },
-      onPreviewImages: handleImageClick,
-      getRemainingFor, // 👈 NUEVO
-    },
-  });
-
-  const hasData = Array.isArray(data) && data.length > 0;
-
-  // Rango mostrado (1–10 de N)
-  const from = totalCount === 0 ? 0 : (page - 1) * limit + 1;
-  const to = Math.min(page * limit, totalCount);
-
-  /** ====== Alturas estimadas para scroll por "limit" ======
-   * Ajusta si cambias densidad de filas:
-   *  - HEADER ~ 44px  |  ROW ~ 56px  |  margen interior ~ 8px
-   */
-  const ESTIMATED_HEADER_H = 44;
-  const ESTIMATED_ROW_H = 56;
-  const ESTIMATED_PADDING = 8;
-
-  // alto deseado del área scrolleable (solo el body)
-  const computedBodyMaxH =
-    ESTIMATED_HEADER_H +
-    ESTIMATED_ROW_H * Math.max(5, limit) +
-    ESTIMATED_PADDING;
-
-  // límite final (permite forzar desde props o por viewport)
-  const desktopBodyMaxH = Math.min(
-    maxDesktopHeightPx ?? computedBodyMaxH,
-    // no exceder el viewport en escritorio
-    Math.max(320, Math.round(0.72 * window.innerHeight || computedBodyMaxH)),
-  );
-
-  const mobileBodyMaxH = Math.min(
-    maxMobileHeightPx ?? computedBodyMaxH,
-    Math.max(280, Math.round(0.65 * window.innerHeight || computedBodyMaxH)),
-  );
-
-  /** --------- UI Helpers --------- */
-  const renderSkeleton = (rows = 6) => (
-    <tbody>
-      {Array.from({ length: rows }).map((_, idx) => (
-        <tr key={idx} className="animate-pulse">
-          <td className="p-2 border-b">
-            <Skeleton className="h-4 w-40" />
-          </td>
-          <td className="p-2 border-b">
-            <Skeleton className="h-4 w-28" />
-          </td>
-          <td className="p-2 border-b">
-            <Skeleton className="h-4 w-16" />
-          </td>
-          <td className="p-2 border-b">
-            <Skeleton className="h-4 w-32" />
-          </td>
-          <td className="p-2 border-b">
-            <Skeleton className="h-8 w-24" />
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  );
-
+  isScannerMode,
+  scanInput,
+  onToggleScannerMode,
+  onScanInputChange,
+  scanInputRef,
+  onScanEnter,
+}: FilterBarProps) {
   const selectedTiposEmpaque = React.useMemo(
     () =>
       tiposPresentacion.filter((tp) =>
@@ -332,25 +252,75 @@ export default function TablePOS({
   );
 
   return (
-    <div className="w-full">
-      {/* Search */}
+    <div className="mb-3 space-y-2">
+      {/* Fila 1: búsqueda normal + toggle modo rápido */}
+      <div className="flex flex-wrap items-end gap-2">
+        {/* Input búsqueda manual (oculto en modo escáner) */}
+        {!isScannerMode && (
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              id="q"
+              type="search"
+              placeholder="Buscar por nombre o código…"
+              value={searchValue}
+              onChange={handleSearchItemsInput}
+              className="h-8 pl-7 pr-2 text-xs"
+            />
+          </div>
+        )}
 
-      <div className="mb-3 grid grid-cols-1 sm:grid-cols-[minmax(220px,1fr)_minmax(260px,1fr)] gap-3 items-end">
-        <div className="relative">
-          {/* Icono izquierdo */}
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        {/* Input escáner (visible solo en modo rápido) */}
+        {isScannerMode && (
+          <div className="relative flex-1 min-w-[200px]">
+            <ScanLine className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary pointer-events-none" />
+            <Input
+              ref={scanInputRef}
+              id="scanner-input"
+              type="text"
+              autoComplete="off"
+              placeholder="Escanear código de barras…"
+              value={scanInput}
+              onChange={(e) => onScanInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onScanEnter();
+                }
+              }}
+              className="h-8 pl-7 pr-2 text-xs border-primary ring-1 ring-primary/40 focus-visible:ring-primary"
+            />
+          </div>
+        )}
 
-          {/* Input con espacio para icono izq y botón der */}
-          <Input
-            id="q"
-            type="search"
-            placeholder="Buscar por nombre o código…"
-            value={searchValue}
-            onChange={handleSearchItemsInput}
-            className="h-8 pl-8 pr-24"
+        {/* Toggle Modo Rápido */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Zap
+            className={`h-3.5 w-3.5 transition-colors ${
+              isScannerMode ? "text-primary" : "text-muted-foreground"
+            }`}
           />
+          <Switch
+            id="scanner-mode-switch"
+            checked={isScannerMode}
+            onCheckedChange={onToggleScannerMode}
+            className="data-[state=checked]:bg-primary"
+          />
+          <Label
+            htmlFor="scanner-mode-switch"
+            className={`text-xs cursor-pointer select-none transition-colors ${
+              isScannerMode
+                ? "text-primary font-medium"
+                : "text-muted-foreground"
+            }`}
+          >
+            {isScannerMode ? "Modo Rápido" : "Modo Manual"}
+          </Label>
         </div>
+      </div>
 
+      {/* Fila 2: filtros (siempre visibles) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="grid gap-1">
           <Label className="text-xs">Por tipo de presentación</Label>
           <ReusableSelect<TipoPresentacion>
@@ -366,13 +336,10 @@ export default function TablePOS({
               isSearchable: true,
               menuPortalTarget: document.body,
               menuPosition: "fixed",
-              menuShouldScrollIntoView: false, // opcional
+              menuShouldScrollIntoView: false,
               styles: {
                 menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                valueContainer: (b) => ({
-                  ...b,
-                  padding: "0 5px",
-                }),
+                valueContainer: (b) => ({ ...b, padding: "0 5px" }),
               },
             }}
           />
@@ -393,23 +360,175 @@ export default function TablePOS({
               isSearchable: true,
               menuPortalTarget: document.body,
               menuPosition: "fixed",
-              menuShouldScrollIntoView: false, // opcional
+              menuShouldScrollIntoView: false,
               styles: {
                 menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                valueContainer: (b) => ({
-                  ...b,
-                  padding: "0 5px",
-                }),
+                valueContainer: (b) => ({ ...b, padding: "0 5px" }),
               },
             }}
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TablePOS – componente principal
+// ---------------------------------------------------------------------------
+export default function TablePOS({
+  data,
+  handleSearchItemsInput,
+  addToCart,
+  handleImageClick,
+  isLoadingProducts,
+  mapToCartProduct,
+  defaultMapToCartProduct,
+  limit,
+  onLimitChange,
+  onPageChange,
+  page,
+  totalCount,
+  totalPages,
+  maxDesktopHeightPx,
+  maxMobileHeightPx,
+  getRemainingFor,
+  searchValue,
+  tiposPresentacion,
+  queryOptions,
+  setQueryOptions,
+  categorias,
+  // Modo Rápido
+  isScannerMode,
+  scanInput,
+  onToggleScannerMode,
+  onScanInputChange,
+  scanInputRef,
+}: TablePOSProps) {
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "nombre", desc: false },
+  ]);
+
+  const table = useReactTable({
+    data,
+    getRowId: (row) => `${row.__source}-${row.id}`,
+    columns: columnsTablePos,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    meta: {
+      onAddToCart: (p: ProductoData) => {
+        const mapper = mapToCartProduct ?? defaultMapToCartProduct;
+        addToCart(mapper(p));
+      },
+      onPreviewImages: handleImageClick,
+      getRemainingFor,
+    },
+  });
+
+  const hasData = Array.isArray(data) && data.length > 0;
+
+  const from = totalCount === 0 ? 0 : (page - 1) * limit + 1;
+  const to = Math.min(page * limit, totalCount);
+
+  const ESTIMATED_HEADER_H = 32;
+  const ESTIMATED_ROW_H = 40;
+  const ESTIMATED_PADDING = 4;
+  const computedBodyMaxH =
+    ESTIMATED_HEADER_H +
+    ESTIMATED_ROW_H * Math.max(5, limit) +
+    ESTIMATED_PADDING;
+
+  const vh =
+    typeof window !== "undefined" ? window.innerHeight : computedBodyMaxH;
+  const desktopBodyMaxH = Math.min(
+    maxDesktopHeightPx ?? computedBodyMaxH,
+    Math.max(320, Math.round(0.72 * vh)),
+  );
+  const mobileBodyMaxH = Math.min(
+    maxMobileHeightPx ?? computedBodyMaxH,
+    Math.max(280, Math.round(0.65 * vh)),
+  );
+
+  const renderSkeleton = (rows = 6) => (
+    <tbody>
+      {Array.from({ length: rows }).map((_, idx) => (
+        <tr key={idx} className="animate-pulse border-t">
+          <td className="px-2 py-1.5">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded shrink-0" />
+              <div className="space-y-1 flex-1">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-2.5 w-20" />
+              </div>
+            </div>
+          </td>
+          <td className="px-2 py-1.5">
+            <Skeleton className="h-3 w-24" />
+          </td>
+          <td className="px-2 py-1.5">
+            <Skeleton className="h-5 w-5 rounded" />
+          </td>
+          <td className="px-2 py-1.5">
+            <Skeleton className="h-4 w-8 rounded-sm" />
+          </td>
+          <td className="px-2 py-1.5">
+            <Skeleton className="h-7 w-7 rounded" />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  );
+
+  /** Cuando el padre notifica un Enter en el escáner, buscamos el primer
+   *  producto que coincida con el scanInput y lo agregamos al carrito. */
+  const handleScanEnter = React.useCallback(() => {
+    if (!scanInput.trim()) return;
+    const term = scanInput.trim().toLowerCase();
+    const match = data.find(
+      (p) =>
+        p.codigoProducto?.toLowerCase() === term ||
+        p.nombre?.toLowerCase() === term,
+    );
+    if (match) {
+      const mapper = mapToCartProduct ?? defaultMapToCartProduct;
+      addToCart(mapper(match));
+    }
+    // El vaciado del input + refocus lo maneja el padre via callback
+    onScanInputChange("");
+    // Re-focus al siguiente frame para asegurar que el input está limpio
+    setTimeout(() => scanInputRef.current?.focus(), 50);
+  }, [
+    scanInput,
+    data,
+    mapToCartProduct,
+    defaultMapToCartProduct,
+    addToCart,
+    onScanInputChange,
+    scanInputRef,
+  ]);
+
+  return (
+    <div className="w-full">
+      {/* Barra de filtros + toggle modo rápido */}
+      <FilterBar
+        searchValue={searchValue}
+        handleSearchItemsInput={handleSearchItemsInput}
+        tiposPresentacion={tiposPresentacion}
+        categorias={categorias}
+        queryOptions={queryOptions}
+        setQueryOptions={setQueryOptions}
+        isScannerMode={isScannerMode}
+        scanInput={scanInput}
+        onToggleScannerMode={onToggleScannerMode}
+        onScanInputChange={onScanInputChange}
+        scanInputRef={scanInputRef}
+        onScanEnter={handleScanEnter}
+      />
 
       {/* ===== DESKTOP ===== */}
-
       <div className="hidden md:flex flex-col rounded-xl border bg-card">
-        {/* Paginación superior (compacta) */}
         <PaginationBar
           page={page}
           totalPages={totalPages}
@@ -424,12 +543,11 @@ export default function TablePOS({
           className="border-t-0"
         />
 
-        {/* Área scrolleable con header sticky */}
         <div className="overflow-y-auto" style={{ maxHeight: desktopBodyMaxH }}>
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted/40 sticky top-0 z-10">
+          <table className="min-w-full">
+            <thead className="bg-muted/50 sticky top-0 z-10 border-b">
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="text-left">
+                <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     const canSort = header.column.getCanSort();
                     const sort = header.column.getIsSorted();
@@ -441,17 +559,21 @@ export default function TablePOS({
                             ? header.column.getToggleSortingHandler()
                             : undefined
                         }
-                        className={`px-3 py-2 font-semibold select-none ${
-                          canSort ? "cursor-pointer hover:bg-muted/60" : ""
+                        className={`px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground select-none ${
+                          canSort ? "cursor-pointer hover:text-foreground" : ""
                         }`}
                       >
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-0.5">
                           {flexRender(
                             header.column.columnDef.header,
                             header.getContext(),
                           )}
-                          {sort === "asc" && <span>▲</span>}
-                          {sort === "desc" && <span>▼</span>}
+                          {sort === "asc" && (
+                            <span className="text-[9px]">▲</span>
+                          )}
+                          {sort === "desc" && (
+                            <span className="text-[9px]">▼</span>
+                          )}
                         </div>
                       </th>
                     );
@@ -463,22 +585,19 @@ export default function TablePOS({
             {isLoadingProducts && renderSkeleton(limit)}
 
             {!isLoadingProducts && hasData && (
-              <tbody>
+              <tbody className="divide-y divide-border/50">
                 <AnimatePresence initial={false}>
                   {table.getRowModel().rows.map((row) => (
                     <motion.tr
                       key={row.id}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.18 }}
-                      className="hover:bg-muted/30"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.12 }}
+                      className="hover:bg-muted/25 transition-colors"
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="px-3 py-2 border-t align-top"
-                        >
+                        <td key={cell.id} className="px-2 py-1.5 align-middle">
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -496,7 +615,7 @@ export default function TablePOS({
                 <tr>
                   <td
                     colSpan={table.getAllColumns().length}
-                    className="px-3 py-8 text-center text-muted-foreground"
+                    className="px-3 py-10 text-center text-xs text-muted-foreground"
                   >
                     No se encontraron productos con ese criterio.
                   </td>
@@ -506,7 +625,6 @@ export default function TablePOS({
           </table>
         </div>
 
-        {/* Paginación inferior (compacta) */}
         <PaginationBar
           page={page}
           totalPages={totalPages}
@@ -517,12 +635,11 @@ export default function TablePOS({
           onPageChange={onPageChange}
           onLimitChange={onLimitChange}
           isDisabled={isLoadingProducts}
-          showPageSize={false} // abajo solemos ocultar el selector de filas
+          showPageSize={false}
         />
       </div>
 
       {/* ===== MOBILE ===== */}
-      {/* Barra superior de paginación (¡afuera del contenedor hidden!) */}
       <div className="md:hidden">
         <PaginationBar
           page={page}
@@ -539,7 +656,6 @@ export default function TablePOS({
         />
       </div>
 
-      {/* Lista móvil scrolleable */}
       <div
         className="md:hidden space-y-2 overflow-y-auto rounded-xl border bg-white p-2"
         style={{ maxHeight: mobileBodyMaxH }}
@@ -561,60 +677,76 @@ export default function TablePOS({
           <AnimatePresence initial={false}>
             {data.map((p) => {
               const precios = p.precios ?? [];
-
               const remaining = getRemainingFor(p);
-
+              const isOut = remaining <= 0;
               return (
                 <motion.div
                   key={`${p.__source ?? "producto"}-${p.id}`}
-                  initial={{ opacity: 0, y: 6 }}
+                  initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.18 }}
-                  className="rounded-lg border p-3 bg-white"
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.12 }}
+                  className="rounded-lg border p-2.5 bg-card"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="font-semibold truncate">{p.nombre}</div>
-                      <div className="text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold truncate leading-tight">
+                        {p.nombre}
+                      </div>
+                      <div className="text-[10px] font-mono text-muted-foreground truncate">
                         {p.codigoProducto}
                       </div>
                     </div>
-                    <button
-                      onClick={() =>
-                        mapToCartProduct
-                          ? addToCart(mapToCartProduct(p))
-                          : addToCart(defaultMapToCartProduct(p))
-                      }
-                      className="rounded-lg px-3 py-2 bg-primary text-primary-foreground text-xs disabled:opacity-60"
-                      disabled={remaining <= 0}
-                      title={
-                        remaining <= 0
-                          ? "Sin stock"
-                          : `Agregar (disp. ${remaining})`
-                      }
-                    >
-                      + Añadir
-                    </button>
-                  </div>
-
-                  {p.descripcion && (
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                      {p.descripcion}
-                    </p>
-                  )}
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    {precios.map((x) => (
-                      <span key={x.id} className="rounded bg-muted px-2 py-1">
-                        {x.rol}: Q{Number(x.precio) || 0}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span
+                        className={`text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-sm ${
+                          isOut
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-muted text-foreground"
+                        }`}
+                      >
+                        {remaining}
                       </span>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          mapToCartProduct
+                            ? addToCart(mapToCartProduct(p))
+                            : addToCart(defaultMapToCartProduct(p))
+                        }
+                        className="h-7 w-7 flex items-center justify-center rounded bg-primary text-primary-foreground disabled:opacity-50 transition-opacity"
+                        disabled={isOut}
+                        title={
+                          isOut ? "Sin stock" : `Agregar (disp. ${remaining})`
+                        }
+                      >
+                        <span className="text-sm font-bold leading-none">
+                          +
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="mt-2 text-xs">
-                    <span className="font-medium">Stock:</span> {remaining}
-                  </div>
+                  {precios.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                      {precios.slice(0, 4).map((x) => (
+                        <span
+                          key={x.id}
+                          className="text-[10px] text-muted-foreground"
+                        >
+                          {x.rol}:{" "}
+                          <span className="font-medium text-foreground tabular-nums">
+                            Q{Number(x.precio).toFixed(2)}
+                          </span>
+                        </span>
+                      ))}
+                      {precios.length > 4 && (
+                        <span className="text-[10px] text-muted-foreground/60">
+                          +{precios.length - 4} más
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}
@@ -622,13 +754,13 @@ export default function TablePOS({
         )}
 
         {!isLoadingProducts && !hasData && (
-          <div className="rounded-lg border p-6 text-center text-muted-foreground bg-white">
+          <div className="rounded-lg border p-6 text-center text-xs text-muted-foreground bg-white">
             No se encontraron productos.
           </div>
         )}
       </div>
 
-      {/* Barra inferior de paginación en mobile */}
+      {/* Paginación inferior mobile */}
       <div className="md:hidden mt-2">
         <PaginationBar
           page={page}

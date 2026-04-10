@@ -1,6 +1,5 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
-//================================================================>
 import { useEffect, useState } from "react";
 import { User, LogOut, AtSign, Monitor, LayoutDashboard } from "lucide-react";
 
@@ -93,7 +92,7 @@ export default function Layout2({ children }: LayoutProps) {
     ["sucursal-info", sucursalId],
     `sucursales/get-info-sucursal/${sucursalId}`,
     undefined,
-    { enabled: !!sucursalId }
+    { enabled: !!sucursalId },
   );
 
   const { data: notifications, isLoading: isLoadingNotis } = useApiQuery<
@@ -102,7 +101,7 @@ export default function Layout2({ children }: LayoutProps) {
     NOTIFICATIONS_QK(userID),
     `notification/get-my-notifications/${userID}`,
     undefined,
-    { staleTime: 0, enabled: !!userID }
+    { staleTime: 0, enabled: !!userID },
   );
 
   const secureNotifications = Array.isArray(notifications) ? notifications : [];
@@ -135,7 +134,7 @@ export default function Layout2({ children }: LayoutProps) {
     isPending: isPendingDeleteAll,
   } = useApiMutation<void, void>(
     "delete",
-    `notification/delete-all-notifications-user/${userID}`
+    `notification/delete-all-notifications-user/${userID}`,
   );
 
   const deleteAllNotis = async () => {
@@ -149,7 +148,7 @@ export default function Layout2({ children }: LayoutProps) {
         loading: "Eliminando notificaciones...",
         success: "Se eliminaron todas las notificaciones.",
         error: (err) => getApiErrorMessageAxios(err),
-      }
+      },
     );
 
     await queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QK(userID) });

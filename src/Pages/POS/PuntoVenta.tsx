@@ -1,8 +1,19 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Link } from "react-router-dom";
+import dayjs from "dayjs";
+import "dayjs/locale/es";
+import { toast } from "sonner";
+import { CheckCircle, Coins, Package, Receipt } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -10,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CheckCircle, Coins, Package, Receipt } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,175 +28,391 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
-
-import SelectM from "react-select";
-import { Link } from "react-router-dom";
-
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { formatearMoneda } from "@/Crm/CrmServices/crm-service.types";
-import CartCheckout from "./CartCheckout";
-import DialogImages from "../DialogImages";
-import { TipoComprobante } from "./interfaces";
-import { formattMonedaGT } from "@/utils/formattMoneda";
-import { ComprobanteSelector } from "./Components/ComprobanteSelector";
-import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
+import SelectM from "react-select";
+
 import { useStore } from "@/components/Context/ContextSucursal";
-import type { NewQueryDTO } from "./interfaces/interfaces";
-import { ProductoData } from "./interfaces/newProductsPOSResponse";
-import TablePOS from "./table/header";
-import { MetodoPagoMainPOS } from "./interfaces/methodPayment";
-import CreditoForm from "./credito-props-components/credito-form-component";
-import { FormCreditoState } from "./credito-props-components/credito-venta.interfaces";
-import dayjs from "dayjs";
-import "dayjs/locale/es";
-import localizedFormat from "dayjs/plugin/localizedFormat";
-import { NewQueryPOS, useFetchVentas } from "@/hooks/use-ventas/use-ventas";
+import { formatearMoneda } from "@/Crm/CrmServices/crm-service.types";
+import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
+import { formattMonedaGT } from "@/utils/formattMoneda";
+import { formatMonedaGT } from "../Compras/compras.utils";
+import { formattFecha } from "../Utils/Utils";
+import { PageTransition } from "@/components/Transition/layout-transition";
+
 import { useClientes } from "@/hooks/use-clientes/use-clientes";
 import { useCreateVenta } from "@/hooks/use-create-venta/use-create-venta";
 import { useGetCategorias } from "@/hooks/use-categorias/use-categorias";
 import { useTiposPresentaciones } from "@/hooks/use-tipos-presentaciones/use-tipos-presentaciones";
 import { useCreateCreditoRequest } from "@/hooks/use-authorization-credito/use-authorization";
 import { useCreatePriceRequest } from "@/hooks/use-create-price-request/use-create-price-request";
-import { formattFecha } from "../Utils/Utils";
-import { formatMonedaGT } from "../Compras/compras.utils";
-import { PageTransition } from "@/components/Transition/layout-transition";
-dayjs.extend(localizedFormat);
-dayjs.locale("es");
+import { NewQueryPOS, useFetchVentas } from "@/hooks/use-ventas/use-ventas";
 
-// =================== Tipos (compatibilidad con tus componentes actuales) ===================
-enum RolPrecio {
-  PUBLICO = "PUBLICO",
-  MAYORISTA = "MAYORISTA",
-  ESPECIAL = "ESPECIAL",
-  DISTRIBUIDOR = "DISTRIBUIDOR",
-  PROMOCION = "PROMOCION",
-  CLIENTE_ESPECIAL = "CLIENTE_ESPECIAL",
-}
+import CartCheckout from "./CartCheckout";
+import DialogImages from "../DialogImages";
+import CreditoForm from "./credito-props-components/credito-form-component";
+import { ComprobanteSelector } from "./Components/ComprobanteSelector";
 
-type Stock = {
-  id: number;
-  cantidad: number;
-  fechaIngreso: string;
-  fechaVencimiento: string;
-};
+import { TipoComprobante } from "./interfaces";
+import { MetodoPagoMainPOS } from "./interfaces/methodPayment";
+import type { NewQueryDTO } from "./interfaces/interfaces";
+import { ProductoData } from "./interfaces/newProductsPOSResponse";
+import { FormCreditoState } from "./credito-props-components/credito-venta.interfaces";
 
-export type Precios = {
-  id: number;
-  precio: number;
-  rol: RolPrecio;
-};
+import type {
+  CartItem,
+  Customer,
+  imagenesProducto,
+  Precios,
+  ProductoPOS,
+  RolPrecio,
+  SourceType,
+} from "@/Types/POS/interfaces";
+import TablePOS from "./table/header";
 
-export type imagenesProducto = {
-  id: number;
-  url: string;
-};
-
-type SourceType = "producto" | "presentacion";
-
-type ProductoPOS = {
-  id: number;
-  source: SourceType;
-  nombre: string;
-  descripcion: string;
-  precioVenta: number;
-  codigoProducto: string;
-  creadoEn: string;
-  actualizadoEn: string;
-  stock: Stock[];
-  precios: Precios[];
-  imagenesProducto: imagenesProducto[];
-};
-
-export interface CartItem {
-  uid: string;
-  id: number;
-  source: SourceType;
-  nombre: string;
-  quantity: number;
-  selectedPriceId: number;
-  selectedPrice: number;
-  selectedPriceRole: RolPrecio;
-  precios: Precios[];
-  stock: { cantidad: number }[];
-}
-
-interface Venta {
-  id: number;
-  clienteId: number | null;
-  fechaVenta: string;
-  horaVenta: string;
-  totalVenta: number;
-  direccionClienteFinal: string | null;
-  nombreClienteFinal: string | null;
-  sucursalId: number;
-  telefonoClienteFinal: string | null;
-  imei: string;
-}
-
-interface Customer {
-  id: number;
-  nombre: string;
-  telefono?: string;
-  dpi?: string;
-  nit?: string;
-}
-
-// =================== Mappers ===================
+export type { imagenesProducto, Precios };
 
 function useDebounce<T>(value: T, delay = 400) {
-  const [debounced, setDebounced] = React.useState(value);
-  React.useEffect(() => {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
     const id = setTimeout(() => setDebounced(value), delay);
     return () => clearTimeout(id);
   }, [value, delay]);
   return debounced;
 }
 
-// =================== Componente ===================
 export default function PuntoVenta() {
   const userId = useStore((state) => state.userId) ?? 0;
   const userRol = useStore((state) => state.userRol) ?? "";
-
   const sucursalId = useStore((state) => state.sucursalId) ?? 0;
 
+  // ── Cart ──────────────────────────────────────────────────────────────────
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // ── Dialogs ───────────────────────────────────────────────────────────────
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [openSection, setOpenSection] = useState(false);
+  const [openReques, setOpenRequest] = useState(false);
+  const [openImage, setOpenImage] = useState(false);
+  const [openCreateRequest, setOpenCreateRequest] = useState(false);
+
+  // ── Payment & checkout ────────────────────────────────────────────────────
   const [paymentMethod, setPaymentMethod] = useState<MetodoPagoMainPOS>(
     MetodoPagoMainPOS.EFECTIVO,
   );
   const [tipoComprobante, setTipoComprobante] =
     useState<TipoComprobante | null>(TipoComprobante.RECIBO);
-  const [referenciaPago, setReferenciaPago] = useState<string>("");
+  const [referenciaPago, setReferenciaPago] = useState("");
+  const [imei, setImei] = useState("");
+  const [isDisableButton, setIsDisableButton] = useState(false);
 
-  const [openSection, setOpenSection] = useState(false);
-  const [ventaResponse, setventaResponse] = useState<Venta | null>(null);
+  // ── Venta response ────────────────────────────────────────────────────────
+  const [ventaResponse, setVentaResponse] = useState<{
+    id: number;
+    fechaVenta: string;
+    totalVenta: number;
+  } | null>(null);
+
+  // ── Price request ─────────────────────────────────────────────────────────
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
   );
   const [precioReques, setPrecioRequest] = useState<number | null>(null);
-  const [openReques, setOpenRequest] = useState(false);
-  const [openImage, setOpenImage] = useState(false);
+
+  // ── Images ────────────────────────────────────────────────────────────────
   const [imagesProduct, setImagesProduct] = useState<string[]>([]);
-  const [isDisableButton, setIsDisableButton] = useState(false);
+
+  // ── Customer ──────────────────────────────────────────────────────────────
   const [selectedCustomerID, setSelectedCustomerID] = useState<Customer | null>(
     null,
   );
   const [activeTab, setActiveTab] = useState("existing");
-  // Datos del cliente ad-hoc (venta rápida)
-  const [nombre, setNombre] = useState<string>("");
-  const [apellidos, setApellidos] = useState<string>("");
-  const [dpi, setDpi] = useState<string>("");
-  const [nit, setNit] = useState<string>("");
+  const [nombre, setNombre] = useState("");
+  const [apellidos, setApellidos] = useState("");
+  const [dpi, setDpi] = useState("");
+  const [nit, setNit] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [observaciones, setObservaciones] = useState("");
 
-  const [imei, setImei] = useState<string>("");
-  const [telefono, setTelefono] = useState<string>("");
-  const [direccion, setDireccion] = useState<string>("");
-  const [observaciones, setObservaciones] = useState<string>("");
-  // Estado controlado del formulario de crédito
-  const [openCreateRequest, setOpenCreateRequest] = useState<boolean>(false);
+  // ── Pagination & search ───────────────────────────────────────────────────
+  const [limit, setLimit] = useState(5);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
+
+  const [queryOptions, setQueryOptions] = useState<NewQueryDTO>({
+    cats: [],
+    codigoItem: "",
+    codigoProveedor: "",
+    nombreItem: "",
+    priceRange: "",
+    tipoEmpaque: [],
+    sucursalId,
+    limit,
+    page,
+  });
+
+  useEffect(() => {
+    setQueryOptions((prev) => ({ ...prev, sucursalId, limit, page }));
+  }, [sucursalId, limit, page]);
+
+  // ── Modo Rápido / Escáner ─────────────────────────────────────────────────
+  const [isScannerMode, setIsScannerMode] = useState(true);
+  const [scanInput, setScanInput] = useState("");
+  /** Ref al input del escáner para poder darle focus desde el padre */
+  const scanInputRef = useRef<HTMLInputElement>(null);
+
+  /** Activa/desactiva el modo rápido y gestiona el autofocus */
+  const handleToggleScannerMode = useCallback(() => {
+    setIsScannerMode((prev) => {
+      const next = !prev;
+      if (next) {
+        // Al activar, forzar focus al siguiente frame
+        setTimeout(() => scanInputRef.current?.focus(), 50);
+      }
+      return next;
+    });
+  }, []);
+
+  /** Atajo de teclado global: F2 para alternar modo rápido */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "F2") {
+        e.preventDefault();
+        handleToggleScannerMode();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleToggleScannerMode]);
+
+  /** Autofocus al montar la página (isScannerMode arranca en true) */
+  useEffect(() => {
+    setTimeout(() => scanInputRef.current?.focus(), 100);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── API params memo ───────────────────────────────────────────────────────
+  const apiParams = useMemo<NewQueryPOS>(() => {
+    const p: Partial<NewQueryPOS> = {
+      sucursalId,
+      limit,
+      page,
+      q: debouncedSearch || undefined,
+    };
+    if (queryOptions.cats?.length) p.cats = queryOptions.cats;
+    if (queryOptions.codigoProveedor)
+      p.codigoProveedor = queryOptions.codigoProveedor;
+    if (queryOptions.tipoEmpaque) p.tipoEmpaque = queryOptions.tipoEmpaque;
+    if (queryOptions.priceRange) p.priceRange = queryOptions.priceRange;
+    return p as NewQueryPOS;
+  }, [
+    debouncedSearch,
+    sucursalId,
+    limit,
+    page,
+    queryOptions.cats,
+    queryOptions.codigoProveedor,
+    queryOptions.tipoEmpaque,
+    queryOptions.priceRange,
+  ]);
+
+  // ── Data fetching ─────────────────────────────────────────────────────────
+  const {
+    data: productsResponse = {
+      data: [],
+      meta: {
+        limit: 10,
+        page: 1,
+        totalCount: 0,
+        totalPages: 1,
+        totals: { presentaciones: 0, productos: 0 },
+      },
+    },
+    refetch: refetchProducts,
+    isFetching: isLoadingProducts,
+    isError: isErrorProducts,
+    error: errorProducts,
+  } = useFetchVentas(apiParams);
+
+  const {
+    data: customersResponse,
+    isError: isErrorCustomers,
+    error: errorCustomers,
+  } = useClientes();
+
+  const { mutateAsync: createSale, isPending: isCreatingSale } =
+    useCreateVenta();
+  const { mutateAsync: createPriceRequest, isPending: isCreatingPriceRequest } =
+    useCreatePriceRequest();
+  const {
+    mutateAsync: createCreditRequest,
+    isPending: isPendingCreditRequest,
+  } = useCreateCreditoRequest();
+  const { data: tiposPresentacionesResponse } = useTiposPresentaciones();
+  const { data: cats } = useGetCategorias();
+
+  const categorias = Array.isArray(cats) ? cats : [];
+  const tiposPresentacion = tiposPresentacionesResponse?.data ?? [];
+
+  const productos: ProductoData[] = Array.isArray(productsResponse.data)
+    ? productsResponse.data
+    : [];
+
+  const meta = productsResponse.meta ?? {
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalCount: 0,
+  };
+
+  // Errors
+  useEffect(() => {
+    if (isErrorProducts && errorProducts)
+      toast.error(getApiErrorMessageAxios(errorProducts));
+    if (isErrorCustomers && errorCustomers)
+      toast.error(getApiErrorMessageAxios(errorCustomers));
+  }, [isErrorProducts, errorProducts, isErrorCustomers, errorCustomers]);
+
+  // ── Pagination ────────────────────────────────────────────────────────────
+  const handlePageChange = (nextPage: number) =>
+    setPage(Math.max(1, Math.min(nextPage, meta.totalPages || 1)));
+
+  const handleLimitChange = (nextLimit: number) => {
+    setLimit(nextLimit);
+    setPage(1);
+  };
+
+  // ── Cart helpers ──────────────────────────────────────────────────────────
+  const handleSearchItemsInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setPage(1);
+  };
+
+  const makeUid = (s: SourceType, id: number) => `${s}-${id}`;
+
+  const addToCart = useCallback((product: ProductoPOS) => {
+    const uid = makeUid(product.source, product.id);
+    setCart((prev) => {
+      const existing = prev.find((i) => i.uid === uid);
+      if (existing) {
+        return prev.map((i) =>
+          i.uid === uid ? { ...i, quantity: i.quantity + 1 } : i,
+        );
+      }
+      const initial = product.precios?.[0];
+      const newItem: CartItem = {
+        uid,
+        id: product.id,
+        source: product.source,
+        nombre: product.nombre,
+        precios: product.precios,
+        stock: product.stock,
+        quantity: 1,
+        selectedPriceId: initial?.id ?? 0,
+        selectedPrice: initial?.precio ?? 0,
+        selectedPriceRole:
+          (initial?.rol as RolPrecio) ?? ("PUBLICO" as RolPrecio),
+      };
+      return [...prev, newItem];
+    });
+  }, []);
+
+  function defaultMapToCartProduct(p: ProductoData): ProductoPOS {
+    return {
+      id: p.id,
+      source: (p.__source as SourceType) ?? "producto",
+      nombre: p.nombre,
+      descripcion: p.descripcion ?? "",
+      precioVenta: 0,
+      codigoProducto: p.codigoProducto,
+      creadoEn: new Date().toISOString(),
+      actualizadoEn: new Date().toISOString(),
+      stock: (p.stocks ?? []).map((s) => ({
+        id: s.id,
+        cantidad: s.cantidad,
+        fechaIngreso: s.fechaIngreso || "",
+        fechaVencimiento: s.fechaVencimiento || "",
+      })),
+      precios: (p.precios ?? []).map((pr) => ({
+        id: pr.id,
+        precio: Number(pr.precio) || 0,
+        rol: (pr.rol as RolPrecio) ?? ("PUBLICO" as RolPrecio),
+      })),
+      imagenesProducto: (p.images ?? [])
+        .filter((im) => !!im?.url)
+        .map((im) => ({ id: im.id ?? 0, url: im.url ?? "" })),
+    };
+  }
+
+  const handleImageClick = (images: string[]) => {
+    setOpenImage(true);
+    setImagesProduct(images);
+  };
+
+  const getRemainingForRow = useCallback(
+    (p: ProductoData) => {
+      const source = (p.__source as SourceType) ?? "producto";
+      const uid = makeUid(source, p.id);
+      const totalStock = (p.stocks ?? []).reduce((a, s) => a + s.cantidad, 0);
+      const reserved = cart.find((i) => i.uid === uid)?.quantity ?? 0;
+      return Math.max(0, totalStock - reserved);
+    },
+    [cart],
+  );
+
+  const updateQuantityByUid = (uid: string, qty: number) =>
+    setCart((prev) =>
+      prev.map((i) => (i.uid === uid ? { ...i, quantity: qty } : i)),
+    );
+
+  const updatePriceByUid = (
+    uid: string,
+    newPrice: number,
+    newRole: RolPrecio,
+  ) =>
+    setCart((prev) =>
+      prev.map((i) =>
+        i.uid === uid
+          ? {
+              ...i,
+              selectedPrice: newPrice,
+              selectedPriceRole: newRole,
+              selectedPriceId:
+                i.precios.find(
+                  (p) => p.precio === newPrice && p.rol === newRole,
+                )?.id ?? i.selectedPriceId,
+            }
+          : i,
+      ),
+    );
+
+  const removeFromCartByUid = (uid: string) =>
+    setCart((prev) => prev.filter((i) => i.uid !== uid));
+
+  // ── Reset state after sale ────────────────────────────────────────────────
+  /** Limpia todo y devuelve el POS a estado inicial, listo para la siguiente venta */
+  const resetPOS = useCallback(() => {
+    setCart([]);
+    setImei("");
+    setReferenciaPago("");
+    setPaymentMethod(MetodoPagoMainPOS.CONTADO);
+    setTipoComprobante(TipoComprobante.RECIBO);
+    setSelectedCustomerID(null);
+    setNombre("");
+    setApellidos("");
+    setTelefono("");
+    setDireccion("");
+    setDpi("");
+    setNit("");
+    setObservaciones("");
+    setScanInput("");
+    setSearch("");
+    setPage(1);
+  }, []);
+
+  // ── Credito state ─────────────────────────────────────────────────────────
   const totalCarrito = useMemo(
     () =>
       cart.reduce((acc, prod) => acc + prod.selectedPrice * prod.quantity, 0),
@@ -209,29 +435,26 @@ export default function PuntoVenta() {
     interesSobreVenta: 0,
     planCuotaModo: "IGUALES",
     diasEntrePagos: 15,
-
     fechaPrimeraCuota: dayjs()
       .tz("America/Guatemala")
       .add(15, "day")
       .format("YYYY-MM-DD"),
-
     comentario: "",
     garantiaMeses: 0,
     testigos: undefined,
     cuotasPropuestas: [],
     lineas: [],
   }));
-  type LineaForm = NonNullable<FormCreditoState["lineas"]>[number];
 
-  // Mapea carrito -> líneas del crédito
-  const mapCartToLineas = React.useCallback(
+  type LineaForm = NonNullable<FormCreditoState["lineas"]>[number];
+  const mapCartToLineas = useCallback(
     (items: CartItem[]): NonNullable<FormCreditoState["lineas"]> =>
       items.map<LineaForm>((i) => ({
         productoId: i.source === "presentacion" ? undefined : i.id,
         presentacionId: i.source === "presentacion" ? i.id : undefined,
         cantidad: i.quantity,
         precioUnitario: i.selectedPrice,
-        precioSeleccionadoId: i.selectedPriceId, //NUEVO
+        precioSeleccionadoId: i.selectedPriceId,
         subtotal:
           Math.round((i.quantity * i.selectedPrice + Number.EPSILON) * 100) /
           100,
@@ -253,10 +476,7 @@ export default function PuntoVenta() {
   }, [sucursalId, selectedCustomerID?.id, totalCarrito]);
 
   useEffect(() => {
-    setCreditoForm((f) => ({
-      ...f,
-      lineas: mapCartToLineas(cart),
-    }));
+    setCreditoForm((f) => ({ ...f, lineas: mapCartToLineas(cart) }));
   }, [cart, mapCartToLineas]);
 
   useEffect(() => {
@@ -273,241 +493,24 @@ export default function PuntoVenta() {
     }
   }, [paymentMethod]);
 
-  const [limit, setLimit] = useState<number>(5);
-  const [page, setPage] = useState<number>(1);
-  const [search, setSearch] = useState<string>("");
-  const debouncedSearch = useDebounce(search, 400);
-
-  const [queryOptions, setQueryOptions] = useState<NewQueryDTO>({
-    cats: [],
-    codigoItem: "",
-    codigoProveedor: "",
-    nombreItem: "",
-    priceRange: "",
-    tipoEmpaque: [],
-    sucursalId,
-    limit,
-    page,
-  });
-
-  // Mantener query en sync con page/limit/sucursal
-  useEffect(() => {
-    setQueryOptions((prev) => ({
-      ...prev,
-      sucursalId,
-      limit,
-      page,
-    }));
-  }, [sucursalId, limit, page]);
-
-  // =================== Queries via wrapper ===================
-
-  // 3) Memo de los filtros que viajan a la API (NO mutar aquí)
-  const apiParams = React.useMemo<NewQueryPOS>(() => {
-    const p: Partial<NewQueryPOS> = {
-      sucursalId,
-      limit,
-      page,
-      q: debouncedSearch || undefined, // 👈 CANÓNICO
-    };
-
-    // Solo añade filtros ortogonales si existen
-    if (queryOptions.cats?.length) p.cats = queryOptions.cats;
-    if (queryOptions.codigoProveedor)
-      p.codigoProveedor = queryOptions.codigoProveedor;
-    if (queryOptions.tipoEmpaque) p.tipoEmpaque = queryOptions.tipoEmpaque;
-    if (queryOptions.priceRange) p.priceRange = queryOptions.priceRange;
-
-    return p as NewQueryPOS;
-  }, [
-    debouncedSearch,
-    sucursalId,
-    limit,
-    page,
-    queryOptions.cats,
-    queryOptions.codigoProveedor,
-    queryOptions.tipoEmpaque,
-    queryOptions.priceRange,
-  ]);
-
-  // Productos para POS (nuevo contrato del servidor)
-  // 4) Usa SIEMPRE el memo en key y params
-
-  const {
-    data: productsResponse = {
-      data: [],
-      meta: {
-        limit: 10,
-        page: 1,
-        totalCount: 0,
-        totalPages: 1,
-        totals: { presentaciones: 0, productos: 0 },
-      },
-    },
-    refetch: refetchProducts,
-    isFetching: isLoadingProducts,
-    isError: isErrorProducts,
-    error: errorProducts,
-  } = useFetchVentas(apiParams);
-
-  // Clientes
-
-  const {
-    data: customersResponse,
-    isError: isErrorCustomers,
-    error: errorCustomers,
-  } = useClientes();
-
-  const { mutateAsync: createSale, isPending: isCreatingSale } =
-    useCreateVenta();
-
-  const { mutateAsync: createPriceRequest, isPending: isCreatingPriceRequest } =
-    useCreatePriceRequest();
-
-  const {
-    mutateAsync: createCreditRequest,
-    isPending: isPendingCreditRequest,
-  } = useCreateCreditoRequest();
-
-  const { data: tiposPresentacionesResponse } = useTiposPresentaciones();
-
-  const { data: cats } = useGetCategorias();
-
-  const categorias = Array.isArray(cats) ? cats : [];
-  const tiposPresentacion = tiposPresentacionesResponse?.data ?? [];
-
-  // =================== Efectos de datos ===================
-  // PRODUCTOS SEGUROS
-  const productos = Array.isArray(productsResponse.data)
-    ? productsResponse.data
-    : [];
-
-  const meta = productsResponse.meta ?? {
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-    totalCount: 0,
-  };
-
-  // Handlers para la paginación (server-side)
-  const handlePageChange = (nextPage: number) => {
-    setPage(Math.max(1, Math.min(nextPage, meta.totalPages || 1)));
-  };
-
-  const handleLimitChange = (nextLimit: number) => {
-    setLimit(nextLimit);
-    setPage(1); // reset page cuando cambia pageSize
-  };
-
-  // Errores
-  useEffect(() => {
-    if (isErrorProducts && errorProducts) {
-      toast.error(getApiErrorMessageAxios(errorProducts));
-    }
-    if (isErrorCustomers && errorCustomers) {
-      toast.error(getApiErrorMessageAxios(errorCustomers));
-    }
-  }, [isErrorProducts, errorProducts, isErrorCustomers, errorCustomers]);
-
-  // =================== Lógica de Carrito ===================
-  const handleSearchItemsInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value;
-    setSearch(v);
-    setPage(1);
-  };
-
-  const makeUid = (s: SourceType, id: number) => `${s}-${id}`;
-
-  const addToCart = (product: ProductoPOS) => {
-    const uid = makeUid(product.source, product.id);
-
-    const existingItem = cart.find((item) => item.uid === uid); // 👈 ahora por uid
-    if (existingItem) {
-      setCart((prev) =>
-        prev.map((item) =>
-          item.uid === uid ? { ...item, quantity: item.quantity + 1 } : item,
-        ),
-      );
-      return;
-    }
-
-    const initial = product.precios?.[0];
-    const initialPriceId = initial?.id ?? 0;
-    const initialPrice = initial?.precio ?? 0;
-
-    const newCartItem: CartItem = {
-      uid,
-      id: product.id,
-      source: product.source, // 👈 conserva el origen
-      nombre: product.nombre,
-      precios: product.precios,
-      stock: product.stock,
-      quantity: 1,
-      selectedPriceId: initialPriceId,
-      selectedPrice: initialPrice,
-      selectedPriceRole: (initial?.rol as RolPrecio) ?? RolPrecio.PUBLICO,
-    };
-
-    setCart((prev) => [...prev, newCartItem]);
-  };
-
-  /** Mapper por defecto (por si no envías uno desde el padre) */
-  function defaultMapToCartProduct(p: ProductoData): ProductoPOS {
-    return {
-      id: p.id,
-      source: (p.__source as SourceType) ?? "producto", // 👈 importante
-      nombre: p.nombre,
-      descripcion: p.descripcion ?? "",
-      precioVenta: 0,
-      codigoProducto: p.codigoProducto,
-      creadoEn: new Date().toISOString(),
-      actualizadoEn: new Date().toISOString(),
-      stock: (p.stocks ?? []).map((s) => ({
-        id: s.id,
-        cantidad: s.cantidad,
-        fechaIngreso: s.fechaIngreso || "",
-        fechaVencimiento: s.fechaVencimiento || "",
-      })),
-      precios: (p.precios ?? []).map((pr) => ({
-        id: pr.id,
-        precio: Number(pr.precio) || 0,
-        rol: (pr.rol as RolPrecio) ?? RolPrecio.PUBLICO,
-      })),
-      imagenesProducto: (p.images ?? [])
-        .filter((im) => !!im?.url)
-        .map((im) => ({ id: im.id ?? 0, url: im.url ?? "" })),
-    };
-  }
-
-  const handleImageClick = (images: string[]) => {
-    setOpenImage(true);
-    setImagesProduct(images);
-  };
-
-  const handleClose = () => setOpenSection(false);
-
-  // =================== Select clientes ===================
+  // ── Customers ─────────────────────────────────────────────────────────────
   const customerOptions = useMemo(
     () =>
       (customersResponse ?? []).map((c) => ({
         value: c.id,
-        label: `${c.nombre} ${c?.apellidos ?? ""} ${
-          c.telefono ? `(${c.telefono})` : ""
-        } ${c.dpi ? `DPI: ${c.dpi}` : "DPI: N/A"} ${
-          c.nit ? `NIT: ${c.nit}` : "NIT: N/A"
-        } ${c.iPInternet ? `IP: ${c.iPInternet}` : ""}`,
+        label: `${c.nombre} ${c?.apellidos ?? ""} ${c.telefono ? `(${c.telefono})` : ""} ${c.dpi ? `DPI: ${c.dpi}` : "DPI: N/A"} ${c.nit ? `NIT: ${c.nit}` : "NIT: N/A"} ${c.iPInternet ? `IP: ${c.iPInternet}` : ""}`,
       })),
     [customersResponse],
   );
 
-  // =================== Validaciones & helpers ===================
-
+  // ── Validations ───────────────────────────────────────────────────────────
   const isReferenceInvalid =
     paymentMethod === "TRANSFERENCIA" && !referenciaPago;
   const isButtonDisabled =
     isDisableButton || isReferenceInvalid || isCreatingSale;
+  const isCreditoVenta = paymentMethod === MetodoPagoMainPOS.CREDITO;
 
-  // =================== Actions ===================
+  // ── Actions ───────────────────────────────────────────────────────────────
   async function handleMakeRequest() {
     if (precioReques && precioReques <= 0) {
       toast.info("La cantidad a solicitar no debe ser negativa");
@@ -517,7 +520,6 @@ export default function PuntoVenta() {
       toast.info("Debe seleccionar un producto primero");
       return;
     }
-
     try {
       await createPriceRequest({
         productoId: Number(selectedProductId),
@@ -538,23 +540,17 @@ export default function PuntoVenta() {
   const handleCreateCreditRequest = async (payload: any) => {
     try {
       await toast.promise(createCreditRequest(payload), {
-        success: "Crédito enviado para autorización, esperando respuesta...",
+        success: "Crédito enviado para autorización...",
         loading: "Enviando solicitud de aprobación de crédito",
         error: (error) => getApiErrorMessageAxios(error),
       });
-
-      console.log("Crédito enviado correctamente", payload);
     } catch (error) {
-      console.error("Error creando crédito:", error);
       toast.error(getApiErrorMessageAxios(error));
     }
   };
 
   const handleCompleteSale = async () => {
     setIsDisableButton(true);
-
-    if (!selectedCustomerID?.id) {
-    }
 
     const saleData = {
       actorRol: userRol,
@@ -569,8 +565,8 @@ export default function PuntoVenta() {
           : { productoId: item.id }),
       })),
       metodoPago: paymentMethod || "CONTADO",
-      tipoComprobante: tipoComprobante,
-      referenciaPago: referenciaPago,
+      tipoComprobante,
+      referenciaPago,
       monto: totalCarrito,
       nombre: nombre.trim(),
       apellidos: apellidos.trim(),
@@ -583,7 +579,6 @@ export default function PuntoVenta() {
     };
 
     const isCustomerInfoProvided = !!saleData.nombre && !!saleData.telefono;
-
     if (
       saleData.monto > 1000 &&
       !saleData.clienteId &&
@@ -605,24 +600,11 @@ export default function PuntoVenta() {
     try {
       const resp = await createSale(saleData);
       toast.success("Venta completada con éxito");
-      setReferenciaPago("");
-      setPaymentMethod(MetodoPagoMainPOS.CONTADO);
-      setTipoComprobante(TipoComprobante.RECIBO);
+      setVentaResponse(resp);
       setIsDialogOpen(false);
-      setCart([]);
-      setImei("");
-      setventaResponse(resp);
-      setSelectedCustomerID(null);
-      setNombre("");
-      setApellidos("");
-      setTelefono("");
-      setDireccion("");
-      setDpi("");
-      setObservaciones("");
-      setNit("");
-      // Refrescar productos
       refetchProducts();
-
+      // Resetear POS (también re-focaliza el escáner si está en modo rápido)
+      resetPOS();
       setTimeout(() => setOpenSection(true), 200);
     } catch (error) {
       toast.error(getApiErrorMessageAxios(error));
@@ -631,61 +613,17 @@ export default function PuntoVenta() {
     }
   };
 
-  const updateQuantityByUid = (uid: string, qty: number) => {
-    setCart((prev) =>
-      prev.map((i) => (i.uid === uid ? { ...i, quantity: qty } : i)),
-    );
-  };
-
-  const updatePriceByUid = (
-    uid: string,
-    newPrice: number,
-    newRole: RolPrecio,
-  ) => {
-    setCart((prev) =>
-      prev.map((i) =>
-        i.uid === uid
-          ? {
-              ...i,
-              selectedPrice: newPrice,
-              selectedPriceRole: newRole,
-              selectedPriceId:
-                i.precios.find(
-                  (p) => p.precio === newPrice && p.rol === newRole,
-                )?.id ?? i.selectedPriceId,
-            }
-          : i,
-      ),
-    );
-  };
-
-  const removeFromCartByUid = (uid: string) => {
-    setCart((prev) => prev.filter((i) => i.uid !== uid));
-  };
-
-  const isCreditoVenta = paymentMethod === MetodoPagoMainPOS.CREDITO;
-
-  const getRemainingForRow = React.useCallback(
-    (p: ProductoData) => {
-      const source = (p.__source as SourceType) ?? "producto";
-      const uid = makeUid(source, p.id);
-      const totalStock = (p.stocks ?? []).reduce((a, s) => a + s.cantidad, 0);
-      const reserved = cart.find((i) => i.uid === uid)?.quantity ?? 0;
-      return Math.max(0, totalStock - reserved);
-    },
-    [cart],
-  );
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <PageTransition fallbackBackTo="/" titleHeader="Punto Venta">
       <div
         className="
-  grid grid-cols-1 gap-4 items-start
-  md:[grid-template-columns:minmax(0,1fr)_clamp(360px,40vw,420px)]
-  xl:[grid-template-columns:minmax(0,1fr)_clamp(380px,32vw,440px)] 
-"
+          grid grid-cols-1 gap-4 items-start
+          md:[grid-template-columns:minmax(0,1fr)_clamp(360px,40vw,420px)]
+          xl:[grid-template-columns:minmax(0,1fr)_clamp(380px,32vw,440px)]
+        "
       >
-        {/* Lista de Productos (se  mantiene) */}
+        {/* ── Tabla de productos ─────────────────────────────────────────── */}
         <div className="min-w-0">
           <TablePOS
             categorias={categorias}
@@ -699,24 +637,32 @@ export default function PuntoVenta() {
             queryOptions={queryOptions}
             setQueryOptions={setQueryOptions}
             data={productos}
-            //NUEVO
             page={meta.page}
             limit={meta.limit}
             totalPages={meta.totalPages}
             totalCount={meta.totalCount}
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
-            //
             getRemainingFor={getRemainingForRow}
+            // Modo rápido
+            isScannerMode={isScannerMode}
+            scanInput={scanInput}
+            onToggleScannerMode={handleToggleScannerMode}
+            onScanInputChange={(value) => {
+              setScanInput(value);
+              // Sincronizar con el estado de búsqueda para que la tabla filtre
+              setSearch(value);
+              setPage(1);
+            }}
+            scanInputRef={scanInputRef}
           />
         </div>
 
+        {/* ── Carrito & Checkout ─────────────────────────────────────────── */}
         <div className="min-w-0">
-          {/* Carrito & Checkout (se mantiene) */}
           <CartCheckout
             nit={nit}
             setNit={setNit}
-            //
             userRol={userRol}
             isCreditoVenta={isCreditoVenta}
             apellidos={apellidos}
@@ -754,73 +700,59 @@ export default function PuntoVenta() {
         </div>
       </div>
 
-      {isCreditoVenta ? (
+      {/* ── Crédito ────────────────────────────────────────────────────────── */}
+      {isCreditoVenta && (
         <CreditoForm
           userRol={userRol}
           openCreateRequest={openCreateRequest}
           setOpenCreateRequest={setOpenCreateRequest}
           value={creditoForm}
           onChange={setCreditoForm}
-          handleCreateCreditRequest={handleCreateCreditRequest} //reemplazo temporal
+          handleCreateCreditRequest={handleCreateCreditRequest}
           isPendingCreditRequest={isPendingCreditRequest}
-          // opcional: onSubmit={(payload) => createCreditRequest(payload)}
         />
-      ) : null}
+      )}
 
-      {/* PETICIÓN DE PRECIO ESPECIAL */}
+      {/* ── Petición de precio especial ─────────────────────────────────────── */}
       <div className="mt-10">
-        <Card className="shadow-md rounded-lg border overflow-hidden">
-          <CardHeader className=" p-6">
-            <CardTitle className="text-xl font-semibold">
+        <Card className="shadow-sm rounded-lg border overflow-hidden">
+          <CardHeader className="p-5">
+            <CardTitle className="text-base font-semibold">
               Petición de precio especial
             </CardTitle>
-            <CardDescription className="text-sm text-gray-600  dark:text-white">
+            <CardDescription className="text-xs text-muted-foreground">
               Al solicitar un precio especial, esa instancia sólo se podrá usar
               en una venta.
             </CardDescription>
           </CardHeader>
-
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Producto */}
-              <div className="flex flex-col">
-                <Label className="text-sm font-medium mb-1">Producto</Label>
+          <CardContent className="p-5 pt-0 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs font-medium">Producto</Label>
                 <SelectM
                   placeholder="Seleccionar producto"
                   options={productos.map((p) => ({
                     value: String(p.id),
                     label: `${p.nombre} (${p.codigoProducto})`,
                   }))}
-                  className="basic-select text-sm h-10 text-black"
+                  className="basic-select text-sm text-black"
                   classNamePrefix="select"
                   onChange={(opt) => setSelectedProductId(opt?.value ?? "")}
                   value={
                     selectedProductId
                       ? {
                           value: selectedProductId,
-                          label: `${
-                            productos.find(
-                              (p) => String(p.id) === selectedProductId,
-                            )?.nombre
-                          } (${
-                            productos.find(
-                              (p) => String(p.id) === selectedProductId,
-                            )?.codigoProducto
-                          })`,
+                          label: `${productos.find((p) => String(p.id) === selectedProductId)?.nombre} (${productos.find((p) => String(p.id) === selectedProductId)?.codigoProducto})`,
                         }
                       : null
                   }
                 />
               </div>
-
-              {/* Precio Requerido */}
-              <div className="flex flex-col">
-                <Label className="text-sm font-medium mb-1">
-                  Precio Requerido
-                </Label>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs font-medium">Precio Requerido</Label>
                 <Input
                   type="number"
-                  className="h-10 text-sm"
+                  className="h-9 text-sm"
                   placeholder="100.00"
                   value={precioReques ?? ""}
                   onChange={(e) =>
@@ -831,7 +763,6 @@ export default function PuntoVenta() {
                 />
               </div>
             </div>
-
             <Button
               onClick={() => setOpenRequest(true)}
               variant="default"
@@ -844,10 +775,10 @@ export default function PuntoVenta() {
             <Dialog open={openReques} onOpenChange={setOpenRequest}>
               <DialogContent className="w-full max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-lg font-semibold text-center">
+                  <DialogTitle className="text-base font-semibold text-center">
                     Solicitar precio especial
                   </DialogTitle>
-                  <DialogDescription className="text-sm text-center text-gray-600">
+                  <DialogDescription className="text-xs text-center text-muted-foreground">
                     Esta instancia sólo se podrá aplicar a una venta.
                     ¿Continuar?
                   </DialogDescription>
@@ -860,7 +791,7 @@ export default function PuntoVenta() {
                       !selectedProductId ||
                       isCreatingPriceRequest
                     }
-                    className="px-4 py-2 text-sm"
+                    size="sm"
                   >
                     Confirmar
                   </Button>
@@ -871,54 +802,59 @@ export default function PuntoVenta() {
         </Card>
       </div>
 
-      {/* DIALOG DE IMÁGENES */}
+      {/* ── Imágenes ──────────────────────────────────────────────────────── */}
       <DialogImages
         images={imagesProduct}
         openImage={openImage}
         setOpenImage={setOpenImage}
       />
 
-      {/* DIALOG DE VENTA EXITOSA */}
-      <Dialog open={openSection} onOpenChange={setOpenSection}>
+      {/* ── Venta exitosa ─────────────────────────────────────────────────── */}
+      <Dialog
+        open={openSection}
+        onOpenChange={(open) => {
+          setOpenSection(open);
+          // Al cerrar el dialog de venta exitosa, re-focalizar el escáner si está activo
+          if (!open && isScannerMode) {
+            setTimeout(() => scanInputRef.current?.focus(), 80);
+          }
+        }}
+      >
         <DialogContent className="max-w-md mx-auto p-0 overflow-hidden">
           <div className="relative p-6 pb-4">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-green-600" />
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-7 h-7 text-green-600" />
               </div>
             </div>
-            <h2 className="text-xl font-semibold text-center text-gray-900 mb-2 dark:text-white">
+            <h2 className="text-base font-semibold text-center mb-1">
               Venta Registrada
             </h2>
-            <p className="dark:text-white text-center text-gray-600 text-sm">
+            <p className="text-center text-muted-foreground text-xs">
               La venta se ha procesado exitosamente
             </p>
           </div>
 
           {ventaResponse && (
-            <div className="dark:bg-zinc-950 px-6 py-4 bg-gray-50 border-y">
+            <div className="px-6 py-4 bg-muted/30 border-y">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600  dark:text-white ">
+                  <span className="text-xs text-muted-foreground">
                     Número de Venta:
                   </span>
-                  <span className="font-semibold text-gray-900  dark:text-white ">
+                  <span className="text-sm font-semibold">
                     #{ventaResponse.id}
                   </span>
                 </div>
-                <div className="flex justify-between items-center ">
-                  <span className="text-sm text-gray-600  dark:text-white ">
-                    Fecha y Hora:
-                  </span>
-                  <span className="font-semibold text-gray-900 text-sm  dark:text-white ">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Fecha:</span>
+                  <span className="text-xs font-semibold">
                     {formattFecha(ventaResponse.fechaVenta)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                  <span className="text-base font-medium text-gray-900 dark:text-white ">
-                    Total:
-                  </span>
-                  <span className="text-lg font-bold text-green-600">
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-sm font-medium">Total:</span>
+                  <span className="text-base font-bold text-green-600">
                     {formattMonedaGT(ventaResponse.totalVenta)}
                   </span>
                 </div>
@@ -928,21 +864,13 @@ export default function PuntoVenta() {
 
           <div className="p-6 pt-4">
             <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1 h-11 border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent dark:text-white dark:hover:bg-transparent "
-                onClick={handleClose}
-              >
-                Mantenerse
-              </Button>
-
               <Link
                 to={`/venta/generar-factura/${ventaResponse?.id}`}
                 className="flex-1"
               >
                 <Button
-                  className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-medium"
-                  onClick={handleClose}
+                  className="w-full h-9 text-sm bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => setOpenSection(false)}
                 >
                   <Receipt className="w-4 h-4 mr-2" />
                   Imprimir Comprobante
@@ -953,69 +881,61 @@ export default function PuntoVenta() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG CONFIRMAR VENTA */}
+      {/* ── Confirmar venta ────────────────────────────────────────────────── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <div className="bg-purple-50 dark:bg-zinc-900 p-4">
+          <div className="bg-muted/30 p-4">
             <DialogHeader className="text-center space-y-2">
               <div className="flex justify-center">
-                <div className="bg-gradient-to-br from-purple-500 to-blue-500 p-2 rounded-full animate-pulse">
-                  <CheckCircle className="h-6 w-6 text-white" />
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <CheckCircle className="h-5 w-5 text-primary" />
                 </div>
               </div>
-              <DialogTitle className="text-base font-bold text-gray-800 dark:text-gray-100 text-center">
+              <DialogTitle className="text-sm font-bold text-center">
                 Confirmar Venta
               </DialogTitle>
             </DialogHeader>
           </div>
 
-          <div className="p-4 space-y-4 bg-purple-50 dark:bg-zinc-900">
-            <div className="bg-purple-50 dark:bg-zinc-950 rounded-lg p-3 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+          <div className="p-4 space-y-4">
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <Package className="h-3 w-3" />
                 Resumen de productos
               </div>
-
               <div className="space-y-1 max-h-20 overflow-y-auto">
                 {cart.map((item) => (
                   <div
                     key={item.uid}
                     className="flex justify-between items-center text-xs"
                   >
-                    <span className="text-gray-600 dark:text-gray-400 truncate">
+                    <span className="text-muted-foreground truncate">
                       {item.nombre} × {item.quantity}
                     </span>
-                    <span className="font-medium text-gray-600 dark:text-gray-400">
+                    <span className="font-medium text-muted-foreground">
                       {formatearMoneda(item.selectedPrice * item.quantity)}
                     </span>
                   </div>
                 ))}
               </div>
-
-              <Separator className="dark:bg-gray-700" />
-
+              <Separator />
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-1">
-                  <Coins className="h-3 w-3 text-green-600 dark:text-green-400" />
-                  <span className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-                    Total
-                  </span>
+                  <Coins className="h-3 w-3 text-green-600" />
+                  <span className="font-semibold text-sm">Total</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                  <div className="text-base font-bold text-green-600">
                     {formatearMoneda(totalCarrito)}
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className="text-xs bg-gray-200 dark:bg-gray-700"
-                  >
+                  <Badge variant="secondary" className="text-xs">
                     {cart.length} {cart.length === 1 ? "artículo" : "artículos"}
                   </Badge>
                 </div>
               </div>
             </div>
 
-            <div className=" justify-center items-center flex">
+            <div className="flex justify-center">
               <ComprobanteSelector
                 tipo={tipoComprobante}
                 setTipo={setTipoComprobante}
@@ -1023,19 +943,19 @@ export default function PuntoVenta() {
             </div>
 
             {referenciaPago && (
-              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
-                <div className="text-xs font-medium text-blue-700 dark:text-blue-300">
+              <div className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+                <div className="text-xs font-medium text-blue-700">
                   Referencia de Pago
                 </div>
-                <div className="text-sm font-mono text-blue-800 dark:text-blue-200">
+                <div className="text-xs font-mono text-blue-800">
                   {referenciaPago}
                 </div>
               </div>
             )}
 
             {isReferenceInvalid && (
-              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
-                <div className="text-xs font-medium text-blue-700 dark:text-blue-300">
+              <div className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+                <div className="text-xs font-medium text-blue-700">
                   El número de boleta no puede estar vacío
                 </div>
               </div>
@@ -1046,7 +966,7 @@ export default function PuntoVenta() {
                 onClick={() => setIsDialogOpen(false)}
                 variant="destructive"
                 size="sm"
-                className="flex-1 h-8 text-sm"
+                className="flex-1 h-8 text-xs"
                 disabled={isDisableButton}
               >
                 Cancelar
@@ -1055,7 +975,7 @@ export default function PuntoVenta() {
                 disabled={isButtonDisabled}
                 size="sm"
                 onClick={handleCompleteSale}
-                className="flex-1 h-8 text-sm bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold"
+                className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700 text-white font-semibold"
               >
                 {isDisableButton || isCreatingSale ? (
                   <div className="flex items-center gap-1">

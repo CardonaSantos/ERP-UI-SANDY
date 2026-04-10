@@ -1,42 +1,37 @@
 import {
   Home,
   ShieldCheck,
-  // Ticket,
   Wallet,
-
-  // FileText,
   CreditCard,
   ChevronDown,
-  // FileSpreadsheet,
   Target,
   Goal,
-  // PackageSearch,
   NotebookPen,
   ListOrdered,
-  // Trash2,
   Boxes,
   Truck,
   ArrowLeftRight,
   Send,
   UserCheck,
   Factory,
-  Building2,
   Shield,
   BarChart3,
-  Calendar,
   Wrench,
   Settings,
   ChartPie,
   ReceiptText,
   ClipboardList,
-  Banknote,
-  ChartArea,
-  ChartScatter,
-  SquareChartGantt,
   HandCoins,
   Landmark,
-  PiggyBank,
-  Text,
+  Calculator,
+  Store,
+  MonitorSmartphone,
+  FileText,
+  PackagePlus,
+  CalendarClock,
+  LineChart,
+  TrendingUp,
+  FileSignature,
 } from "lucide-react";
 
 import {
@@ -52,15 +47,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import {
-  ShoppingCart,
-  Package,
-  Users,
-  AlertCircle,
-  Clock,
-  Building,
-  History,
-} from "lucide-react";
+import { ShoppingCart, Package, Users, Building, History } from "lucide-react";
 import { useStore } from "../Context/ContextSucursal";
 import { Link } from "react-router-dom";
 import {
@@ -76,78 +63,105 @@ import {
 } from "../ui/collapsible";
 import { useMemo } from "react";
 
-const menuVendedor = [
+export const menuVendedor = [
+  // ==========================================
+  // 1. VENTAS Y OPERACIONES (Mayor prioridad)
+  // ==========================================
   { icon: Home, label: "Inicio", href: "/" },
-  { icon: ShoppingCart, label: "Punto de Venta", href: "/punto-venta" },
-  { icon: Clock, label: "Historial de Ventas", href: "/historial/ventas" },
 
   {
-    icon: Package,
-    label: "Inventario y Stock",
+    icon: Store,
+    label: "Ventas",
     submenu: [
-      { icon: Boxes, label: "Inventario General", href: "/inventario-stock" },
+      {
+        icon: MonitorSmartphone,
+        label: "Punto de Venta",
+        href: "/punto-venta",
+      },
+      { icon: CreditCard, label: "Gestión de Créditos", href: "/creditos" },
+      {
+        icon: History,
+        label: "Historial de Ventas",
+        href: "/historial/ventas",
+      },
     ],
   },
-  { icon: Users, label: "Clientes", href: "/clientes-manage" },
-  { icon: CreditCard, label: "Créditos", href: "/creditos" },
 
-  // === Metas ===
+  // ==========================================
+  // 2. CONSULTAS RÁPIDAS (Atención al cliente)
+  // ==========================================
+  // Ruta aplanada: un vendedor necesita ver el stock con 1 solo clic
+  { icon: Package, label: "Inventario General", href: "/inventario-stock" },
+  { icon: Users, label: "Directorio de Clientes", href: "/clientes-manage" },
+
+  // ==========================================
+  // 3. RENDIMIENTO PERSONAL
+  // ==========================================
   { icon: Goal, label: "Mis Metas", href: "/mis-metas" },
 ];
 
 const menuItemsAdmin = [
-  // === Inicio ===
+  // ==========================================
+  // 1. OPERACIONES DIARIAS (Lo más usado)
+  // ==========================================
   { icon: Home, label: "Inicio", href: "/" },
 
-  // === Ventas ===
-
   {
-    icon: Package,
-    label: "Venta y Cotizador",
+    icon: Store,
+    label: "Ventas",
     submenu: [
-      { icon: ShoppingCart, label: "Punto de Venta", href: "/punto-venta" },
-
-      { icon: Boxes, label: "Cotizador de Productos", href: "/cotizador" },
+      {
+        icon: MonitorSmartphone,
+        label: "Punto de Venta",
+        href: "/punto-venta",
+      },
+      { icon: FileText, label: "Cotizador", href: "/cotizador" },
+      {
+        icon: History,
+        label: "Historial de Ventas",
+        href: "/historial/ventas",
+      },
     ],
   },
 
-  { icon: Clock, label: "Historial de Ventas", href: "/historial/ventas" },
-  // === Créditos ===
-  { icon: CreditCard, label: "Créditos", href: "/creditos" },
-
   {
-    icon: Text,
-    label: "Plantillas legales",
-    href: "/plantillas-legales",
+    icon: Wallet,
+    label: "Caja Operativa",
+    submenu: [
+      {
+        icon: NotebookPen,
+        label: "Apertura / Registro",
+        href: "/registro-caja",
+      },
+      {
+        icon: ListOrdered,
+        label: "Movimientos de Caja",
+        href: "/movimientos-financieros",
+      },
+    ],
   },
 
-  // === Inventario y Stock ===
+  { icon: CreditCard, label: "Gestión de Créditos", href: "/creditos" },
+
+  // ==========================================
+  // 2. CADENA DE SUMINISTRO Y PRODUCTOS
+  // ==========================================
   {
     icon: Package,
     label: "Inventario y Stock",
     submenu: [
       { icon: Boxes, label: "Inventario General", href: "/inventario-stock" },
-
-      { icon: Boxes, label: "Crear Producto", href: "/crear-producto" },
-
-      {
-        icon: Truck,
-        label: "Entregas de Stock",
-        href: "/entregas-stock",
-      },
+      { icon: PackagePlus, label: "Crear Producto", href: "/crear-producto" },
+      { icon: Truck, label: "Entregas de Stock", href: "/entregas-stock" },
+      { icon: CalendarClock, label: "Vencimientos", href: "/vencimientos" }, // Movido aquí por contexto
     ],
   },
 
-  // === Transferencias ===
   {
     icon: ArrowLeftRight,
     label: "Transferencias",
     submenu: [
-      {
-        icon: Send,
-        label: "Transferir Productos",
-        href: "/transferencia",
-      },
+      { icon: Send, label: "Transferir Productos", href: "/transferencia" },
       {
         icon: History,
         label: "Historial de Transferencias",
@@ -156,133 +170,107 @@ const menuItemsAdmin = [
     ],
   },
 
-  // === Clientes y Proveedores ===
+  {
+    icon: ShoppingCart,
+    label: "Compras",
+    submenu: [
+      { icon: Package, label: "Pedidos", href: "/pedidos" },
+      { icon: ClipboardList, label: "Requisiciones", href: "/requisiciones" },
+      { icon: ReceiptText, label: "Historial de Compras", href: "/compras" },
+    ],
+  },
+
+  // ==========================================
+  // 3. CONTACTOS Y SERVICIOS POST-VENTA
+  // ==========================================
   {
     icon: Users,
-    label: "Clientes y Proveedores",
+    label: "Directorio",
     submenu: [
       { icon: UserCheck, label: "Clientes", href: "/clientes-manage" },
       { icon: Factory, label: "Proveedores", href: "/agregar-proveedor" },
     ],
   },
 
-  // === Sucursales ===
-  {
-    icon: Building,
-    label: "Sucursales",
-    submenu: [{ icon: Building2, label: "Mis Sucursales", href: "/sucursal" }],
-  },
-
-  // === Garantías y Tickets ===
   {
     icon: ShieldCheck,
-    label: "Garantías",
+    label: "Servicios y Post-Venta",
     submenu: [
-      { icon: Shield, label: "Gestión Garantías", href: "/garantia/manage" },
-      // { icon: Ticket, label: "Gestión Tickets", href: "/ticket/manage" },
+      { icon: Shield, label: "Garantías", href: "/garantia/manage" },
+      { icon: Wrench, label: "Reparaciones", href: "/reparaciones" }, // Agrupado con garantías
     ],
   },
 
-  // === Caja ===
+  // ==========================================
+  // 4. FINANZAS Y ADMINISTRACIÓN (Nivel Gerencial)
+  // ==========================================
   {
-    icon: Wallet,
-    label: "Caja",
-    submenu: [
-      { icon: NotebookPen, label: "Registrar Caja", href: "/registro-caja" },
-      {
-        icon: ListOrdered,
-        label: "Registros de Cajas",
-        href: "/movimientos-financieros",
-      },
-    ],
-  },
-
-  // === Administración ===
-  {
-    icon: BarChart3,
-    label: "Resumen Admin",
-    submenu: [
-      { icon: ChartPie, label: "Resumen Diario", href: "/admin/caja/diario" },
-      { icon: Calendar, label: "Históricos", href: "/admin/historicos" },
-    ],
-  },
-
-  {
-    icon: ChartArea,
-    label: "Caja Administrativo",
-    submenu: [
-      {
-        icon: Banknote,
-        label: "Flujo de Caja Histórico",
-        href: "/caja-administrativo/efectivo-banco",
-      },
-
-      {
-        icon: ChartScatter,
-        label: "Costo Ventas Historicos",
-        href: "/caja-administrativo/costos-ventas-historicos",
-      },
-
-      {
-        icon: SquareChartGantt,
-        label: "Gastos Operativos Historicos",
-        href: "/caja-administrativo/gastos-operativos-historicos",
-      },
-
-      {
-        icon: HandCoins,
-        label: "Flujo Efectivo",
-        href: "/caja-administrativo/flujo-efectivo",
-      },
-    ],
-  },
-
-  {
-    icon: PiggyBank,
-    label: "Cuentas Bancarias",
+    icon: Landmark,
+    label: "Finanzas y Cuentas",
     submenu: [
       {
         icon: Landmark,
         label: "Cuentas Bancarias",
         href: "/cuentas-bancarias",
       },
-    ],
-  },
-
-  {
-    icon: PiggyBank,
-    label: "Costos Presupuestales",
-    submenu: [
       {
-        icon: ClipboardList,
+        icon: Calculator,
         label: "Costos Presupuestales",
         href: "/costos-presupuestales",
       },
+      {
+        icon: HandCoins,
+        label: "Flujo de Efectivo",
+        href: "/caja-administrativo/flujo-efectivo",
+      },
     ],
   },
-  // === Compras ===
+
   {
-    icon: ShoppingCart,
-    label: "Compras",
+    icon: BarChart3,
+    label: "Analíticas y Reportes",
     submenu: [
-      { icon: ClipboardList, label: "Requisiciones", href: "/requisiciones" },
-      { icon: ReceiptText, label: "Ver Compras", href: "/compras" },
-      { icon: Package, label: "Pedidos", href: "/pedidos" },
+      { icon: ChartPie, label: "Resumen Diario", href: "/admin/caja/diario" },
+      { icon: History, label: "Histórico General", href: "/admin/historicos" },
+      {
+        icon: LineChart,
+        label: "Histórico Flujo de Caja",
+        href: "/caja-administrativo/efectivo-banco",
+      },
+      {
+        icon: TrendingUp,
+        label: "Histórico Costo Ventas",
+        href: "/caja-administrativo/costos-ventas-historicos",
+      },
+      {
+        icon: BarChart3,
+        label: "Histórico Gastos",
+        href: "/caja-administrativo/gastos-operativos-historicos",
+      },
     ],
   },
 
-  // === Operaciones ===
-  { icon: AlertCircle, label: "Vencimientos", href: "/vencimientos" },
-  { icon: Wrench, label: "Reparaciones", href: "/reparaciones" },
+  // ==========================================
+  // 5. GESTIÓN INTERNA Y CONFIGURACIÓN
+  // ==========================================
+  {
+    icon: Target,
+    label: "Rendimiento y Metas",
+    submenu: [
+      { icon: Target, label: "Metas Generales", href: "/metas" },
+      { icon: Goal, label: "Mis Metas", href: "/mis-metas" },
+    ],
+  },
 
-  // === Metas ===
-  { icon: Target, label: "Metas", href: "/metas" },
-  { icon: Goal, label: "Mis Metas", href: "/mis-metas" },
+  // Rutas directas para administración
+  { icon: Building, label: "Sucursales", href: "/sucursal" },
+  {
+    icon: FileSignature,
+    label: "Plantillas Legales",
+    href: "/plantillas-legales",
+  },
 
-  // === Reportes ===
-  // { icon: FileSpreadsheet, label: "Reportes", href: "/reportes" },
-
-  // === Configuración ===
+  // Siempre al final
   { icon: Settings, label: "Configuración", href: "/config/user" },
 ];
 

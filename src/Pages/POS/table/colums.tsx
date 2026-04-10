@@ -1,3 +1,5 @@
+"use client";
+
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ProductoData } from "../interfaces/newProductsPOSResponse";
@@ -6,34 +8,33 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-/** Meta que inyecta TablePOS a la tabla (para acciones) */
+/** Meta que inyecta TablePOS a la tabla */
 declare module "@tanstack/table-core" {
   interface TableMeta<TData extends unknown> {
     onAddToCart?: (p: ProductoData) => void;
     onPreviewImages?: (images: string[]) => void;
-    getRemainingFor?: (p: ProductoData) => number; // 👈 NUEVO
+    getRemainingFor?: (p: ProductoData) => number;
   }
 }
 
 const columnHelper = createColumnHelper<ProductoData>();
 
-const formatQ = (v: string | number) => `Q${Number(v || 0)}`;
+const fmtQ = (v: string | number) => `Q${Number(v || 0).toFixed(2)}`;
 
 export const columnsTablePos: ColumnDef<ProductoData, any>[] = [
-  /** Producto (sortable) */
+  // ── Producto ──────────────────────────────────────────────────────────────
   columnHelper.accessor((row) => row.nombre, {
     id: "nombre",
     header: "Producto",
     sortingFn: "alphanumeric",
-    meta: { thClass: "w-[50%]" },
 
     cell: (info) => {
       const p = info.row.original;
 
-      // urls desde p.images[] y, si vino, p.image (algunos responses lo traen)
       const urls = [
         ...(Array.isArray(p.images)
           ? (p.images.map((im) => im?.url).filter(Boolean) as string[])
@@ -43,120 +44,107 @@ export const columnsTablePos: ColumnDef<ProductoData, any>[] = [
       const first = urls[0];
 
       const openPreview = () => {
-        if (urls.length > 0) {
-          info.table.options.meta?.onPreviewImages?.(urls);
-        }
+        if (urls.length > 0) info.table.options.meta?.onPreviewImages?.(urls);
       };
 
       return (
-        <div className="min-w-0 flex items-start gap-3">
-          {/* Thumb */}
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Thumbnail 32 × 32 */}
           <button
             type="button"
             onClick={openPreview}
             title={urls.length ? "Ver imágenes" : "Sin imagen"}
-            className={`relative shrink-0 w-12 h-12 rounded-md overflow-hidden border 
-                        bg-muted/40 ${
-                          urls.length
-                            ? "cursor-pointer group"
-                            : "cursor-default"
-                        }`}
+            className={cn(
+              "relative shrink-0 w-8 h-8 rounded overflow-hidden border bg-muted/40",
+              urls.length ? "cursor-pointer group" : "cursor-default",
+            )}
           >
             {first ? (
               <>
                 <img
                   src={first}
                   alt={p.nombre}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
                   loading="lazy"
                 />
-                {/* overlay + eye */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
-                <Eye className="absolute inset-0 m-auto h-4 w-4 text-white/90 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-200" />
               </>
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
-                Sin imagen
+              <div className="flex h-full w-full items-center justify-center">
+                <Package className="h-3.5 w-3.5 text-muted-foreground/50" />
               </div>
             )}
           </button>
 
-          {/* Texto */}
+          {/* Nombre + código */}
           <div className="min-w-0 flex-1">
-            <div className="font-medium truncate">{p.nombre}</div>
-            <div className="text-xs text-muted-foreground truncate">
+            <div className="text-xs font-medium leading-tight truncate">
+              {p.nombre}
+            </div>
+            <div className="text-[10px] text-muted-foreground font-mono leading-tight truncate">
               {p.codigoProducto}
             </div>
-            {/* opcional: deja la desc compacta */}
-            {p.descripcion && (
-              <div className="mt-0.5 text-[11px] text-muted-foreground/90 line-clamp-1">
-                {p.descripcion}
-              </div>
-            )}
           </div>
         </div>
       );
     },
   }),
 
-  /** Precios (chips compactos) */
+  // ── Precios ───────────────────────────────────────────────────────────────
   columnHelper.display({
     id: "precios",
     header: "Precios",
-    meta: { thClass: "w-[22%]" },
 
     cell: (info) => {
       const precios = info.row.original.precios ?? [];
-      if (!precios.length) {
-        return <span className="text-xs text-muted-foreground">—</span>;
-      }
+      if (!precios.length)
+        return <span className="text-[10px] text-muted-foreground">—</span>;
 
-      const MAX_INLINE = 3;
+      const MAX_INLINE = 4;
       const inline = precios.slice(0, MAX_INLINE);
       const rest = precios.slice(MAX_INLINE);
 
       return (
-        <div className="flex items-center gap-2">
-          {/* Inline: sin tags/chips, estilo texto simple en columnas */}
-          <div className="flex flex-col text-xs leading-5">
+        <div className="flex items-start gap-1.5">
+          <div className="flex flex-col gap-px">
             {inline.map((p) => (
-              <span key={p.id}>
-                {p.rol}: {formatQ(p.precio)}
+              <span
+                key={p.id}
+                className="text-[10px] leading-tight whitespace-nowrap"
+              >
+                <span className="text-muted-foreground">{p.rol}:</span>{" "}
+                <span className="font-medium tabular-nums">
+                  {fmtQ(p.precio)}
+                </span>
               </span>
             ))}
           </div>
 
-          {/* Popover con detalle completo si hay más de 3 */}
           {rest.length > 0 && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 px-2">
-                  +{rest.length} más
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                  +{rest.length}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="start" className="w-80">
-                <div className="text-sm">
-                  <div className="font-medium mb-2">Todos los precios</div>
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-left text-muted-foreground">
-                        <th className="py-1 pr-2">Rol</th>
-                        <th className="py-1 pr-2">Tipo</th>
-                        <th className="py-1 text-right">Precio</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {precios.map((p) => (
-                        <tr key={p.id} className="border-t">
-                          <td className="py-1 pr-2">{p.rol}</td>
-                          <td className="py-1 pr-2">{p.tipo ?? "—"}</td>
-                          <td className="py-1 text-right">
-                            {formatQ(p.precio)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <PopoverContent align="start" className="w-64 p-3">
+                <p className="text-xs font-semibold mb-2">Todos los precios</p>
+                <div className="divide-y">
+                  {precios.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between py-1 text-xs"
+                    >
+                      <span className="text-muted-foreground">{p.rol}</span>
+                      <span className="font-medium tabular-nums">
+                        {fmtQ(p.precio)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </PopoverContent>
             </Popover>
@@ -166,75 +154,91 @@ export const columnsTablePos: ColumnDef<ProductoData, any>[] = [
     },
   }),
 
-  /** Detalle con popover (stocks por sucursal) */
+  // ── Detalle / stock por sucursal ──────────────────────────────────────────
   columnHelper.display({
     id: "detalle",
-    header: "Det.",
-    meta: { thClass: "w-[72px]" }, // icono + padding
+    header: "",
 
     cell: (info) => {
       const p = info.row.original;
       return (
         <Popover>
-          <PopoverTrigger className="inline-flex items-center justify-center rounded-md p-2 hover:bg-muted">
-            <Eye className="h-4 w-4" />
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="Ver detalle"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 text-sm">
-            <div className="space-y-2">
-              <div>
-                <div className="font-medium">Descripción</div>
-                <p className="text-muted-foreground whitespace-pre-wrap">
-                  {p.descripcion || "Sin descripción"}
+          <PopoverContent className="w-72 p-3 text-xs">
+            <p className="font-semibold mb-2">Stock por sucursal</p>
+            {Array.isArray(p.stocksBySucursal) &&
+            p.stocksBySucursal.length > 0 ? (
+              <div className="divide-y">
+                {p.stocksBySucursal.map((s) => (
+                  <div
+                    key={`${s.sucursalId}-${s.nombre}`}
+                    className="flex items-center justify-between py-1"
+                  >
+                    <span className="text-muted-foreground truncate">
+                      {s.nombre}
+                    </span>
+                    <span className="font-medium tabular-nums ml-2">
+                      {s.cantidad}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Sin datos de stock</p>
+            )}
+            {p.descripcion && (
+              <>
+                <p className="font-semibold mt-3 mb-1">Descripción</p>
+                <p className="text-muted-foreground whitespace-pre-wrap line-clamp-4">
+                  {p.descripcion}
                 </p>
-              </div>
-
-              <div>
-                <div className="font-medium">Stocks por sucursal</div>
-                <div className="mt-1 space-y-1">
-                  {Array.isArray(p.stocksBySucursal) &&
-                  p.stocksBySucursal.length > 0 ? (
-                    p.stocksBySucursal.map((s) => (
-                      <div
-                        key={`${s.sucursalId}-${s.nombre}`}
-                        className="text-muted-foreground"
-                      >
-                        {s.nombre}:{" "}
-                        <span className="font-medium">{s.cantidad}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-muted-foreground">No hay datos</div>
-                  )}
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </PopoverContent>
         </Popover>
       );
     },
   }),
 
-  /** Stock total (sortable) */
+  // ── Stock total ────────────────────────────────────────────────────────────
   columnHelper.accessor(
     (row) => (row.stocks ?? []).reduce((acc, s) => acc + s.cantidad, 0),
     {
       id: "stockTotal",
       header: "Stock",
       sortingFn: "basic",
-      meta: { thClass: "w-[80px]" },
 
       cell: (info) => {
         const total = info.getValue<number>() ?? 0;
-        return <span className="text-sm">{total}</span>;
+        const low = total <= 5;
+        return (
+          <span
+            className={cn(
+              "inline-block text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-sm",
+              low
+                ? "bg-destructive/10 text-destructive"
+                : "bg-muted text-foreground",
+            )}
+          >
+            {total}
+          </span>
+        );
       },
-    }
+    },
   ),
 
-  /** Acciones */
+  // ── Añadir al carrito ──────────────────────────────────────────────────────
   columnHelper.display({
     id: "accion",
-    header: "Añadir",
-    meta: { thClass: "w-[96px]" }, // botón no se comprime
+    header: "",
 
     cell: (info) => {
       const p = info.row.original;
@@ -245,17 +249,17 @@ export const columnsTablePos: ColumnDef<ProductoData, any>[] = [
       const disabled = remaining <= 0;
 
       return (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            disabled={disabled}
-            onClick={() => info.table.options.meta?.onAddToCart?.(p)}
-            className="h-8 w-9 p-0 bg-violet-600 hover:bg-violet-700"
-            title={disabled ? "Sin stock" : `Agregar (disp. ${remaining})`}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          disabled={disabled}
+          onClick={() => info.table.options.meta?.onAddToCart?.(p)}
+          className="h-7 w-7 p-0 shrink-0"
+          title={
+            disabled ? "Sin stock" : `Agregar al carrito (disp. ${remaining})`
+          }
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
       );
     },
   }),

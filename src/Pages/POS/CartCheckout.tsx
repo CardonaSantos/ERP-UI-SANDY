@@ -1,16 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
+import { useMemo } from "react";
 import {
   ShoppingCart,
   ShoppingBag,
@@ -18,56 +8,37 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
+import SelectM from "react-select";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import SelectM from "react-select";
+
 import { TipoComprobante } from "./interfaces";
 import { MetodoPagoMainPOS } from "./interfaces/methodPayment";
-import { useMemo } from "react";
+import type {
+  CartItem,
+  Customer,
+  CustomerOption,
+  RolPrecio,
+} from "@/Types/POS/interfaces";
 
-enum RolPrecio {
-  PUBLICO = "PUBLICO",
-  MAYORISTA = "MAYORISTA",
-  ESPECIAL = "ESPECIAL",
-  DISTRIBUIDOR = "DISTRIBUIDOR",
-  PROMOCION = "PROMOCION",
-  CLIENTE_ESPECIAL = "CLIENTE_ESPECIAL",
-}
-
-interface Precios {
-  id: number;
-  precio: number;
-  rol: RolPrecio;
-}
-
-interface CartItem {
-  uid: string; // 👈 NUEVO
-  id: number;
-  nombre: string;
-  quantity: number;
-  selectedPriceId: number;
-  selectedPrice: number;
-  selectedPriceRole: RolPrecio;
-  precios: Precios[];
-  stock: { cantidad: number }[];
-}
-
-interface Customer {
-  id: number;
-  nombre: string;
-  telefono?: string;
-  dpi?: string;
-}
-
-interface CustomerOption {
-  value: number;
-  label: string;
-}
+export type { CartItem, Customer, CustomerOption };
 
 interface CartCheckoutProps {
   isCreditoVenta: boolean;
@@ -91,23 +62,18 @@ interface CartCheckoutProps {
   observaciones: string;
   setObservaciones: (observaciones: string) => void;
   customerOptions: CustomerOption[];
-
   onCompleteSale: () => void;
   formatCurrency: (amount: number) => string;
-  //PARA METODO DE PAGO Y OTROS
   tipoComprobante: TipoComprobante | null;
   setTipoComprobante: React.Dispatch<
     React.SetStateAction<TipoComprobante | null>
   >;
-
   setReferenciaPago: React.Dispatch<React.SetStateAction<string>>;
   referenciaPago: string;
-
   setApellidos: React.Dispatch<React.SetStateAction<string>>;
   apellidos: string;
-  //NUEVOS
-  onUpdateQuantity: (uid: string, newQuantity: number) => void; // 👈
-  onUpdatePrice: (uid: string, newPrice: number, newRole: RolPrecio) => void; // 👈
+  onUpdateQuantity: (uid: string, newQuantity: number) => void;
+  onUpdatePrice: (uid: string, newPrice: number, newRole: RolPrecio) => void;
   onRemoveFromCart: (uid: string) => void;
   userRol: string;
   setNit: React.Dispatch<React.SetStateAction<string>>;
@@ -149,45 +115,33 @@ export default function CartCheckout({
   nit,
   setNit,
 }: CartCheckoutProps) {
-  const calculateTotal = (): number => {
-    return cart.reduce(
-      (total, item) => total + item.selectedPrice * item.quantity,
-      0
-    );
-  };
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  const calculateTotal = () =>
+    cart.reduce((total, item) => total + item.selectedPrice * item.quantity, 0);
 
   const handleChange = (selectedOption: CustomerOption | null) => {
-    const selectedCustomer = selectedOption
-      ? customerOptions.find((opt) => opt.value === selectedOption.value)
-      : null;
-
-    if (selectedCustomer) {
-      setSelectedCustomerID({
-        id: selectedCustomer.value,
-        nombre: selectedCustomer.label.split(" (")[0], // Extract name from label
-      });
-    } else {
-      setSelectedCustomerID(null);
+    if (selectedOption) {
+      const opt = customerOptions.find((o) => o.value === selectedOption.value);
+      if (opt) {
+        setSelectedCustomerID({
+          id: opt.value,
+          nombre: opt.label.split(" (")[0],
+        });
+        return;
+      }
     }
+    setSelectedCustomerID(null);
   };
 
-  // Función para verificar si hay información de nuevo cliente
-  const hasNewCustomerData = () => {
-    return (
-      nombre.trim() !== "" ||
-      telefono.trim() !== "" ||
-      dpi.trim() !== "" ||
-      direccion.trim() !== "" ||
-      observaciones.trim() !== ""
-    );
-  };
+  const hasNewCustomerData = () =>
+    nombre.trim() !== "" ||
+    telefono.trim() !== "" ||
+    dpi.trim() !== "" ||
+    direccion.trim() !== "" ||
+    observaciones.trim() !== "";
 
-  // Función para verificar si hay cliente seleccionado
-  const hasSelectedCustomer = () => {
-    return selectedCustomerID !== null;
-  };
+  const hasSelectedCustomer = () => selectedCustomerID !== null;
 
-  // Función para limpiar datos del nuevo cliente
   const clearNewCustomerData = () => {
     setNombre("");
     setTelefono("");
@@ -196,48 +150,40 @@ export default function CartCheckout({
     setObservaciones("");
   };
 
-  // Función para limpiar cliente seleccionado
-  const clearSelectedCustomer = () => {
-    setSelectedCustomerID(null);
-  };
-
   const handleTabChange = (value: string) => {
-    if (value === "existing" && hasNewCustomerData()) {
-      // Si cambia a "existing" y hay datos de nuevo cliente, limpiar los datos
-      clearNewCustomerData();
-    } else if (value === "new" && hasSelectedCustomer()) {
-      // Si cambia a "new" y hay cliente seleccionado, limpiar la selección
-      clearSelectedCustomer();
-    }
+    if (value === "existing" && hasNewCustomerData()) clearNewCustomerData();
+    else if (value === "new" && hasSelectedCustomer())
+      setSelectedCustomerID(null);
     setActiveTab(value);
   };
 
-  const truncateButton: boolean = cart.length <= 0 || isCreditoVenta;
+  // ── Cart processing ──────────────────────────────────────────────────────
   const processedCart = useMemo(() => {
     return cart.map((item) => {
       const preciosVisibles =
         userRol === "VENDEDOR"
           ? item.precios.filter(
               (p) =>
-                p.rol !== RolPrecio.DISTRIBUIDOR &&
-                p.rol !== RolPrecio.PROMOCION &&
-                p.precio > 0
+                p.rol !== ("DISTRIBUIDOR" as RolPrecio) &&
+                p.rol !== ("PROMOCION" as RolPrecio) &&
+                p.precio > 0,
             )
           : item.precios.filter((p) => p.precio > 0);
-
       return { ...item, preciosVisibles };
     });
   }, [cart, userRol]);
-  console.log("El rol legando es: ", userRol);
 
+  const truncateButton = cart.length <= 0 || isCreditoVenta;
+
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-3 min-w-[360px] max-w-[440px]">
-      {/* Carrito */}
+      {/* ── Carrito ─────────────────────────────────────────────────────── */}
       <Card className="border-0 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 bg-background">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            <span className="font-medium">Carrito</span>
+            <ShoppingCart className="h-4 w-4" />
+            <span className="text-sm font-medium">Carrito</span>
             {cart.length > 0 && (
               <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">
                 {cart.reduce((acc, item) => acc + item.quantity, 0)} items
@@ -249,11 +195,11 @@ export default function CartCheckout({
               <Button
                 size="sm"
                 variant="outline"
-                className={
+                className={`text-xs h-7 ${
                   imei.length >= 15
                     ? "bg-green-600 hover:bg-green-700 text-white"
                     : ""
-                }
+                }`}
               >
                 {imei.length >= 15 ? "IMEI AÑADIDO" : "AÑADIR IMEI"}
               </Button>
@@ -272,150 +218,140 @@ export default function CartCheckout({
                     value={imei}
                     onChange={(e) => setImei(e.target.value)}
                     placeholder="Ej. 123456789012345"
-                    className="col-span-3 h-8"
+                    className="col-span-3 h-7 text-xs"
                   />
                 </div>
               </div>
             </PopoverContent>
           </Popover>
         </div>
-        <div className="border-t">
-          {/* Encabezados de tabla */}
 
-          <div
-            className="
-    grid px-4 py-2 text-sm text-muted-foreground border-b
-    grid-cols-[minmax(0,1fr)_72px_100px_96px]  /* nombre | cant | precio | total */
-  "
-          >
-            <div className="col-span-1">Producto</div>
+        <div className="border-t">
+          {/* Encabezados */}
+          <div className="grid px-4 py-1.5 text-xs text-muted-foreground border-b grid-cols-[minmax(0,1fr)_72px_100px_96px]">
+            <div>Producto</div>
             <div className="text-center">Cant.</div>
             <div className="text-center">Precio</div>
             <div className="text-center">Total</div>
           </div>
-          {/* Productos en el carrito */}
+
+          {/* Items */}
           <div className="overflow-y-auto max-h-[calc(100vh-430px)]">
             {processedCart.length > 0 ? (
               <div className="divide-y">
-                {processedCart.map((item) => {
-                  return (
-                    <div
-                      key={item.uid}
-                      className="
-            grid items-center gap-x-2 px-4 py-2
-            grid-cols-[minmax(0,1fr)_72px_100px_96px]
-          "
-                    >
-                      <div className="text-sm pr-2 min-w-0">
-                        <div className="truncate">{item.nombre}</div>
-                      </div>
-
-                      <div className="flex justify-center">
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const val = Number.parseInt(e.target.value);
-                            if (!isNaN(val) && val > 0) {
-                              onUpdateQuantity(item.uid, val); // 👈 antes: item.id
-                            }
-                          }}
-                          min="1"
-                          max={item.stock.reduce((t, s) => t + s.cantidad, 0)}
-                          className="h-7 w-[72px] text-center"
-                        />
-                      </div>
-
-                      <div className="flex justify-center">
-                        <Select
-                          value={item.selectedPriceId.toString()}
-                          onValueChange={(newPriceId) => {
-                            const p = item.precios.find(
-                              (x) => x.id === Number(newPriceId)
-                            );
-                            if (p) onUpdatePrice(item.uid, p.precio, p.rol);
-                          }}
-                        >
-                          <SelectTrigger className="h-7 w-[100px] justify-between">
-                            <SelectValue
-                              placeholder={formatCurrency(item.selectedPrice)}
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {item.preciosVisibles
-                              .filter((prec) => prec.precio > 0)
-                              .map((precio) => (
-                                <SelectItem
-                                  key={precio.id}
-                                  value={precio.id.toString()}
-                                >
-                                  <div className="flex w-full items-center justify-between">
-                                    <span className="tabular-nums">
-                                      {formatCurrency(precio.precio)}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground ml-2">
-                                      {precio.rol.toLowerCase()}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium tabular-nums">
-                          {formatCurrency(item.selectedPrice * item.quantity)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-100/20 shrink-0"
-                          onClick={() => onRemoveFromCart(item.uid)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                {processedCart.map((item) => (
+                  <div
+                    key={item.uid}
+                    className="grid items-center gap-x-2 px-4 py-2 grid-cols-[minmax(0,1fr)_72px_100px_96px]"
+                  >
+                    <div className="text-xs pr-2 min-w-0">
+                      <div className="truncate">{item.nombre}</div>
                     </div>
-                  );
-                })}
+
+                    <div className="flex justify-center">
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = Number.parseInt(e.target.value);
+                          if (!isNaN(val) && val > 0)
+                            onUpdateQuantity(item.uid, val);
+                        }}
+                        min="1"
+                        max={item.stock.reduce((t, s) => t + s.cantidad, 0)}
+                        className="h-7 w-[72px] text-center text-xs"
+                      />
+                    </div>
+
+                    <div className="flex justify-center">
+                      <Select
+                        value={item.selectedPriceId.toString()}
+                        onValueChange={(newPriceId) => {
+                          const p = item.precios.find(
+                            (x) => x.id === Number(newPriceId),
+                          );
+                          if (p) onUpdatePrice(item.uid, p.precio, p.rol);
+                        }}
+                      >
+                        <SelectTrigger className="h-7 w-[100px] justify-between text-xs">
+                          <SelectValue
+                            placeholder={formatCurrency(item.selectedPrice)}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {item.preciosVisibles
+                            .filter((prec) => prec.precio > 0)
+                            .map((precio) => (
+                              <SelectItem
+                                key={precio.id}
+                                value={precio.id.toString()}
+                                className="text-xs"
+                              >
+                                <div className="flex w-full items-center justify-between">
+                                  <span className="tabular-nums">
+                                    {formatCurrency(precio.precio)}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground ml-2">
+                                    {precio.rol.toLowerCase()}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium tabular-nums">
+                        {formatCurrency(item.selectedPrice * item.quantity)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => onRemoveFromCart(item.uid)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-muted-foreground flex flex-col items-center justify-center space-y-2">
-                <span>No hay productos en el carrito</span>
-                <ShoppingBag className="h-6 w-6" />
+              <div className="py-8 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
+                <ShoppingBag className="h-5 w-5" />
+                <span className="text-xs">No hay productos en el carrito</span>
               </div>
             )}
           </div>
-          {/* Total y botón completar */}
+
+          {/* Total + botón */}
           <div className="px-4 py-2 border-t">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">
                 Total: {formatCurrency(calculateTotal())}
               </span>
               <span className="text-xs text-muted-foreground">
-                Productos:{" "}
-                {cart.reduce((acc, total) => acc + total.quantity, 0)}
+                {cart.reduce((acc, total) => acc + total.quantity, 0)} items
               </span>
             </div>
             <Button
-              className="w-full h-10 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              className="w-full h-9 text-sm font-semibold"
               disabled={truncateButton}
               onClick={onCompleteSale}
             >
-              <ShoppingCart className="h-5 w-5 mr-2" />
+              <ShoppingCart className="h-4 w-4 mr-2" />
               Completar venta
             </Button>
           </div>
         </div>
       </Card>
 
-      {/* Método de Pago & Cliente */}
-      <Card className="border-0 ">
+      {/* ── Método de pago & cliente ─────────────────────────────────────── */}
+      <Card className="border-0">
         <div className="p-4">
-          {/* Usando flexbox para dividir en dos columnas */}
           <div className="flex flex-row gap-4">
-            {/* Columna izquierda: Método de Pago */}
+            {/* Método de Pago */}
             <div className="flex-1">
               <Label className="text-xs font-medium block mb-1.5">
                 Método de Pago
@@ -425,7 +361,7 @@ export default function CartCheckout({
                 value={paymentMethod}
                 onValueChange={(e: MetodoPagoMainPOS) => setPaymentMethod(e)}
               >
-                <SelectTrigger className="w-full h-8 min-h-0 py-1 px-2 text-xs">
+                <SelectTrigger className="w-full h-8 py-1 px-2 text-xs">
                   <SelectValue placeholder="Método de Pago" />
                 </SelectTrigger>
                 <SelectContent className="text-xs">
@@ -457,58 +393,58 @@ export default function CartCheckout({
               </Select>
             </div>
 
-            {/* Columna derecha: Selección de Cliente */}
+            {/* Selección de Cliente */}
             <div className="flex-1">
               <Tabs
                 value={activeTab}
                 onValueChange={handleTabChange}
                 className="w-full"
               >
-                <TabsList className="grid grid-cols-2 w-full">
+                <TabsList className="grid grid-cols-2 w-full h-8">
                   <TabsTrigger
                     value="existing"
-                    disabled={hasNewCustomerData()} // Deshabilitar si hay datos de nuevo cliente
+                    disabled={hasNewCustomerData()}
                     className="flex items-center justify-center gap-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <User className="h-3.5 w-3.5" />
-                    Cliente Existente
+                    <User className="h-3 w-3" />
+                    Existente
                   </TabsTrigger>
                   <TabsTrigger
                     value="new"
-                    disabled={hasSelectedCustomer()} // Deshabilitar si hay cliente seleccionado
+                    disabled={hasSelectedCustomer()}
                     className="flex items-center justify-center gap-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Nuevo Cliente
+                    <UserPlus className="h-3 w-3" />
+                    Nuevo
                   </TabsTrigger>
                 </TabsList>
+
                 <TabsContent value="existing" className="mt-2">
                   <div className="space-y-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Seleccionar Cliente</Label>
-                      <SelectM
-                        className="bg-transparent w-full text-xs text-black px-2 py-1"
-                        options={customerOptions}
-                        onChange={handleChange}
-                        placeholder="Buscar cliente..."
-                        isClearable
-                        value={
-                          selectedCustomerID
-                            ? {
-                                value: selectedCustomerID.id,
-                                label: selectedCustomerID.nombre,
-                              }
-                            : null
-                        }
-                      />
-                    </div>
+                    <Label className="text-xs">Seleccionar Cliente</Label>
+                    <SelectM
+                      className="bg-transparent w-full text-xs text-black px-2 py-1"
+                      options={customerOptions}
+                      onChange={handleChange}
+                      placeholder="Buscar cliente..."
+                      isClearable
+                      value={
+                        selectedCustomerID
+                          ? {
+                              value: selectedCustomerID.id,
+                              label: selectedCustomerID.nombre,
+                            }
+                          : null
+                      }
+                    />
                     {selectedCustomerID && (
                       <div className="text-xs font-semibold text-green-600 bg-green-50 p-2 rounded">
-                        Cliente seleccionado: {selectedCustomerID.nombre}
+                        Cliente: {selectedCustomerID.nombre}
                       </div>
                     )}
                   </div>
                 </TabsContent>
+
                 <TabsContent value="new" className="mt-2">
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
@@ -521,10 +457,9 @@ export default function CartCheckout({
                           value={nombre}
                           onChange={(e) => setNombre(e.target.value)}
                           placeholder="Nombre"
-                          className="h-8 text-xs"
+                          className="h-7 text-xs"
                         />
                       </div>
-
                       <div>
                         <Label htmlFor="apellidos" className="text-xs">
                           Apellidos
@@ -534,7 +469,7 @@ export default function CartCheckout({
                           value={apellidos}
                           onChange={(e) => setApellidos(e.target.value)}
                           placeholder="Apellidos"
-                          className="h-8 text-xs"
+                          className="h-7 text-xs"
                         />
                       </div>
                     </div>
@@ -547,11 +482,10 @@ export default function CartCheckout({
                           id="dpi"
                           value={dpi}
                           onChange={(e) => setDpi(e.target.value)}
-                          placeholder="Número de DPI (opcional)"
-                          className="h-8 text-xs"
+                          placeholder="DPI (opcional)"
+                          className="h-7 text-xs"
                         />
                       </div>
-
                       <div>
                         <Label htmlFor="nit" className="text-xs">
                           NIT
@@ -560,8 +494,8 @@ export default function CartCheckout({
                           id="nit"
                           value={nit}
                           onChange={(e) => setNit(e.target.value)}
-                          placeholder="Número de NIT (opcional)"
-                          className="h-8 text-xs"
+                          placeholder="NIT (opcional)"
+                          className="h-7 text-xs"
                         />
                       </div>
                     </div>
@@ -574,7 +508,7 @@ export default function CartCheckout({
                         value={telefono}
                         onChange={(e) => setTelefono(e.target.value)}
                         placeholder="+502 5060 7080"
-                        className="h-8 text-xs"
+                        className="h-7 text-xs"
                       />
                     </div>
                     <div>
@@ -586,7 +520,7 @@ export default function CartCheckout({
                         value={observaciones}
                         onChange={(e) => setObservaciones(e.target.value)}
                         placeholder="Observaciones (opcional)"
-                        className="text-xs h-16"
+                        className="text-xs h-14"
                       />
                     </div>
                     {hasNewCustomerData() && (
@@ -601,12 +535,12 @@ export default function CartCheckout({
           </div>
 
           {paymentMethod === "TRANSFERENCIA" && (
-            <div>
+            <div className="mt-3">
               <Label className="text-xs" htmlFor="referenciaPago">
-                Núm. boleta / transferencia único
+                Núm. boleta / transferencia
               </Label>
               <Input
-                className="h-6 my-1"
+                className="h-7 mt-1 text-xs"
                 id="referenciaPago"
                 value={referenciaPago}
                 onChange={(e) => setReferenciaPago(e.target.value)}

@@ -22,8 +22,6 @@ interface Props {
 
 const ROLES: { label: string; value: RolPrecio }[] = [
   { label: "Público", value: RolPrecio.PUBLICO },
-  { label: "Agroservicio", value: RolPrecio.AGROSERVICIO },
-  { label: "Finca", value: RolPrecio.FINCA },
   { label: "Distribuidor", value: RolPrecio.DISTRIBUIDOR },
   { label: "Promoción", value: RolPrecio.PROMOCION },
 ];
