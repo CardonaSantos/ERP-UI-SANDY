@@ -158,13 +158,10 @@ export default function PuntoVenta() {
     setQueryOptions((prev) => ({ ...prev, sucursalId, limit, page }));
   }, [sucursalId, limit, page]);
 
-  // ── Modo Rápido / Escáner ─────────────────────────────────────────────────
   const [isScannerMode, setIsScannerMode] = useState(true);
   const [scanInput, setScanInput] = useState("");
-  /** Ref al input del escáner para poder darle focus desde el padre */
   const scanInputRef = useRef<HTMLInputElement>(null);
 
-  /** Activa/desactiva el modo rápido y gestiona el autofocus */
   const handleToggleScannerMode = useCallback(() => {
     setIsScannerMode((prev) => {
       const next = !prev;
