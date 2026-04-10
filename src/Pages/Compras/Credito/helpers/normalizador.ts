@@ -1,8 +1,8 @@
-import { CompraDetalleUI } from "../../Interfaces/RegistroCompraInterface";
+import { CompraDetalleUI } from "@/Types/compras/interfaces";
 import { DetalleNormalizado } from "../../table-select-recepcion/detalleNormalizado";
 
 export function normalizarDetalles(
-  detalles: CompraDetalleUI[]
+  detalles: CompraDetalleUI[],
 ): DetalleNormalizado[] {
   return detalles.map((d) => {
     const usarPresentacion = d.presentacion != null;
@@ -20,10 +20,12 @@ export function normalizarDetalles(
         codigo: usarPresentacion
           ? d.presentacion!.codigoBarras
           : d.producto.codigo,
-        sku: usarPresentacion ? d.presentacion!.sku : undefined,
+        // 👇 Si es null, lo forzamos a undefined
+        sku: usarPresentacion ? (d.presentacion!.sku ?? undefined) : undefined,
         tipo: usarPresentacion ? "PRESENTACION" : "PRODUCTO",
         precioCosto: d.costoUnitario,
-        fechaVencimiento: d.fechaVencimiento,
+        // 👇 NOTA: Quité fechaVencimiento porque no está en tu interfaz,
+        // o agrégalo a la interfaz (ver Opción 2).
       },
     };
   });

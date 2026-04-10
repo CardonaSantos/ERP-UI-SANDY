@@ -8,7 +8,7 @@ export interface DetalleNormalizado {
   producto: {
     id: number;
     nombre: string;
-    codigo?: string;
+    codigo: string | null;
     sku?: string;
     precioCosto: number;
     tipo: "PRESENTACION" | "PRODUCTO";

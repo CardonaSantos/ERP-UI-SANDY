@@ -1,10 +1,6 @@
 // === QUERIES ================================================================
 
-import {
-  keepPreviousData,
-  useQueryClient,
-  UseQueryOptions,
-} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { comprasQkeys } from "./Qk";
 import { erp } from "@/API/erpApi";
 import { erpEndpoints } from "@/API/routes/endpoints";

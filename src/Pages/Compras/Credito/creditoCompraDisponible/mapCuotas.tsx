@@ -86,7 +86,6 @@ interface PropsCuotas {
   compraId: number;
   cuentasBancarias?: CuentaBancaria[];
   proveedores?: ProveedorLite[];
-  normalizados: DetalleNormalizado[];
 }
 
 interface PayloadDeletePago {

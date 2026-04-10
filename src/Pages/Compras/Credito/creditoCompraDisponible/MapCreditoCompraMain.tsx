@@ -1,6 +1,4 @@
-// MapCreditoCompraMain.tsx
 "use client";
-
 import { UICreditoCompra } from "./interfaces/interfaces";
 import { motion } from "framer-motion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,8 +12,6 @@ import MapCuotasCreditoCompra from "./mapCuotas";
 import { CajaConSaldo } from "@/utils/components/SelectMethodPayment/PurchasePaymentFormDialog";
 import { DesvanecerHaciaArriba } from "@/Pages/movimientos-cajas/utils/animations";
 import { DetalleNormalizado } from "../../table-select-recepcion/detalleNormalizado";
-
-dayjs.locale("es");
 
 interface CreditoAvaliableProps {
   creditoFromCompra: UICreditoCompra | undefined;
@@ -97,7 +93,6 @@ function MapCreditoCompraMain({
   cajasDisponibles,
   cuentasBancarias,
   proveedores,
-  normalizados,
   compraId,
 }: CreditoAvaliableProps) {
   if (!creditoFromCompra) {
@@ -232,7 +227,6 @@ function MapCreditoCompraMain({
 
       {/* Detalle de cuotas */}
       <MapCuotasCreditoCompra
-        normalizados={normalizados}
         cuentasBancarias={cuentasBancarias}
         proveedores={proveedores}
         cajasDisponibles={cajasDisponibles}

@@ -1,13 +1,6 @@
 import React from "react";
 import { PresupuestoListItem } from "@/Types/costos presupuestales/presupuestos_all";
-import {
-  ArrowUpRight,
-  Building2,
-  Calendar,
-  ChevronRight,
-  Info,
-  Tag,
-} from "lucide-react";
+import { Building2, Calendar, ChevronRight, Tag } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface Props {
