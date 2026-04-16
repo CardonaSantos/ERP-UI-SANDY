@@ -47,12 +47,7 @@ export function RequisicionesPage() {
   const mutationDeleteRequisicion = useDeleteRequisicion();
 
   const handleSendToCompras = async (dto: SendToComprasDTO) => {
-    if (
-      !dto.requisicionID ||
-      !dto.userID ||
-      !dto.proveedorId
-      // !dto.presupuestoId
-    ) {
+    if (!dto.requisicionID || !dto.userID || !dto.proveedorId) {
       toast.warning("Faltan datos para el envío");
       return;
     }

@@ -6,7 +6,6 @@ import { MovimientoFinancieroForm } from "./movimiento-caja-form";
 import { CuentaBancaria } from "./movimientos-financieros";
 
 interface PropsMovimientosPage {
-  getMovimientosCaja: () => Promise<void>;
   userID: number;
   reloadContext: () => Promise<void>;
   proveedores: Proveedor[];
@@ -20,8 +19,7 @@ export default function MovimientoCajaPage({
   cuentasBancarias,
 }: PropsMovimientosPage) {
   return (
-    <div className="container mx-auto">
-      {/* Configuración de Sonner */}
+    <div className=" ">
       <MovimientoFinancieroForm
         cuentasBancarias={cuentasBancarias}
         proveedores={proveedores}

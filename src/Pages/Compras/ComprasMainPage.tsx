@@ -81,7 +81,6 @@ export function ComprasMainPage() {
         limit={limit}
         pages={pages}
         total={total}
-        // ⬇️ usa isFetching para mostrar loading suave mientras refetchea por paginación/filtros
         loading={isFetching}
         onChangePage={handleChangePage}
         onChangeLimit={handleChangeLimit}

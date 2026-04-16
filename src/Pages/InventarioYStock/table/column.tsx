@@ -151,8 +151,8 @@ const PRORRATEO_COL: ColumnDef<ProductoInventarioResponse, null> =
         const arr = Array.isArray(stock?.prorrateo)
           ? stock.prorrateo
           : stock?.prorrateo
-          ? [stock.prorrateo]
-          : [];
+            ? [stock.prorrateo]
+            : [];
         return arr.map((p) => ({
           ...p,
           _stockId: stock.id,
@@ -163,12 +163,12 @@ const PRORRATEO_COL: ColumnDef<ProductoInventarioResponse, null> =
       const sorted = prorrateosRegists
         .slice()
         .sort(
-          (a, b) => dayjs(b.creadoEn).valueOf() - dayjs(a.creadoEn).valueOf()
+          (a, b) => dayjs(b.creadoEn).valueOf() - dayjs(a.creadoEn).valueOf(),
         );
 
       const first = sorted[0];
       const triggerValue = first
-        ? first.costoUnitarioResultante ?? first.costoUnitarioProrrateado
+        ? (first.costoUnitarioResultante ?? first.costoUnitarioProrrateado)
         : null;
 
       return (
@@ -283,13 +283,13 @@ const PRORRATEO_COL: ColumnDef<ProductoInventarioResponse, null> =
           const arr = Array.isArray(s?.prorrateo)
             ? s.prorrateo
             : s?.prorrateo
-            ? [s.prorrateo]
-            : [];
+              ? [s.prorrateo]
+              : [];
           return arr;
         });
         return regs.reduce(
           (max: number, r: any) => Math.max(max, dayjs(r.creadoEn).valueOf()),
-          0
+          0,
         );
       };
       return pickLastTs(rowA) - pickLastTs(rowB);
@@ -304,7 +304,7 @@ const VALOR_INVENTARIO: ColumnDef<ProductoInventarioResponse, number> =
       const valorLotes = lots.reduce(
         (acc, l) =>
           acc + Number(l.cantidad ?? 0) * Number(l.costoUnitario ?? 0),
-        0
+        0,
       );
 
       // 2) Fallback: si no hay lotes, usa stock agregado * costo de producto
@@ -312,7 +312,7 @@ const VALOR_INVENTARIO: ColumnDef<ProductoInventarioResponse, number> =
         const qtyAgg =
           (row.stocksBySucursal ?? []).reduce(
             (acc, s) => acc + Number(s.cantidad ?? 0),
-            0
+            0,
           ) || 0;
         const costoProd = Number(row.precioCosto ?? 0); // viene como string en tu normalizer
         return qtyAgg * costoProd;
@@ -336,11 +336,11 @@ const VALOR_INVENTARIO: ColumnDef<ProductoInventarioResponse, number> =
         );
       },
       enableSorting: true,
-    }
+    },
   );
 
 export const makeColumnsInventario = (
-  rolUser: string
+  rolUser: string,
 ): ColumnDef<ProductoInventarioResponse, any>[] => {
   const cols: ColumnDef<ProductoInventarioResponse, any>[] = [
     // NOMBRE / PRODUCTO
@@ -357,7 +357,7 @@ export const makeColumnsInventario = (
         const { cover, items } = getImages(p);
         const totalImgs = Math.max(items.length || 0, 1);
         const tp = (p as any).tipoPresentacion;
-        const tpLabel = typeof tp === "string" ? tp : tp?.nombre ?? "";
+        const tpLabel = typeof tp === "string" ? tp : (tp?.nombre ?? "");
         return (
           <div className="min-w-[180px] max-w-[260px]">
             <div className="flex items-start gap-2">
@@ -411,7 +411,7 @@ export const makeColumnsInventario = (
                               />
                             </div>
                           </CarouselItem>
-                        )
+                        ),
                       )}
                     </CarouselContent>
                     <CarouselPrevious />
@@ -479,7 +479,7 @@ export const makeColumnsInventario = (
         ),
         enableSorting: true,
         sortingFn: "basic",
-      }
+      },
     ),
 
     // INGRESOS
@@ -492,13 +492,19 @@ export const makeColumnsInventario = (
         </div>
       ),
       cell: (info) => {
-        const items = [...(info.row.original.stocks ?? [])].sort((x, y) =>
-          cmpDescNullsLast(parseDMY(x.fechaIngreso), parseDMY(y.fechaIngreso))
+        const items = [
+          ...(info.row.original.stocks.filter((item) => item.cantidad > 0) ??
+            []),
+        ].sort((x, y) =>
+          cmpDescNullsLast(parseDMY(x.fechaIngreso), parseDMY(y.fechaIngreso)),
         );
+
         const isProductStock = info.row.original.type === "PRODUCTO";
 
         const show = items.slice(0, 2);
+
         const extra = items.length - show.length;
+
         return (
           <div className="max-w-[220px]">
             {show.map((s, i) => {
@@ -563,7 +569,7 @@ export const makeColumnsInventario = (
       cell: (info) => {
         const raw = info.row.original.stocks ?? [];
         const items = [...raw].sort((a, b) =>
-          cmpVencProximas(a.fechaVencimiento, b.fechaVencimiento)
+          cmpVencProximas(a.fechaVencimiento, b.fechaVencimiento),
         );
 
         const show = items.slice(0, 2);
@@ -572,7 +578,7 @@ export const makeColumnsInventario = (
         const anyExpired = items.some(
           (s) =>
             !Number.isNaN(ddmmyyyyToTime(s.fechaVencimiento)) &&
-            ddmmyyyyToTime(s.fechaVencimiento) < Date.now()
+            ddmmyyyyToTime(s.fechaVencimiento) < Date.now(),
         );
 
         return (
@@ -592,41 +598,43 @@ export const makeColumnsInventario = (
                 </PopoverTrigger>
                 <PopoverContent className="w-96">
                   <div className="max-h-48 overflow-y-auto space-y-1">
-                    {items.map((s, i) => {
-                      const todayJs = dayjs().startOf("day").toDate();
-                      const todayDayJs = dayjs().startOf("day");
-                      const d = dayjs(s.fechaVencimiento, "DD-MM-YYYY", true);
-                      const isStockVencido = dayjs(
-                        s.fechaVencimiento
-                      ).isSameOrBefore(todayJs);
-                      const differenceBetween = todayDayJs.diff(d, "day");
-                      return (
-                        <div
-                          key={s.id ?? i}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <span className="text-[11px]">
-                            Vence: {s.fechaVencimiento || "N/A"}
-                          </span>
-                          <Separator orientation="vertical" className="h-4" />
-                          <span className="tabular-nums text-[11px]">
-                            {s.cantidad} unidades
-                          </span>
-                          {isStockVencido ? (
-                            <>
-                              <Separator
-                                orientation="vertical"
-                                className="h-4"
-                              />
-                              <CircleAlert className="w-auto h-3 text-red-600 dark:text-red-400 " />
-                              <span className="text-[11px] text-red-600 dark:text-red-400">
-                                Vencido desde hace: {differenceBetween} días
-                              </span>
-                            </>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                    {items
+                      .filter((it) => it.cantidad > 0)
+                      .map((s, i) => {
+                        const todayJs = dayjs().startOf("day").toDate();
+                        const todayDayJs = dayjs().startOf("day");
+                        const d = dayjs(s.fechaVencimiento, "DD-MM-YYYY", true);
+                        const isStockVencido = dayjs(
+                          s.fechaVencimiento,
+                        ).isSameOrBefore(todayJs);
+                        const differenceBetween = todayDayJs.diff(d, "day");
+                        return (
+                          <div
+                            key={s.id ?? i}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <span className="text-[11px]">
+                              Vence: {s.fechaVencimiento || "N/A"}
+                            </span>
+                            <Separator orientation="vertical" className="h-4" />
+                            <span className="tabular-nums text-[11px]">
+                              {s.cantidad} unidades
+                            </span>
+                            {isStockVencido ? (
+                              <>
+                                <Separator
+                                  orientation="vertical"
+                                  className="h-4"
+                                />
+                                <CircleAlert className="w-auto h-3 text-red-600 dark:text-red-400 " />
+                                <span className="text-[11px] text-red-600 dark:text-red-400">
+                                  Vencido desde hace: {differenceBetween} días
+                                </span>
+                              </>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                   </div>
                 </PopoverContent>
               </Popover>

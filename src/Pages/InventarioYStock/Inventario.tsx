@@ -55,7 +55,6 @@ interface InventarioProps {
 
 export default function Inventario({
   categorias,
-  proveedores,
   loadInventoryData,
   setSearchQuery,
   searchQuery,
@@ -68,11 +67,6 @@ export default function Inventario({
   handleSelecTiposEmpaque,
   rolUser,
 }: InventarioProps) {
-  console.log("Las categorias son: ", categorias);
-  console.log("proveedores: ", proveedores);
-  console.log("el query es: ", searchQuery);
-  console.log();
-
   return (
     <>
       <div className="mb-3 grid gap-3 lg:grid-cols-[1fr_auto] items-start">

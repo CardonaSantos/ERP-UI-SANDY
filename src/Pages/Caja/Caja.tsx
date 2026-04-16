@@ -1,65 +1,82 @@
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
-import { CajaAbierta, CerrarCaja, IniciarCaja } from "./interfaces";
-import { motion } from "framer-motion";
-import DesvanecerHaciaArriba from "@/Crm/Motion/DashboardAnimations";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import {
-  cerrarCaja,
-  getMovimientosCajaById,
-  getUltimaCajaAbierta,
-  getUltimoSaldoSucursal,
-  getVentasCajaById,
-  iniciarCaja,
-} from "./api";
+import { CerrarCaja, IniciarCaja } from "./types/interfaces";
+
 import { useStore } from "@/components/Context/ContextSucursal";
-import { MovimientoCajaItem } from "./MovimientosCajaInterface";
-import MovimientoCajaPage from "./Movimientos/movimiento-caja-page";
-import { VentaLigadaACaja } from "./VentasCaja/interface";
-import { Proveedor } from "./Movimientos/types";
-import { getProveedores } from "./Movimientos/api";
-// import { CuentaBancaria } from "./Movimientos/movimientos-financieros";
-import CajaForm from "./caja-form";
-import { useApiQuery } from "@/hooks/genericoCall/genericoCallHook";
-import { CuentasBancariasSelect } from "@/Types/CuentasBancarias/CuentasBancariasSelect";
-import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 import { PageTransition } from "@/components/Transition/layout-transition";
+import {
+  useCloseCaja,
+  useGetUltimaCajaAbierta,
+  useGetUltimoSaldoSucursal,
+  useIniciarCaja,
+} from "@/hooks/use-cajas/use-cajas";
+import { useGetCuentasBancarias } from "@/hooks/use-cuentas-bancarias/use-cuentas-bancarias";
+
+import CajaForm from "./caja-form";
+import MovimientoCajaPage from "./Movimientos/movimiento-caja-page";
+import { useGetProveedores } from "@/hooks/getProveedoresSelect/proveedores";
+import { useQueryClient } from "@tanstack/react-query";
+import { cajasQkeys } from "@/hooks/use-cajas/Qk";
+import { ReusableTabs, TabItem } from "@/utils/components/tabs/reusable-tabs";
+import { useSearchParams } from "react-router-dom";
+import { useTabChangeWithUrl } from "@/utils/components/tabs/handleTabChangeWithParamURL";
+import { Clipboard, ReceiptText } from "lucide-react";
+
+type DialogState = {
+  confirmDialog: boolean;
+  closeCaja: boolean;
+};
+
+// COMPONENT
 function Caja() {
-  const sucursalID: number = useStore((state) => state.sucursalId) ?? 0;
-  const userID: number = useStore((state) => state.userId) ?? 0;
-  const [cajaAbierta, setCajaAbierta] = useState<CajaAbierta | null>(null);
-  const [isSubmiting, setIsSubmiting] = useState<boolean>(false);
+  const queryClient = useQueryClient();
 
-  const [movimientos, setMovimientos] = useState<MovimientoCajaItem[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaultTab = (searchParams.get("tab") as string) || "caja";
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
 
-  const [ventas, setVentas] = useState<VentaLigadaACaja[]>([]);
-  console.log(
-    "los movimientos y ventas, no se usan mas son: ",
-    movimientos,
-    ventas,
+  const sucursalID = useStore((state) => state.sucursalId) ?? 0;
+  const userID = useStore((state) => state.userId) ?? 0;
+  const cajaAbiertaResponse = useGetUltimaCajaAbierta(sucursalID, userID);
+  const cajaAbierta = cajaAbiertaResponse.data ?? null;
+  const cajaMontoAnteriorResponse = useGetUltimoSaldoSucursal(
+    sucursalID,
+    userID,
   );
+  const cajaMontoAnterior = cajaMontoAnteriorResponse.data ?? 0;
+  const cuentasBancariasResponse = useGetCuentasBancarias();
 
-  const [cajaMontoAnterior, setCajaMontoAnterior] = useState<number>(1);
+  const iniciarCaja = useIniciarCaja();
+
+  const cerrarCaja = useCloseCaja();
+
+  const cuentas = cuentasBancariasResponse.data ?? [];
+  const [isSubmiting, setIsSubmiting] = useState(false);
+  const [dialogs, setDialogs] = useState<DialogState>({
+    confirmDialog: false,
+    closeCaja: false,
+  });
+
   const [nuevaCaja, setNuevaCaja] = useState<IniciarCaja | null>({
-    saldoInicial: cajaMontoAnterior,
+    saldoInicial: cajaMontoAnterior ?? 0,
     sucursalId: sucursalID,
     usuarioInicioId: userID,
     comentario: "",
   });
+
   const [cerrarCajaDto, setCerrarCajaDto] = useState<CerrarCaja | null>({
     registroCajaId: cajaAbierta?.id ?? 0,
     usuarioCierra: userID,
     comentarioFinal: "",
   });
-  console.log("La caja dto es: ", cerrarCajaDto);
 
-  //STATES PARA ABRIR O CERRAR DIALOGS
-  const [openConfirmDialog, setOpenConfirDialog] = useState<boolean>(false);
-  const [openCloseCaja, setOpenCloseCaja] = useState<boolean>(false);
+  const { data: proveedoresResponse } = useGetProveedores();
+  const proveedores = proveedoresResponse ? proveedoresResponse : [];
+  const hasOpen = !!cajaAbierta && cajaAbierta.estado === "ABIERTO";
 
-  let hasOpen: boolean = true;
-
-  hasOpen = !!cajaAbierta && cajaAbierta.estado === "ABIERTO";
+  /**
+   * Sincroniza el estado de formularios cuando cambia si hay caja abierta
+   */
   useEffect(() => {
     if (hasOpen) {
       setNuevaCaja(null);
@@ -72,27 +89,26 @@ function Caja() {
     } else {
       setCerrarCajaDto(null);
       setNuevaCaja({
-        saldoInicial: cajaMontoAnterior,
+        saldoInicial: cajaMontoAnterior ?? 0,
         sucursalId: sucursalID,
         usuarioInicioId: userID,
         comentario: "",
       });
     }
-  }, [hasOpen, cajaMontoAnterior, sucursalID, userID]);
+  }, [hasOpen, cajaMontoAnterior, sucursalID, userID, cajaAbierta?.id]);
 
   useEffect(() => {
-    getCajaAbierta();
-    getMontoAnterior();
-    handleGetProveedores();
-    // getCuentasBancarias();
+    reloadContext();
   }, []);
 
   const handleChangeGeneric = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    if (!nuevaCaja) return; // solo en modo ABRIR
+    if (!nuevaCaja) return;
+
     const { name, value, type } = e.target as HTMLInputElement;
     if (type === "checkbox") return;
+
     setNuevaCaja({
       ...nuevaCaja,
       [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
@@ -102,7 +118,8 @@ function Caja() {
   const handleChangeCerrar = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    if (!cerrarCajaDto) return; // solo en modo CERRAR
+    if (!cerrarCajaDto) return;
+
     const { name, value, type } = e.target as HTMLInputElement;
     setCerrarCajaDto({
       ...cerrarCajaDto,
@@ -110,255 +127,134 @@ function Caja() {
     });
   };
 
+  const handleToggleDialog = (dialog: keyof DialogState, value: boolean) => {
+    setDialogs((prev) => ({
+      ...prev,
+      [dialog]: value,
+    }));
+  };
+
+  /**
+   * Inicia una nueva caja
+   */
   const handleSubmitIniciarCaja = async () => {
     if (!nuevaCaja || isSubmiting) return;
     setIsSubmiting(true);
 
     if (nuevaCaja.saldoInicial <= 0) {
-      toast.warning("No se puede iniciar un turno con saldo cero.");
+      toast.warning("No se puede iniciar turno con saldo cero");
       setIsSubmiting(false);
-      setOpenConfirDialog(false);
+      handleToggleDialog("confirmDialog", false);
       await reloadContext();
       return;
     }
 
     try {
-      await toast.promise(iniciarCaja(nuevaCaja), {
-        loading: "Iniciando turno en caja...",
+      await toast.promise(iniciarCaja.mutateAsync(nuevaCaja), {
+        loading: "Iniciando turno...",
         success: "Turno registrado",
-        error: "Error al registrar turno en caja",
+        error: "Error al registrar turno",
       });
-      await reloadContext();
     } finally {
       setIsSubmiting(false);
-      setOpenConfirDialog(false);
+      handleToggleDialog("confirmDialog", false);
       await reloadContext();
     }
   };
-  console.log("El obj nueva caja es: ", nuevaCaja);
 
+  /**
+   * Cierra la caja actual
+   */
   const handleCerrarCaja = async () => {
     if (!cerrarCajaDto || isSubmiting) return;
     setIsSubmiting(true);
+
     try {
-      await toast.promise(cerrarCaja(cerrarCajaDto), {
-        loading: "Cerrando turno en caja...",
+      await toast.promise(cerrarCaja.mutateAsync(cerrarCajaDto), {
+        loading: "Cerrando turno...",
         success: "Caja cerrada correctamente",
-        error: "Error al cerrar turno en caja",
+        error: "Error al cerrar turno",
       });
-      await reloadContext(); // <- esto decide si limpia o trae todo
     } finally {
       setIsSubmiting(false);
-      setOpenCloseCaja(false);
+      handleToggleDialog("closeCaja", false);
       await reloadContext();
     }
   };
 
-  const getCajaAbierta = async () => {
-    try {
-      const data = await getUltimaCajaAbierta(sucursalID, userID);
-      setCajaAbierta(data);
-      return data;
-    } catch {
-      toast.error("Error al conseguir último registro de caja");
-      return null;
-    }
-  };
-
-  const getMontoAnterior = async () => {
-    try {
-      const data = await getUltimoSaldoSucursal(sucursalID, userID);
-      setCajaMontoAnterior(data);
-    } catch {
-      toast.error("Error al conseguir último monto de caja");
-    }
-  };
-
-  const getMovimientosCaja = async (cajaId: number) => {
-    try {
-      const data = await getMovimientosCajaById(cajaId);
-      setMovimientos(data);
-    } catch {
-      toast.error("Error al conseguir registros de movimientos de esta caja");
-    }
-  };
-  const getVentasCaja = async (cajaId: number) => {
-    try {
-      const data = await getVentasCajaById(cajaId);
-      setVentas(data);
-    } catch {
-      toast.error("Error al conseguir registros de ventas de esta caja");
-    }
-  };
-
-  useEffect(() => {
-    if (!cajaAbierta?.id) {
-      setMovimientos([]);
-      setVentas([]);
-      return;
-    }
-    getMovimientosCaja(cajaAbierta.id);
-    getVentasCaja(cajaAbierta.id);
-  }, [cajaAbierta?.id]);
-
-  const refreshMovimientos = useCallback(async () => {
-    if (cajaAbierta?.id) {
-      await getMovimientosCaja(cajaAbierta.id);
-    } else {
-      setMovimientos([]);
-    }
-  }, [cajaAbierta?.id]);
-
   const reloadContext = useCallback(async () => {
-    const caja = await getUltimaCajaAbierta(sucursalID, userID);
-    setCajaAbierta(caja);
+    await queryClient.invalidateQueries({
+      queryKey: cajasQkeys.all,
+    });
+  }, [queryClient]);
 
-    // obtener el saldo más reciente primero
-    const saldo = await getUltimoSaldoSucursal(sucursalID, userID);
-    setCajaMontoAnterior(saldo);
+  const handleChangeTabs = useTabChangeWithUrl({
+    activeTab,
+    setActiveTab,
+    searchParams,
+    setSearchParams,
+  });
 
-    if (caja?.id) {
-      // Caja abierta → limpiar nuevaCaja, preparar cerrarCajaDto
-      setNuevaCaja(null);
-      setCerrarCajaDto({
-        registroCajaId: caja.id,
-        usuarioCierra: userID,
-        comentarioFinal: "",
-      });
-
-      const [movs, vtas] = await Promise.all([
-        getMovimientosCajaById(caja.id),
-        getVentasCajaById(caja.id),
-      ]);
-      setMovimientos(movs);
-      setVentas(vtas);
-    } else {
-      // Caja cerrada → limpiar cerrarCajaDto, preparar nuevaCaja con el saldo que ACABAMOS de traer
-      setCerrarCajaDto(null);
-      setNuevaCaja({
-        saldoInicial: saldo, // <-- usar el saldo fresco
-        sucursalId: sucursalID,
-        usuarioInicioId: userID,
-        comentario: "",
-      });
-      setMovimientos([]);
-      setVentas([]);
-    }
-  }, [sucursalID, userID]);
-
-  useEffect(() => {
-    reloadContext();
-  }, [reloadContext]);
-
-  console.log("La caja abierta es: ", cajaAbierta);
-  console.log(
-    "El saldo anterior que en teoria es del parcial es: ",
-    cajaMontoAnterior,
-  );
-
-  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const handleGetProveedores = async () => {
-    try {
-      const dt = await getProveedores();
-      setProveedores(dt);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  console.log("El monto anterior es: ", cajaMontoAnterior);
-
-  const {
-    data: cuentas = [],
-    isError,
-    error,
-  } = useApiQuery<CuentasBancariasSelect[]>(
-    ["cuentas-bancarias-select"],
-    "/cuentas-bancarias/get-simple-select",
-    undefined, // o {}
+  const dataTabs: Array<TabItem> = [
     {
-      initialData: [],
-      enabled: true, // 👈 fuerza el fetch
-      refetchOnMount: "always", // opcional, asegura que pegue al server al montar
+      content: (
+        <CajaForm
+          cuentas={cuentas}
+          hasOpen={hasOpen}
+          nuevaCaja={nuevaCaja}
+          handleChangeGeneric={handleChangeGeneric}
+          handleSubmitIniciarCaja={handleSubmitIniciarCaja}
+          cerrarCajaDto={cerrarCajaDto}
+          handleChangeCerrar={handleChangeCerrar}
+          handleCerrarCaja={handleCerrarCaja}
+          isSubmiting={isSubmiting}
+          cajaMontoAnterior={cajaMontoAnterior}
+          openCloseCaja={dialogs.closeCaja}
+          openConfirmDialog={dialogs.confirmDialog}
+          setOpenCloseCaja={(v) =>
+            handleToggleDialog("closeCaja", v as boolean)
+          }
+          setOpenConfirDialog={(v) =>
+            handleToggleDialog("confirmDialog", v as boolean)
+          }
+          cajaAbierta={cajaAbierta}
+          reloadContext={reloadContext}
+        />
+      ),
+      label: "Turno en Caja",
+      value: "caja",
+      icon: <Clipboard size={15} />,
     },
-  );
 
-  useEffect(() => {
-    if (isError && error) {
-      toast.error(getApiErrorMessageAxios(error));
-    }
-  }, [isError, error]);
-  console.log("cuentas bancarias en caja main page es: ", cuentas);
+    {
+      content: (
+        <MovimientoCajaPage
+          proveedores={proveedores}
+          reloadContext={reloadContext}
+          userID={userID}
+          cuentasBancarias={cuentas}
+        />
+      ),
+      label: "Movimientos Financieros.",
+      value: "generar-mf",
+      icon: <ReceiptText size={15} />,
+    },
+  ];
 
   return (
     <PageTransition
       fallbackBackTo="/"
       titleHeader="Registro de Caja y Movimientos Financieros"
     >
-      <Tabs className="w-full" defaultValue="registrarcaja">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 h-auto p-1">
-          <TabsTrigger
-            value="registrarcaja"
-            className="w-full text-sm md:text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <span className="truncate">Registrar Caja</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="movimientoscaja"
-            className="w-full text-sm md:text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <span className="truncate">Registrar Movimientos de Caja</span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* TAB: Registrar Caja */}
-        <TabsContent value="registrarcaja" className="mt-6">
-          <motion.div {...DesvanecerHaciaArriba} className="w-full">
-            {/* Center wrapper */}
-            <div className="w-full flex justify-center">
-              {/* El hijo ocupa todo el ancho disponible */}
-              <div className="w-full">
-                <CajaForm
-                  cuentas={cuentas}
-                  hasOpen={hasOpen}
-                  nuevaCaja={nuevaCaja}
-                  handleChangeGeneric={handleChangeGeneric}
-                  handleSubmitIniciarCaja={handleSubmitIniciarCaja}
-                  cerrarCajaDto={cerrarCajaDto}
-                  handleChangeCerrar={handleChangeCerrar}
-                  handleCerrarCaja={handleCerrarCaja}
-                  isSubmiting={isSubmiting}
-                  cajaMontoAnterior={cajaMontoAnterior}
-                  openCloseCaja={openCloseCaja}
-                  openConfirmDialog={openConfirmDialog}
-                  setOpenCloseCaja={setOpenCloseCaja}
-                  /* ojo: nombre consistente */
-                  setOpenConfirDialog={setOpenConfirDialog}
-                  cajaAbierta={cajaAbierta}
-                  reloadContext={reloadContext}
-                />
-              </div>
-            </div>
-          </motion.div>
-        </TabsContent>
-
-        {/* TAB: Movimientos de Caja */}
-        <TabsContent value="movimientoscaja" className="mt-6">
-          {/* Center wrapper */}
-          <div className="w-full flex justify-center">
-            {/* El hijo ocupa todo el ancho disponible */}
-            <div className="w-full">
-              <MovimientoCajaPage
-                proveedores={proveedores}
-                reloadContext={reloadContext}
-                userID={userID}
-                getMovimientosCaja={refreshMovimientos}
-                cuentasBancarias={cuentas}
-              />
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <ReusableTabs
+        tabs={dataTabs}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        className=""
+        defaultValue={defaultTab}
+        handleTabChange={handleChangeTabs}
+        variant="compact"
+      />
     </PageTransition>
   );
 }

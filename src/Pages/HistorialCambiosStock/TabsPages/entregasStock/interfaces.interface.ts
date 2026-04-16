@@ -1,3 +1,5 @@
+import { Proveedor } from "@/Pages/Caja/Movimientos/types";
+
 export interface HistorialEntregaStockResponse {
   data: HistorialEntregaStockItem[];
   page: number;
@@ -45,11 +47,6 @@ export interface ProductoConCategorias {
   descripcion: string;
   categorias: Categoria[];
   imagenesProducto: any[]; // tipa si es necesario
-}
-
-export interface Proveedor {
-  id: number;
-  nombre: string;
 }
 
 export interface EntregaStockDetalle {

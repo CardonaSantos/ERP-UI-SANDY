@@ -1,5 +1,4 @@
 "use client";
-import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,18 +30,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-import { CerrarCajaV2Dto, PreviaCierreResponse } from "./cierre.types";
-import { cerrarCajaV2 } from "./caja.api";
-import { getPreviaCierre } from "./types2";
 import { CuentasBancariasSelect } from "@/Types/CuentasBancarias/CuentasBancariasSelect";
+import { useCloseCaja, useGetPreviaCaja } from "@/hooks/use-cajas/use-cajas";
+import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
+import { ComprobanteTipoZ, schemaBase } from "./schema/schema";
+import { useStore } from "@/components/Context/ContextSucursal";
+import { CerrarCajaV2Dto } from "./types/cierres.types";
 
-// ------------------------------------------------------
-// Types locales
-// ------------------------------------------------------
+// ============================================================================
+// TYPES
+// ============================================================================
 
 type CuentaBancaria = {
   id: number;
@@ -59,175 +58,66 @@ type CierreCajaDialogProps = {
   cuentasBancarias: CuentaBancaria[];
   onClosed?: () => void;
   reloadContext: () => Promise<void>;
-  //nuevos
   cuentas: CuentasBancariasSelect[];
 };
 
-const ComprobanteTipoZ = z.enum([
-  "DEPOSITO_BOLETA",
-  "TRANSFERENCIA",
-  "CHEQUE",
-  "TARJETA_VOUCHER",
-  "OTRO",
-]);
-
-// ------------------------------------------------------
-// Schema (sin dependencias fuertes de `previa` para evitar
-// problemas al rehidratar el resolver). Hacemos clamps en UI + server.
-// ------------------------------------------------------
-// const schemaBase = z.object({
-//   modo: z.enum([
-//     "SIN_DEPOSITO",
-//     "DEPOSITO_PARCIAL",
-//     "DEPOSITO_TODO",
-//     "CAMBIO_TURNO",
-//   ] as const),
-//   comentarioFinal: z.string().optional(),
-
-//   // Depósito
-//   cuentaBancariaId: z.number().optional(),
-//   montoParcial: z.number().optional(),
-
-//   // Nuevos
-//   dejarEnCaja: z.number().min(0, "No puede ser negativo"),
-//   asentarVentas: z.boolean(), // <- antes tenía .default(true)
-
-//   // Cambio de turno
-//   abrirSiguiente: z.boolean().optional(),
-//   usuarioInicioSiguienteId: z.number().optional(),
-//   fondoFijoSiguiente: z.number().optional(),
-//   comentarioAperturaSiguiente: z.string().optional(),
-// });
-
-const schemaBase = z
-  .object({
-    modo: z.enum([
-      "SIN_DEPOSITO",
-      "DEPOSITO_PARCIAL",
-      "DEPOSITO_TODO",
-      "CAMBIO_TURNO",
-    ] as const),
-    comentarioFinal: z.string().optional(),
-
-    // Depósito
-    cuentaBancariaId: z.number().optional(),
-    montoParcial: z.number().optional(),
-
-    // Nuevos (boleta/transferencia)
-    comprobanteTipo: ComprobanteTipoZ.optional(),
-    comprobanteNumero: z.string().trim().optional(),
-    comprobanteFecha: z.string().trim().optional(), // "YYYY-MM-DD" del <input type="date">
-
-    // Nuevos
-    dejarEnCaja: z.number().min(0, "No puede ser negativo"),
-    asentarVentas: z.boolean(),
-
-    // Cambio de turno
-    abrirSiguiente: z.boolean().optional(),
-    usuarioInicioSiguienteId: z.number().optional(),
-    fondoFijoSiguiente: z.number().optional(),
-    comentarioAperturaSiguiente: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const requiereDeposito =
-      data.modo === "DEPOSITO_PARCIAL" || data.modo === "DEPOSITO_TODO";
-
-    if (requiereDeposito) {
-      if (!data.cuentaBancariaId) {
-        ctx.addIssue({
-          path: ["cuentaBancariaId"],
-          code: z.ZodIssueCode.custom,
-          message: "Cuenta bancaria requerida",
-        });
-      }
-      if (!data.comprobanteTipo) {
-        ctx.addIssue({
-          path: ["comprobanteTipo"],
-          code: z.ZodIssueCode.custom,
-          message: "Tipo de comprobante requerido",
-        });
-      }
-      if (!data.comprobanteNumero || data.comprobanteNumero.trim().length < 3) {
-        ctx.addIssue({
-          path: ["comprobanteNumero"],
-          code: z.ZodIssueCode.custom,
-          message: "Número de comprobante requerido (mín. 3 caract.)",
-        });
-      }
-    }
-
-    if (data.modo === "DEPOSITO_PARCIAL") {
-      if (!data.montoParcial || data.montoParcial <= 0) {
-        ctx.addIssue({
-          path: ["montoParcial"],
-          code: z.ZodIssueCode.custom,
-          message: "Monto debe ser > 0",
-        });
-      }
-    }
-  });
-
 type CierreCajaFormData = z.infer<typeof schemaBase>;
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 export function CierreCajaDialog({
   open,
   onOpenChange,
   registroCajaId,
   usuarioCierreId,
-  // cuentasBancarias,
   onClosed,
   reloadContext,
   cuentas,
 }: CierreCajaDialogProps) {
-  const [previa, setPrevia] = useState<PreviaCierreResponse | null>(null);
-  const [isLoadingPrevia, setIsLoadingPrevia] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // --- State & Hooks ---
+  const sucursalId = useStore((state) => state.sucursalId) ?? 0;
+  const userId = useStore((state) => state.userId) ?? 0;
+
+  const closeCaja = useCloseCaja();
+  const getPreviaCaja = useGetPreviaCaja(sucursalId, registroCajaId, userId);
+  const previa = getPreviaCaja.data;
+  const isLoadingPrevia = getPreviaCaja.isPending;
+  const isSubmitting = closeCaja.isPending;
 
   const form = useForm<CierreCajaFormData>({
+    values: getPreviaCaja.data
+      ? {
+          modo: "SIN_DEPOSITO",
+          abrirSiguiente: true,
+          asentarVentas: true,
+          dejarEnCaja: Number(getPreviaCaja.data.fondoFijoActual ?? 0),
+          fondoFijoSiguiente: Number(getPreviaCaja.data.fondoFijoActual ?? 0),
+        }
+      : undefined,
     resolver: zodResolver(schemaBase),
     defaultValues: {
       modo: "SIN_DEPOSITO",
       abrirSiguiente: true,
       dejarEnCaja: 0,
-      asentarVentas: true, // <- default aquí
+      asentarVentas: true,
+    },
+    resetOptions: {
+      keepDirtyValues: true,
     },
   });
 
-  console.log("cuentas bancarias en cerrar caja son: ", cuentas);
-
+  // --- Watched Values ---
   const watched = form.watch();
 
-  // Cargar previa al abrir el modal
-  useEffect(() => {
-    if (open && registroCajaId) {
-      setIsLoadingPrevia(true);
-      getPreviaCierre(registroCajaId)
-        .then((data) => {
-          setPrevia(data);
-          // setear defaults dependientes de `previa`
-          form.setValue("dejarEnCaja", Number(data.fondoFijoActual ?? 0));
-          form.setValue(
-            "fondoFijoSiguiente",
-            Number(data.fondoFijoActual ?? 0)
-          );
-        })
-        .catch((error) => {
-          console.error("Error cargando previa:", error);
-          toast.error("Error al cargar información de caja");
-        })
-        .finally(() => {
-          setIsLoadingPrevia(false);
-        });
-    }
-  }, [open, registroCajaId]);
-
-  // Valores calculados de negocio
+  // --- Calculations ---
   const enCaja = Number(previa?.enCaja ?? 0);
   const dejarEnCaja = Number(watched.dejarEnCaja ?? 0);
   const disponibleOperable = Math.max(0, enCaja - dejarEnCaja);
 
   const requiereDeposito = ["DEPOSITO_PARCIAL", "DEPOSITO_TODO"].includes(
-    watched.modo
+    watched.modo,
   );
 
   const calcularDeposito = (): number => {
@@ -241,25 +131,27 @@ export function CierreCajaDialog({
   };
 
   const depositoCalculado = calcularDeposito();
-  const saldoFinalEsperado = enCaja - depositoCalculado; // saldo físico al cierre
+  const saldoFinalEsperado = enCaja - depositoCalculado;
 
-  // Validaciones adicionales a nivel UI (además de zod + clamps en server)
+  // --- Validations ---
   const cuentaRequeridaError =
-    requiereDeposito && !watched.cuentaBancariaId
-      ? "Cuenta bancaria requerida"
-      : null;
+    requiereDeposito && !watched.cuentaBancariaId ? "Cuenta requerida" : null;
+
   const montoParcialError =
     watched.modo === "DEPOSITO_PARCIAL" &&
     Number(watched.montoParcial || 0) <= 0
-      ? "Monto debe ser > 0"
+      ? "Monto > 0"
       : null;
 
-  // Enviar
-  // Enviar
+  // --- Handlers ---
+  const formatCuentaBancaria = (cuenta: CuentaBancaria) => {
+    const numeroMasked = `****${cuenta.numero.slice(-4)}`;
+    return `${cuenta.alias || cuenta.banco || numeroMasked}`;
+  };
+
   const onSubmit: SubmitHandler<CierreCajaFormData> = async (data) => {
     if (!previa) return;
 
-    // Recalcular con los valores actuales del form (robusto)
     const enCajaLocal = Number(previa.enCaja ?? 0);
     const dejarEnCajaLocal = Number(data.dejarEnCaja ?? 0);
     const disponibleOperableLocal = Math.max(0, enCajaLocal - dejarEnCajaLocal);
@@ -274,14 +166,14 @@ export function CierreCajaDialog({
       const v = Number(data.montoParcial || 0);
       depositoCalculadoLocal = Math.min(
         Math.max(v, 0),
-        disponibleOperableLocal
+        disponibleOperableLocal,
       );
     }
 
-    // Validaciones ligeras; el server re-clamp y valida igualmente
+    // Validations
     if (esDeposito && !data.cuentaBancariaId) {
       form.setError("cuentaBancariaId", {
-        message: "Cuenta bancaria requerida",
+        message: "Cuenta requerida",
       });
       return;
     }
@@ -290,37 +182,34 @@ export function CierreCajaDialog({
       data.modo === "DEPOSITO_PARCIAL" &&
       (!data.montoParcial || data.montoParcial <= 0)
     ) {
-      form.setError("montoParcial", { message: "Monto debe ser > 0" });
+      form.setError("montoParcial", { message: "Monto > 0" });
       return;
     }
 
     if (esDeposito && depositoCalculadoLocal <= 0) {
-      toast.error("No hay disponible para depositar.");
+      toast.error("Sin disponible para depositar");
       return;
     }
 
-    // Reglas del comprobante cuando hay depósito
     if (esDeposito) {
       if (!data.comprobanteTipo) {
         form.setError("comprobanteTipo", {
-          message: "Tipo de comprobante requerido",
+          message: "Tipo requerido",
         });
         return;
       }
       if (!data.comprobanteNumero?.trim()) {
         form.setError("comprobanteNumero", {
-          message: "Número de comprobante requerido",
+          message: "Número requerido",
         });
         return;
       }
     }
 
-    setIsSubmitting(true);
     try {
       const payload: CerrarCajaV2Dto & {
         dejarEnCaja?: number;
         asentarVentas?: boolean;
-        // nuevos (si tu DTO ya los tiene tipados, puedes quitar estas extensiones)
         comprobanteTipo?: string;
         comprobanteNumero?: string;
         comprobanteFecha?: string;
@@ -336,7 +225,6 @@ export function CierreCajaDialog({
       if (esDeposito) {
         payload.cuentaBancariaId = data.cuentaBancariaId!;
 
-        // normaliza número (trim + upper + colapsa espacios, limita a 64)
         const num = (data.comprobanteNumero ?? "")
           .replace(/\s+/g, " ")
           .trim()
@@ -346,17 +234,15 @@ export function CierreCajaDialog({
         payload.comprobanteTipo = data.comprobanteTipo!;
         payload.comprobanteNumero = num;
 
-        // transforma "YYYY-MM-DD" a ISO (medianoche local)
         if (data.comprobanteFecha) {
           payload.comprobanteFecha = new Date(
-            `${data.comprobanteFecha}T00:00:00`
+            `${data.comprobanteFecha}T00:00:00`,
           ).toISOString();
         }
 
         if (data.modo === "DEPOSITO_PARCIAL") {
           payload.montoParcial = depositoCalculadoLocal;
         } else {
-          // asegura no enviar campo sobrante
           delete (payload as any).montoParcial;
         }
       }
@@ -371,307 +257,311 @@ export function CierreCajaDialog({
         }
       }
 
-      console.log("El payload es: ", payload);
-
-      await cerrarCajaV2(payload); // POST /caja/cerrar-v3
-
-      toast.success("Caja cerrada exitosamente");
+      toast.promise(closeCaja.mutateAsync(payload), {
+        success: "Caja cerrada",
+        error: (error) => getApiErrorMessageAxios(error),
+        loading: "Cerrando...",
+      });
       onOpenChange(false);
       onClosed?.();
     } catch (error) {
       console.error("Error cerrando caja:", error);
-      toast.error("Error al cerrar la caja");
     } finally {
-      setIsSubmitting(false);
       await reloadContext();
     }
   };
 
-  const formatCuentaBancaria = (cuenta: CuentaBancaria) => {
-    const numeroMasked = `****${cuenta.numero.slice(-4)}`;
-    return `${cuenta.alias} - ${cuenta.banco || numeroMasked}`;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Cerrar Caja</DialogTitle>
-          <DialogDescription>
-            Configure los detalles del cierre. El sistema asentará ventas en
-            efectivo y actualizará los snapshots del día.
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-4">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-lg">Cerrar Caja</DialogTitle>
+          <DialogDescription className="text-xs">
+            Configure cierre y asentamiento de ventas
           </DialogDescription>
         </DialogHeader>
 
         {isLoadingPrevia ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Cargando información...</span>
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="ml-2 text-sm">Cargando...</span>
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Columna principal */}
-                <div className="lg:col-span-2 space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+              {/* Main Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                {/* Left Panel - Form Fields */}
+                <div className="lg:col-span-3 space-y-3">
                   {/* Modo de cierre */}
                   <FormField
                     control={form.control}
                     name="modo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Modo de cierre</FormLabel>
+                        <FormLabel className="text-xs">Modo</FormLabel>
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
                             value={field.value}
-                            className="grid grid-cols-1 gap-3"
+                            className="grid grid-cols-3 gap-2"
                           >
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1">
                               <RadioGroupItem
                                 value="SIN_DEPOSITO"
                                 id="sin-deposito"
                               />
-                              <Label htmlFor="sin-deposito">
-                                Solo cerrar (sin depósito)
+                              <Label
+                                htmlFor="sin-deposito"
+                                className="text-xs font-normal cursor-pointer"
+                              >
+                                Cerrar
                               </Label>
                             </div>
 
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1">
                               <RadioGroupItem
                                 value="DEPOSITO_PARCIAL"
                                 id="deposito-parcial"
                                 disabled={disponibleOperable <= 0}
                               />
-                              <Label htmlFor="deposito-parcial">
-                                Depositar parcial
+                              <Label
+                                htmlFor="deposito-parcial"
+                                className="text-xs font-normal cursor-pointer"
+                              >
+                                Parcial
                               </Label>
                             </div>
 
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1">
                               <RadioGroupItem
                                 value="DEPOSITO_TODO"
                                 id="deposito-todo"
                                 disabled={disponibleOperable <= 0}
                               />
-                              <Label htmlFor="deposito-todo">
-                                Depositar todo
+                              <Label
+                                htmlFor="deposito-todo"
+                                className="text-xs font-normal cursor-pointer"
+                              >
+                                Todo
                               </Label>
                             </div>
                           </RadioGroup>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs" />
                       </FormItem>
                     )}
                   />
 
-                  {/* Asentar ventas */}
-                  <FormField
-                    control={form.control}
-                    name="asentarVentas"
-                    render={({ field }) => (
-                      <FormItem className="mt-2">
-                        <div className="flex items-center space-x-2">
+                  {/* Row: Asentar ventas & Dejar en caja */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="asentarVentas"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-2">
                           <input
                             id="asentar-ventas"
                             type="checkbox"
-                            className="h-4 w-4"
+                            className="h-3 w-3"
                             checked={!!field.value}
                             onChange={(e) => field.onChange(e.target.checked)}
                           />
-                          <Label htmlFor="asentar-ventas">
-                            Asentar ventas en efectivo antes de depositar
-                          </Label>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Dejar en caja */}
-                  <FormField
-                    control={form.control}
-                    name="dejarEnCaja"
-                    render={({ field }) => (
-                      <FormItem className="mt-2">
-                        <FormLabel>Dejar en caja (base)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            max={enCaja}
-                            value={Number(field.value ?? 0)}
-                            onChange={(e) =>
-                              field.onChange(Number(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Cuenta bancaria si hay depósito */}
-                  {requiereDeposito && (
-                    <FormField
-                      control={form.control}
-                      name="cuentaBancariaId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cuenta bancaria *</FormLabel>
-                          <Select
-                            onValueChange={(value) =>
-                              field.onChange(Number(value))
-                            }
-                            value={field.value?.toString()}
+                          <Label
+                            htmlFor="asentar-ventas"
+                            className="text-xs font-normal cursor-pointer"
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccione una cuenta" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {cuentas.map((cuenta) => (
-                                <SelectItem
-                                  key={cuenta.id}
-                                  value={cuenta.id.toString()}
-                                >
-                                  {formatCuentaBancaria(cuenta)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          {cuentaRequeridaError ? (
-                            <p className="text-sm text-red-500 mt-1">
-                              {cuentaRequeridaError}
-                            </p>
-                          ) : null}
+                            Asentar ventas
+                          </Label>
                         </FormItem>
                       )}
                     />
-                  )}
 
+                    <FormField
+                      control={form.control}
+                      name="dejarEnCaja"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Base</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              max={enCaja}
+                              value={Number(field.value ?? 0)}
+                              onChange={(e) =>
+                                field.onChange(Number(e.target.value))
+                              }
+                              className="h-8 text-xs"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Deposito Section */}
                   {requiereDeposito && (
                     <>
-                      {/* Tipo de comprobante */}
-                      <FormField
-                        control={form.control}
-                        name="comprobanteTipo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo de comprobante *</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
+                      {/* Row: Cuenta bancaria & Monto parcial */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="cuentaBancariaId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">
+                                Cuenta *
+                              </FormLabel>
+                              <Select
+                                onValueChange={(value) =>
+                                  field.onChange(Number(value))
+                                }
+                                value={field.value?.toString()}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Seleccionar" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {cuentas.map((cuenta) => (
+                                    <SelectItem
+                                      key={cuenta.id}
+                                      value={cuenta.id.toString()}
+                                      className="text-xs"
+                                    >
+                                      {formatCuentaBancaria(cuenta)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage className="text-xs" />
+                              {cuentaRequeridaError && (
+                                <p className="text-xs text-red-500 mt-0.5">
+                                  {cuentaRequeridaError}
+                                </p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        {watched.modo === "DEPOSITO_PARCIAL" && (
+                          <FormField
+                            control={form.control}
+                            name="montoParcial"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">
+                                  Monto *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min={0.01}
+                                    max={disponibleOperable}
+                                    value={Number(field.value ?? 0)}
+                                    onChange={(e) =>
+                                      field.onChange(Number(e.target.value))
+                                    }
+                                    className="h-8 text-xs"
+                                  />
+                                </FormControl>
+                                {montoParcialError && (
+                                  <p className="text-xs text-red-500 mt-0.5">
+                                    {montoParcialError}
+                                  </p>
+                                )}
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+
+                      {/* Row: Tipo & Número comprobante */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="comprobanteTipo"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Tipo *</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Seleccionar" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {ComprobanteTipoZ.options.map((t) => (
+                                    <SelectItem
+                                      key={t}
+                                      value={t}
+                                      className="text-xs"
+                                    >
+                                      {t.replace("_", " ")}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="comprobanteNumero"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">
+                                Número *
+                              </FormLabel>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccione el tipo" />
-                                </SelectTrigger>
+                                <Input
+                                  placeholder="Ej. 123456"
+                                  value={field.value ?? ""}
+                                  onChange={(e) =>
+                                    field.onChange(e.target.value)
+                                  }
+                                  maxLength={64}
+                                  className="h-8 text-xs"
+                                />
                               </FormControl>
-                              <SelectContent>
-                                {ComprobanteTipoZ.options.map((t) => (
-                                  <SelectItem key={t} value={t}>
-                                    {t.replace("_", " ")}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-                      {/* Número de comprobante */}
-                      <FormField
-                        control={form.control}
-                        name="comprobanteNumero"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Número de comprobante *</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Ej. 123456 / REF-ABCD"
-                                value={field.value ?? ""}
-                                onChange={(e) => field.onChange(e.target.value)}
-                                maxLength={64}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Fecha del comprobante (opcional) */}
+                      {/* Fecha comprobante */}
                       <FormField
                         control={form.control}
                         name="comprobanteFecha"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>
-                              Fecha del comprobante (opcional)
+                            <FormLabel className="text-xs">
+                              Fecha (opt.)
                             </FormLabel>
                             <FormControl>
                               <Input
                                 type="date"
                                 value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value)}
+                                className="h-8 text-xs"
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-xs" />
                           </FormItem>
                         )}
                       />
                     </>
                   )}
-
-                  {/* Monto parcial */}
-                  {watched.modo === "DEPOSITO_PARCIAL" && (
-                    <FormField
-                      control={form.control}
-                      name="montoParcial"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Monto a depositar *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min={0.01}
-                              max={disponibleOperable}
-                              value={Number(field.value ?? 0)}
-                              onChange={(e) =>
-                                field.onChange(Number(e.target.value))
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                          {montoParcialError ? (
-                            <p className="text-sm text-red-500 mt-1">
-                              {montoParcialError}
-                            </p>
-                          ) : null}
-                          {disponibleOperable <= 0 ? (
-                            <p className="text-sm text-yellow-600 mt-1">
-                              No hay disponible para depositar (base ≥ efectivo
-                              en caja).
-                            </p>
-                          ) : null}
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* Warnings de previa */}
-                  {previa?.warnings?.length ? (
-                    <div className="rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-                      {previa.warnings.map((w, i) => (
-                        <div key={i}>{w}</div>
-                      ))}
-                    </div>
-                  ) : null}
 
                   {/* Comentario final */}
                   <FormField
@@ -679,84 +569,84 @@ export function CierreCajaDialog({
                     name="comentarioFinal"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Comentario final (opcional)</FormLabel>
+                        <FormLabel className="text-xs">
+                          Comentario (opt.)
+                        </FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Notas del cierre" {...field} />
+                          <Textarea
+                            placeholder="Notas..."
+                            {...field}
+                            className="text-xs min-h-[60px] resize-none"
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs" />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                {/* Resumen lateral */}
+                {/* Right Panel - Summary */}
                 <div className="lg:col-span-1">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Resumen</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+                  <div className="border rounded p-2  text-xs space-y-2 sticky top-0">
+                    <h4 className="font-semibold text-xs">Resumen</h4>
+
+                    <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Efectivo en caja:
-                        </span>
+                        <span className="text-gray-600">En caja:</span>
                         <span className="font-medium">
                           Q {enCaja.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Base a dejar:
-                        </span>
+                        <span className="text-gray-600">Base:</span>
                         <span className="font-medium">
                           Q {dejarEnCaja.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Disponible para depósito:
-                        </span>
+                        <span className="text-gray-600">Disponible:</span>
                         <span className="font-medium">
                           Q {disponibleOperable.toFixed(2)}
                         </span>
                       </div>
-                      <hr />
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Depósito a realizar:
-                        </span>
-                        <span className="font-medium text-blue-600">
-                          Q {depositoCalculado.toFixed(2)}
-                        </span>
+
+                      <div className="border-t pt-1.5 mt-1.5">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Depósito:</span>
+                          <span className="font-semibold text-blue-600">
+                            Q {depositoCalculado.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Saldo final:</span>
+                          <span className="font-semibold text-green-600">
+                            Q {saldoFinalEsperado.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Saldo final esperado:
-                        </span>
-                        <span className="font-medium text-green-600">
-                          Q {saldoFinalEsperado.toFixed(2)}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <DialogFooter>
+              {/* Footer */}
+              <DialogFooter className="pt-2 flex gap-2 justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
+                  className="h-8 text-xs px-3"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting || !form.formState.isValid}
+                  className="h-8 text-xs px-3"
                 >
                   {isSubmitting && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                   )}
                   {isSubmitting ? "Cerrando..." : "Cerrar Caja"}
                 </Button>

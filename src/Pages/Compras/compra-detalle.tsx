@@ -22,7 +22,6 @@ import {
 import dayjs from "dayjs";
 import RecepcionesMain from "./Recepciones/RecepcionesMain";
 import CreditoCompraMainPage from "./Credito/CreditoCompraMainPage";
-import PurchasePaymentFormDialog from "@/utils/components/SelectMethodPayment/PurchasePaymentFormDialog";
 import { normalizarDetalles } from "./Credito/helpers/normalizador";
 import CostosAsociadosDialog from "./components/Costos Asociados Dialog";
 import {
@@ -75,7 +74,6 @@ export default function CompraDetalle() {
   const [searchParams, setSearchParams] = useSearchParams();
   const defaultTab = (searchParams.get("tab") as string) || "compra";
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
-  // QUERIES & MUTATIONS ===============================================
   const {
     data: registroQ,
     isPending: isPendingRegistro,
@@ -187,9 +185,7 @@ export default function CompraDetalle() {
   }, [selectedItems]);
 
   const optionsCajas: Option[] = cajasDisponibles.map((c) => ({
-    label: `Caja #${c.id} · Inicial ${formattMonedaGT(
-      c.saldoInicial,
-    )} · Disponible ${formattMonedaGT(c.disponibleEnCaja)}`,
+    label: `${c.usuarioInicio.nombre} — Caja #${c.id} | Saldo: ${formattMonedaGT(c.disponibleEnCaja)}`,
     value: c.id.toString(),
   }));
 
@@ -334,8 +330,6 @@ export default function CompraDetalle() {
 
   const handleCreateRecepcionParcial = async () => {
     try {
-      console.log("El log del payload (selectedItems): ", selectedItems);
-
       const isValid = verifyTransaction();
       if (!isValid) {
         toast.warning("Verifique los datos a enviar");
@@ -356,8 +350,6 @@ export default function CompraDetalle() {
             }
           : {}),
       };
-
-      console.log("Payload parcial ENVIADO: ", payloadParcial);
 
       await toast.promise(
         handleRecepcionarParcial.mutateAsync(payloadParcial),
@@ -434,8 +426,6 @@ export default function CompraDetalle() {
       ...(mf ? { mf } : {}),
       ...(aplicarProrrateo ? { prorrateo: { aplicar: true } } : {}),
     };
-
-    console.log("El payload es: ", payload);
 
     await toast.promise(recepcionarM.mutateAsync(payload), {
       loading: "Recepcionando compra...",
@@ -545,7 +535,6 @@ export default function CompraDetalle() {
       icon: <ShoppingBag size={18} />,
       content: (
         <ComprasMain
-          //STATES
           openFormPaymentDialog={openFormPaymentDialog}
           setOpenFormPaymentDialog={setOpenFormPaymentDialog}
           selectedItems={selectedItems}
@@ -559,9 +548,7 @@ export default function CompraDetalle() {
           selectedIds={selectedIds}
           openRecibirParcial={openRecibirParcial}
           setOpenRecibirParcial={setOpenRecibirParcial}
-          //REGISTRO
           registro={registroQ}
-          //HELPERS
           updateCantidadDetalle={updateCantidadDetalle}
           upsserSelectItems={upsserSelectItems}
           recepcionable={recepcionable}
@@ -570,7 +557,6 @@ export default function CompraDetalle() {
             setOpenFormPaymentDialog(true);
           }}
           updateFechaVencimiento={updateFechaVencimiento}
-          //FLAGS
           hasCredit={hasCredit}
         />
       ),
@@ -612,7 +598,7 @@ export default function CompraDetalle() {
         handleTabChange={handleChangeTabs}
         tabs={tabs}
       />
-      {/* Confirmación (segunda pantalla) */}
+
       <AdvancedDialog
         type="warning"
         onOpenChange={setOpenSendStock}
@@ -663,28 +649,7 @@ Si existe un presupuesto asociado, el monto correspondiente a esta recepción se
         }}
       />
       {/* Form previo a confirmar */}
-      <PurchasePaymentFormDialog
-        open={openFormDialog}
-        onOpenChange={setOpenFormDialog}
-        proveedores={proveedores}
-        cuentasBancarias={cuentasBancarias}
-        cajasDisponibles={cajasDisponibles}
-        montoRecepcion={montoRecepcion}
-        formatMoney={formattMonedaGT}
-        observaciones={observaciones}
-        setObservaciones={setObservaciones}
-        proveedorSelected={proveedorSelected}
-        setProveedorSelected={setProveedorSelected}
-        metodoPago={metodoPago}
-        setMetodoPago={setMetodoPago}
-        cuentaBancariaSelected={cuentaBancariaSelected}
-        setCuentaBancariaSelected={setCuentaBancariaSelected}
-        cajaSelected={cajaSelected}
-        setCajaSelected={setCajaSelected}
-        onContinue={() => setOpenSendStock(true)}
-        layout="two-column"
-        flow="OUT"
-      />
+
       {/* FORM PREVIO A RECEPCION PARCIAL */}
       <PaymentMethodCompraDialogConfirm
         isBankMethod={isBankMethod}
@@ -716,7 +681,6 @@ Si existe un presupuesto asociado, el monto correspondiente a esta recepción se
         open={openCostoDialog}
         onOpenChange={(v) => {
           setOpenCostoDialog(v);
-          // Si el usuario cierra sin guardar, continuamos al modal final (omitir costo)
           if (!v && !costoStepDone) {
             if (recepcionFlow === "PARCIAL") setOpenRecibirParcial(true);
             else setOpenSendStock(true);
@@ -738,8 +702,6 @@ Si existe un presupuesto asociado, el monto correspondiente a esta recepción se
           setProrrateoMeta(prorrateo ?? null);
           setCostoStepDone(true);
           setOpenCostoDialog(false);
-
-          // Ahora sí abrimos el modal final de confirmación
           if (recepcionFlow === "PARCIAL") setOpenRecibirParcial(true);
           else setOpenSendStock(true);
         }}

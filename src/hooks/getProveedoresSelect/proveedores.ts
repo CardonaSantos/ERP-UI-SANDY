@@ -1,8 +1,10 @@
-// /hooks/useProveedoresSelect.ts
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { axiosClient } from "../getClientsSelect/Queries/axiosClient";
 import { ProveedoresResponse } from "./interfaces/proveedores.interfaces";
 import { parseProveedores } from "./utils/parseProveedores";
+import { erp } from "@/API/erpApi";
+import { erpEndpoints } from "@/API/routes/endpoints";
+import { Proveedor } from "@/Pages/Caja/Movimientos/types";
 
 export type ProveedoresParams = {
   search?: string;
@@ -30,7 +32,7 @@ export function useProveedoresSelect(params: ProveedoresParams = {}) {
             page: params.page,
             pageSize: params.pageSize,
           },
-        }
+        },
       );
       return data.map(parseProveedores);
     },
@@ -39,4 +41,13 @@ export function useProveedoresSelect(params: ProveedoresParams = {}) {
     gcTime: 10 * 60 * 1000,
     retry: false, // 🔕 desactiva retries mientras depuras
   });
+}
+
+export function useGetProveedores() {
+  return erp.useQueryApi<Array<Proveedor>>(
+    proveedoresKey.all,
+    erpEndpoints.proveedores,
+    undefined,
+    undefined,
+  );
 }

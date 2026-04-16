@@ -41,11 +41,11 @@ import { VentaLigadaACaja } from "./VentasCaja/interface";
 import { VentaCard } from "./VentasCaja/venta-card";
 import { useState } from "react";
 import { toast } from "sonner";
-import { deleteMovimiento } from "./api";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { Button } from "@/components/ui/button";
-// Interfaces
+import { useDeleteMovimiento } from "@/hooks/use-cajas/use-cajas";
+
 export type TipoMovimiento =
   | "INGRESO"
   | "EGRESO"
@@ -92,7 +92,6 @@ interface PropsCardRegistroMovimiento {
   setOpenDelete: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-// Configuración de iconos y colores por tipo
 const getTipoConfig = (tipo: TipoMovimiento) => {
   const configs = {
     INGRESO: {
@@ -176,30 +175,24 @@ const getCategoriaLabel = (categoria: CategoriaMovimiento) => {
 };
 
 function RegistrosCaja({ movimientos = [], ventas }: MovimientosCajaProps) {
-  console.log("Los movimientos de esta caja son: ", movimientos);
-  console.log(
-    "Las ventas en componente registros que deberia mapearlos es: ",
-    ventas
-  );
   const [movimientoSelected, setMovimientoSelected] = useState<number>(0);
   const [openDelete, setOpenDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const deleteMovimiento = useDeleteMovimiento(movimientoSelected);
+
   const deleteMovimientoByID = async (
     movimientoID: number,
-    onDeleted?: (id: number) => void
+    onDeleted?: (id: number) => void,
   ) => {
     if (isDeleting) return;
     try {
       setIsDeleting(true);
 
-      await toast.promise(
-        deleteMovimiento(movimientoID), // <- devuelve una Promise
-        {
-          loading: "Eliminando movimiento de la caja...",
-          success: "Movimiento eliminado",
-          error: (e) => getApiErrorMessageAxios(e),
-        }
-      );
+      await toast.promise(deleteMovimiento.mutateAsync(), {
+        loading: "Eliminando movimiento de la caja...",
+        success: "Movimiento eliminado",
+        error: (e) => getApiErrorMessageAxios(e),
+      });
       onDeleted?.(movimientoID);
       setOpenDelete(false);
     } catch (err) {
@@ -309,15 +302,11 @@ function RegistrosCaja({ movimientos = [], ventas }: MovimientosCajaProps) {
 
 const CardMovimientoRegistro = ({
   movimiento,
-  // movimientoSelected,
   setMovimientoSelected,
   setOpenDelete,
 }: PropsCardRegistroMovimiento) => {
   const tipoConfig = getTipoConfig(movimiento.tipo);
   const IconComponent = tipoConfig.icon;
-  // const isEgreso = ["EGRESO", "RETIRO", "DEPOSITO_PROVEEDOR"].includes(
-  //   movimiento.tipo
-  // );
 
   return (
     <Card className="border-muted hover:shadow-md transition-all duration-200">

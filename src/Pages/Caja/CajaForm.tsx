@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CajaAbierta, CerrarCaja, IniciarCaja } from "./interfaces";
+import { CajaAbierta, CerrarCaja, IniciarCaja } from "./types/interfaces";
 import { Textarea } from "@/components/ui/textarea";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { formattFechaWithMinutes } from "../Utils/Utils";
@@ -20,13 +20,13 @@ interface CajaInicioProps {
   // abrir
   nuevaCaja: IniciarCaja | null;
   handleChangeGeneric: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
   handleSubmitIniciarCaja: () => Promise<void>;
   // cerrar
   cerrarCajaDto: CerrarCaja | null;
   handleChangeCerrar: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
   handleCerrarCaja: () => Promise<void>;
   // comunes
@@ -70,7 +70,7 @@ function CajaForm({
           {hasOpen
             ? `Caja abierta desde ${
                 formattFechaWithMinutes(
-                  cajaAbierta?.fechaApertura ?? new Date()
+                  cajaAbierta?.fechaApertura ?? new Date(),
                 ) ?? ""
               }`
             : "Ingrese su saldo inicial o tome el del día anterior"}

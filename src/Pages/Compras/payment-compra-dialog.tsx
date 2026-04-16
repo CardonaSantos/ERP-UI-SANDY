@@ -49,7 +49,7 @@ interface PropsDialog {
   setOpenFormPaymentDialog: React.Dispatch<React.SetStateAction<boolean>>;
   // helpers
   isBankMethod: (
-    m?: "" | MetodoPago
+    m?: "" | MetodoPago,
   ) => m is "TRANSFERENCIA" | "TARJETA" | "CHEQUE";
   isCashMethod: (m?: "" | MetodoPago) => m is "EFECTIVO" | "CONTADO";
   // form state
@@ -74,7 +74,7 @@ interface PropsDialog {
   cuentasBancarias: { id: number; nombre: string }[];
   // UX
   canContinue: boolean;
-  onContinue: () => void; // ✅ NUEVO
+  onContinue: () => void;
   proveedores: {
     id: number;
     nombre: string;
@@ -189,12 +189,13 @@ function PaymentMethodCompraDialogConfirm({
                 onChange={handleSelectCaja}
                 value={
                   cajaSelected
-                    ? optionsCajas.find((o) => o.value === cajaSelected) ?? null
+                    ? (optionsCajas.find((o) => o.value === cajaSelected) ??
+                      null)
                     : null
                 }
                 isClearable
                 isSearchable
-                className="text-black"
+                className="text-black text-xs"
                 placeholder="Seleccione una caja a asignar"
               />
               {!cajaSelected && (
@@ -209,7 +210,7 @@ function PaymentMethodCompraDialogConfirm({
                 </p>
               )}
               {!cajasDisponibles.some(
-                (c) => Number(c.disponibleEnCaja) >= montoRecepcion
+                (c) => Number(c.disponibleEnCaja) >= montoRecepcion,
               ) && (
                 <p className="text-[11px] text-amber-600 mt-1">
                   ` Ninguna caja abierta tiene saldo suficiente ($

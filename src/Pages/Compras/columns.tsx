@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { CompraEstado, CompraListItem } from "@/Types/compras/interfaces";
 import { formattMonedaGT } from "@/utils/formattMoneda";
+import { Link } from "react-router-dom";
 
 export function formatFechaCompra(iso: string | null): {
   date: string;
@@ -298,13 +299,13 @@ export const comprasColumns: ColumnDef<CompraListItem, any>[] = [
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <a
-                  href={`/compra/${compra.id}`}
+                <Link
+                  to={`/compra/${compra.id}`}
                   className="inline-flex items-center justify-center h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   aria-label={`Ver compra #${compra.id}`}
                 >
                   <ExternalLink className="h-3 w-3" />
-                </a>
+                </Link>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
                 Ver compra completa

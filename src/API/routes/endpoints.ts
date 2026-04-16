@@ -45,10 +45,27 @@ export const erpEndpoints = {
   },
 
   proveedores: "/proveedor",
+
   cuentas_bancarias: "cuentas-bancarias/get-simple-select",
   cajas: {
     disponibles: (sucursalId: number) =>
       `/caja/cajas-disponibles/${sucursalId}`,
+    cerrar_caja: `/caja/cerrar-v3`,
+
+    iniciar_caja: `/caja/iniciar-caja`,
+
+    caja_previa_data: `/caja/previa-cierre`,
+    ultima_caja_abierta: (sucursalId: number, userId: number) =>
+      `/caja/find-cash-regist-open/${sucursalId}/${userId}`,
+
+    ultimo_saldo_sucursal: (sucursalId: number, userId: number) =>
+      `/caja/get-ultimo-saldo-usuario/${sucursalId}/${userId}`,
+  },
+
+  movimiento: {
+    delete_movimiento: (movimientoId: number) =>
+      `/movimiento-caja/delete-movimiento/${movimientoId}`,
+    create_movimiento: `/movimiento-financiero`,
   },
 
   creditos: {

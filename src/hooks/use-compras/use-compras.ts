@@ -38,7 +38,6 @@ export function useGetCompraDetails(
 
 export function useRecepcionarCompraTotal(compraId: number) {
   const queryClient = useQueryClient();
-
   return erp.useMutationApi<any, any>(
     "post",
     erpEndpoints.compras.recepcionar(compraId),

@@ -43,6 +43,10 @@ export interface CajaConSaldo {
   saldoInicial: number;
   usuarioInicioId: number;
   disponibleEnCaja: number;
+  usuarioInicio: {
+    id: number;
+    nombre: string;
+  };
 }
 
 export interface SimpleOption {
@@ -118,7 +122,7 @@ export type PurchasePaymentFormDialogProps = {
 };
 
 export default function PurchasePaymentFormDialog(
-  props: PurchasePaymentFormDialogProps
+  props: PurchasePaymentFormDialogProps,
 ) {
   const {
     open,
@@ -135,8 +139,8 @@ export default function PurchasePaymentFormDialog(
     setObservaciones,
     proveedorSelected,
     setProveedorSelected,
-    metodoPago, // ✅ controlado
-    setMetodoPago, // ✅ controlado
+    metodoPago,
+    setMetodoPago,
     cuentaBancariaSelected,
     setCuentaBancariaSelected,
     cajaSelected,
@@ -157,7 +161,7 @@ export default function PurchasePaymentFormDialog(
 
   const metodoDef = React.useMemo(
     () => metodoPagoOptions.find((m) => m.value === metodoPago),
-    [metodoPago, metodoPagoOptions]
+    [metodoPago, metodoPagoOptions],
   );
 
   const isBankMethod = metodoDef?.canal === "BANCO";
@@ -174,12 +178,12 @@ export default function PurchasePaymentFormDialog(
   const optionsCajas: SimpleOption[] = React.useMemo(
     () =>
       (cajasDisponibles ?? []).map((c) => ({
-        label: `Caja #${c.id} · Inicial ${formatMoney(
-          c.saldoInicial
+        label: `Usuario: ${c.usuarioInicio.nombre} - Caja #${c.id} · Inicial ${formatMoney(
+          c.saldoInicial,
         )} · Disponible ${formatMoney(c.disponibleEnCaja)}`,
         value: String(c.id),
       })),
-    [cajasDisponibles, formatMoney]
+    [cajasDisponibles, formatMoney],
   );
 
   const selectedCaja = React.useMemo(
@@ -187,7 +191,7 @@ export default function PurchasePaymentFormDialog(
       cajaSelected
         ? cajasDisponibles.find((c) => String(c.id) === String(cajaSelected))
         : undefined,
-    [cajaSelected, cajasDisponibles]
+    [cajaSelected, cajasDisponibles],
   );
 
   // Para ENTRADA (flow='IN') no validamos saldo de caja
@@ -201,7 +205,7 @@ export default function PurchasePaymentFormDialog(
   const algunaCajaConSaldo = React.useMemo(() => {
     if (flow === "IN") return (cajasDisponibles ?? []).length > 0; // IN: cualquier caja abierta
     return (cajasDisponibles ?? []).some(
-      (c) => Number(c.disponibleEnCaja) >= Number(montoRecepcion)
+      (c) => Number(c.disponibleEnCaja) >= Number(montoRecepcion),
     );
   }, [cajasDisponibles, montoRecepcion, flow]);
 
@@ -219,7 +223,7 @@ export default function PurchasePaymentFormDialog(
         className={cn(
           // antes: "sm:max-w-md"
           "sm:max-w-2xl md:max-w-3xl lg:max-w-5xl", // ➜ ancho horizontal
-          contentClassName
+          contentClassName,
         )}
       >
         <DialogHeader>
@@ -228,7 +232,7 @@ export default function PurchasePaymentFormDialog(
         </DialogHeader>
         <div
           className={cn(
-            layout === "two-column" ? "grid md:grid-cols-2 gap-6" : "space-y-4"
+            layout === "two-column" ? "grid md:grid-cols-2 gap-6" : "space-y-4",
           )}
         >
           {/* Columna izquierda: children + observaciones */}
@@ -316,13 +320,13 @@ export default function PurchasePaymentFormDialog(
                   }
                   value={
                     cajaSelected
-                      ? optionsCajas.find((o) => o.value === cajaSelected) ??
-                        null
+                      ? (optionsCajas.find((o) => o.value === cajaSelected) ??
+                        null)
                       : null
                   }
                   isClearable
                   isSearchable
-                  className="text-black"
+                  className="text-black text-xs"
                   placeholder="Seleccione una caja a asignar"
                 />
                 {!cajaSelected && (

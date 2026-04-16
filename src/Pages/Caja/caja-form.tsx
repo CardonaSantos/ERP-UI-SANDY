@@ -6,35 +6,38 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 import { CierreCajaDialog } from "./cierre-caja-dialog";
-import { CajaAbierta, CerrarCaja, IniciarCaja } from "./interfaces";
+import type { CajaAbierta, CerrarCaja, IniciarCaja } from "./types/interfaces";
 import { formattFechaWithMinutes } from "../Utils/Utils";
-import { CuentasBancariasSelect } from "@/Types/CuentasBancarias/CuentasBancariasSelect";
+import type { CuentasBancariasSelect } from "@/Types/CuentasBancarias/CuentasBancariasSelect";
+import {
+  LockOpen,
+  Lock,
+  Clock,
+  Wallet,
+  MessageSquare,
+  CheckCircle,
+} from "lucide-react";
 
 interface CajaInicioProps {
   hasOpen: boolean;
-  // abrir
   nuevaCaja: IniciarCaja | null;
   handleChangeGeneric: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
   handleSubmitIniciarCaja: () => Promise<void>;
-  // cerrar - using existing props from main page
   cerrarCajaDto: CerrarCaja | null;
   handleChangeCerrar: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
   handleCerrarCaja: () => Promise<void>;
-  // ui states
   isSubmiting: boolean;
   cajaMontoAnterior: number;
   openCloseCaja: boolean;
@@ -43,21 +46,101 @@ interface CajaInicioProps {
   setOpenConfirDialog: React.Dispatch<React.SetStateAction<boolean>>;
   cajaAbierta: CajaAbierta | null;
   reloadContext: () => Promise<void>;
-  //
   cuentas: CuentasBancariasSelect[];
 }
 
+// --- Subcomponente: modo apertura ---
+function AperturaCaja({
+  nuevaCaja,
+  cajaMontoAnterior,
+  handleChangeGeneric,
+}: Pick<
+  CajaInicioProps,
+  "nuevaCaja" | "cajaMontoAnterior" | "handleChangeGeneric"
+>) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-1">
+        <Label
+          htmlFor="saldoInicial"
+          className="text-xs font-medium flex items-center gap-1"
+        >
+          <Wallet size={13} className="text-muted-foreground" aria-hidden />
+          Saldo inicial
+        </Label>
+        <Input
+          id="saldoInicial"
+          name="saldoInicial"
+          type="number"
+          value={
+            nuevaCaja
+              ? (nuevaCaja.saldoInicial ?? "")
+              : (cajaMontoAnterior ?? "")
+          }
+          onChange={handleChangeGeneric}
+          placeholder="0.00"
+          required
+          className="h-8 text-sm"
+        />
+        {cajaMontoAnterior > 0 && (
+          <span className="text-xs text-muted-foreground" aria-live="polite">
+            Tomando saldo anterior — puedes editarlo
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-1">
+        <Label
+          htmlFor="comentario"
+          className="text-xs font-medium flex items-center gap-1"
+        >
+          <MessageSquare
+            size={13}
+            className="text-muted-foreground"
+            aria-hidden
+          />
+          Comentario
+        </Label>
+        <Textarea
+          id="comentario"
+          name="comentario"
+          value={nuevaCaja?.comentario ?? ""}
+          onChange={handleChangeGeneric}
+          placeholder="Comentario opcional"
+          rows={2}
+          className="text-sm resize-none"
+        />
+      </div>
+    </div>
+  );
+}
+
+// --- Subcomponente: modo cierre ---
+function CierreCaja({ cajaAbierta }: Pick<CajaInicioProps, "cajaAbierta">) {
+  return (
+    <div className="grid gap-1">
+      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+        <Wallet size={13} aria-hidden />
+        Saldo inicial del turno
+      </span>
+      <div
+        className="rounded border bg-muted px-3 py-2 text-sm font-mono tabular-nums"
+        aria-label="Saldo inicial del turno"
+      >
+        Q {cajaAbierta?.saldoInicial?.toFixed(2) ?? "0.00"}
+      </div>
+    </div>
+  );
+}
+
+// --- Componente principal ---
 function CajaForm({
   hasOpen,
-  // abrir
   nuevaCaja,
   handleChangeGeneric,
   handleSubmitIniciarCaja,
-  // cerrar - existing props
   cerrarCajaDto,
-  // handleChangeCerrar, porque?
   handleCerrarCaja,
-  // ui states
   isSubmiting,
   cajaMontoAnterior,
   openCloseCaja,
@@ -70,8 +153,6 @@ function CajaForm({
 }: CajaInicioProps) {
   const [openCierreCajaDialog, setOpenCierreCajaDialog] = useState(false);
 
-  // const truncateInputSaldo: boolean = cajaMontoAnterior > 0 ? true : false;
-
   const fechaApertura = cajaAbierta?.fechaApertura
     ? typeof cajaAbierta.fechaApertura === "string"
       ? new Date(cajaAbierta.fechaApertura)
@@ -80,108 +161,80 @@ function CajaForm({
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-center text-lg">
-          {hasOpen ? "Cerrar turno en caja" : "Registrar turno en caja"}
-        </CardTitle>
-        <CardDescription className="text-center">
-          {hasOpen
-            ? `Caja abierta desde ${
-                formattFechaWithMinutes(fechaApertura) ?? ""
-              }`
-            : "Ingrese su saldo inicial o tome el del día anterior"}
-        </CardDescription>
+      {/* Header */}
+      <CardHeader className="px-4 py-3 border-b">
+        <div className="flex items-center gap-2">
+          {hasOpen ? (
+            <Lock size={15} className="text-destructive shrink-0" aria-hidden />
+          ) : (
+            <LockOpen
+              size={15}
+              className="text-green-600 shrink-0"
+              aria-hidden
+            />
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-semibold leading-none truncate">
+              {hasOpen ? "Cerrar turno en caja" : "Registrar turno en caja"}
+            </p>
+            {hasOpen ? (
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                <Clock size={11} aria-hidden />
+                Abierta desde {formattFechaWithMinutes(fechaApertura) ?? "—"}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ingresa el saldo inicial del turno
+              </p>
+            )}
+          </div>
+        </div>
       </CardHeader>
 
-      <CardContent>
+      {/* Content */}
+      <CardContent className="px-4 py-3">
         {hasOpen ? (
-          // --- MODO CERRAR ---
-          <div className="flex flex-col gap-6">
-            <div className="grid gap-1 text-sm">
-              <span className="font-medium">Saldo inicial del turno</span>
-              <div className="rounded-md border px-3 py-2 bg-muted">
-                Q {cajaAbierta?.saldoInicial?.toFixed(2) ?? "0.00"}
-              </div>
-            </div>
-
-            {/* 👇 Aquí quitas el textarea de comentario final */}
-            {/* El comentario final solo se gestiona en el Dialog */}
-          </div>
+          <CierreCaja cajaAbierta={cajaAbierta} />
         ) : (
-          // --- MODO ABRIR ---
-          <div className="flex flex-col gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="saldoInicial">Saldo inicial</Label>
-              <Input
-                id="saldoInicial"
-                name="saldoInicial"
-                type="number"
-                // Usamos el valor de nuevaCaja (controlado). Si por alguna razón nuevaCaja es null,
-                // mostramos cajaMontoAnterior como fallback para que no quede vacío.
-                value={
-                  nuevaCaja
-                    ? // si existe nuevaCaja usar su saldo (editable)
-                      nuevaCaja.saldoInicial ?? ""
-                    : // fallback visual, no controlamos si no existe nuevaCaja
-                      cajaMontoAnterior ?? ""
-                }
-                onChange={handleChangeGeneric}
-                placeholder="Ingrese su saldo inicial para este turno"
-                required
-              />
-              <span
-                className="text-xs text-muted-foreground"
-                aria-live="polite"
-              >
-                {cajaMontoAnterior > 0
-                  ? "Tomando saldo anterior (puedes editarlo)"
-                  : "\u00A0"}
-              </span>
-            </div>
-
-            {/* 👇 Este sí se queda, porque es el comentario inicial */}
-            <div className="grid gap-2">
-              <Label htmlFor="comentario">Comentario inicial</Label>
-              <Textarea
-                value={nuevaCaja?.comentario ?? ""}
-                onChange={handleChangeGeneric}
-                id="comentario"
-                name="comentario"
-                placeholder="Comentario opcional"
-              />
-            </div>
-          </div>
+          <AperturaCaja
+            nuevaCaja={nuevaCaja}
+            cajaMontoAnterior={cajaMontoAnterior}
+            handleChangeGeneric={handleChangeGeneric}
+          />
         )}
       </CardContent>
 
-      <CardFooter className="flex-col gap-2">
+      {/* Footer */}
+      <CardFooter className="px-4 py-3 border-t">
         {!hasOpen ? (
           <Button
             type="button"
-            className="w-full bg-green-500 hover:bg-green-500"
+            size="sm"
+            className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8"
             onClick={() => setOpenConfirDialog(true)}
             disabled={!nuevaCaja || isSubmiting}
+            aria-label="Registrar turno en caja"
           >
+            <CheckCircle size={13} className="mr-1.5" aria-hidden />
             Registrar turno
           </Button>
-        ) : null}
-
-        {hasOpen ? (
-          <div className="flex flex-col gap-2 w-full">
-            <Button
-              onClick={() => setOpenCierreCajaDialog(true)}
-              type="button"
-              variant="destructive"
-              className="w-full"
-              disabled={isSubmiting}
-            >
-              Cerrar caja
-            </Button>
-          </div>
-        ) : null}
+        ) : (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="w-full text-xs h-8"
+            onClick={() => setOpenCierreCajaDialog(true)}
+            disabled={isSubmiting}
+            aria-label="Cerrar turno en caja"
+          >
+            <Lock size={13} className="mr-1.5" aria-hidden />
+            Cerrar caja
+          </Button>
+        )}
       </CardFooter>
 
-      {/* Confirm abrir */}
+      {/* Dialog: confirmar apertura */}
       <AdvancedDialog
         type="confirmation"
         title="¿Iniciar turno con estos datos?"
@@ -202,6 +255,7 @@ function CajaForm({
         }}
       />
 
+      {/* Dialog: confirmar cierre (legacy) */}
       <AdvancedDialog
         type="warning"
         title="¿Cerrar turno en caja?"
@@ -222,6 +276,7 @@ function CajaForm({
         }}
       />
 
+      {/* Dialog: cierre detallado */}
       {hasOpen && cajaAbierta && (
         <CierreCajaDialog
           cuentas={cuentas}
@@ -231,10 +286,7 @@ function CajaForm({
           registroCajaId={cajaAbierta.id}
           usuarioCierreId={cerrarCajaDto?.usuarioCierra ?? 0}
           cuentasBancarias={cuentas}
-          onClosed={() => {
-            // Callback when V2 close is completed - you can add reload logic here
-            console.log("Caja cerrada con V2");
-          }}
+          onClosed={() => {}}
         />
       )}
     </Card>
