@@ -15,14 +15,12 @@ import {
 import axios from "axios";
 import { toast } from "sonner";
 const API_URL = import.meta.env.VITE_API_URL;
-// import { Switch } from "@/components/ui/switch"
 
 export default function CreateSucursal() {
   const [nombre, setNombre] = useState("");
   const [direccion, setDireccion] = useState("");
   const [telefono, setTelefono] = useState("");
   const [tipoSucursal, setTipoSucursal] = useState("");
-  //   const [estadoOperacion, setEstadoOperacion] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

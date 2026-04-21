@@ -60,12 +60,15 @@ export const erpEndpoints = {
 
     ultimo_saldo_sucursal: (sucursalId: number, userId: number) =>
       `/caja/get-ultimo-saldo-usuario/${sucursalId}/${userId}`,
+
+    list_registros: `/caja/list-cajas`,
   },
 
   movimiento: {
     delete_movimiento: (movimientoId: number) =>
       `/movimiento-caja/delete-movimiento/${movimientoId}`,
     create_movimiento: `/movimiento-financiero`,
+    list_movimientos: `/movimientos-cajas`,
   },
 
   creditos: {
@@ -74,5 +77,8 @@ export const erpEndpoints = {
 
   tickets_boleta: {
     byId: (id: number) => `/tickets-soporte/get-ticket-boleta/${id}`,
+  },
+  excel: {
+    cajas: `/excel-reports/cajas`,
   },
 } as const;

@@ -1,5 +1,4 @@
 "use client";
-
 import {
   type ColumnFiltersState,
   flexRender,
@@ -30,10 +29,10 @@ import DialogMovimientoDetails from "./dialog-movimiento-details";
 
 type PropsMovimientosTable = {
   data: MovimientoCajaItem[];
-  page: number; // 1-based
+  page: number;
   limit: number;
-  pages: number; // total de páginas (server)
-  total: number; // total de registros (server)
+  pages: number;
+  total: number;
   loading?: boolean;
   onChangePage: (p: number) => void;
   onChangeLimit: (l: number) => void;
@@ -76,12 +75,12 @@ function MovimientosTable({
   loading,
 }: PropsMovimientosTable) {
   const [selected, setSelected] = React.useState<MovimientoCajaItem | null>(
-    null
+    null,
   );
   const [openDetalle, setOpenDetalle] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    [],
   );
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [showFilters, setShowFilters] = React.useState(false);
@@ -94,7 +93,7 @@ function MovimientosTable({
       columnFilters,
       globalFilter,
       pagination: {
-        pageIndex: Math.max(0, page - 1), // TanStack usa base 0
+        pageIndex: Math.max(0, page - 1),
         pageSize: limit,
       },
     },
@@ -112,16 +111,13 @@ function MovimientosTable({
         onChangePage(next.pageIndex + 1);
     },
 
-    // 🔑 Server-side pagination:
     manualPagination: true,
     pageCount: pages,
 
-    // Row models
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
 
-    // callback para abrir detalle desde las celdas
     meta: {
       onOpenDetalle: (row: MovimientoCajaItem) => {
         setSelected(row);
@@ -219,7 +215,7 @@ function MovimientosTable({
                         <div className="flex items-center gap-1">
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                           <div className="flex flex-col">
                             {{
@@ -287,7 +283,7 @@ function MovimientosTable({
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </td>
                       ))}

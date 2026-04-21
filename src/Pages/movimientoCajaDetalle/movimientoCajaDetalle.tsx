@@ -1,5 +1,4 @@
 "use client";
-
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,8 +32,9 @@ import { formateDateWithMinutes } from "@/Crm/Utils/FormateDate";
 import { getApiErrorMessageAxios } from "../Utils/UtilsErrorApi";
 import { getMovimientoCajaDetail } from "./api";
 import { ReplaceUnderlines } from "@/utils/UtilsII";
+import { useDeleteMovimiento } from "@/hooks/use-cajas/use-cajas";
+import { AdvancedDialog } from "@/utils/components/AdvancedDialog";
 
-// Animaciones
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -60,9 +60,13 @@ export default function MovimientoFinancieroDetail() {
   const { id } = useParams();
   const movimientoID = Number(id);
 
+  const [openDelete, setOpenDelete] = useState<boolean>(false);
+
   const [movimiento, setMovimiento] = useState<MovimientoCajaDetail | null>(
-    null
+    null,
   );
+
+  const deleteMovimiento = useDeleteMovimiento(movimientoID);
 
   const getSetData = async () => {
     const data = await getMovimientoCajaDetail(movimientoID);
@@ -126,8 +130,18 @@ export default function MovimientoFinancieroDetail() {
     return { sign, canal, isTransfer, tipoCalculado };
   };
 
+  const deleteMf = () => {
+    toast.promise(deleteMovimiento.mutateAsync(), {
+      success: () => {
+        onBack();
+        return "Movimiento Financiero Eliminado";
+      },
+      error: (error) => getApiErrorMessageAxios(error),
+      loading: "Eliminando registro....",
+    });
+  };
+
   const getTipoBadge = (movimiento: MovimientoCajaDetail) => {
-    // const { tipoCalculado, isTransfer } = getMovimientoInfo(movimiento);
     const { tipoCalculado } = getMovimientoInfo(movimiento);
 
     const variants = {
@@ -207,7 +221,7 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="clasificacion" variant="outline">
           {movimiento.clasificacion}
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -215,7 +229,7 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="motivo" variant="outline">
           {movimiento.motivo}
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -223,7 +237,7 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="metodoPago" variant="outline">
           {movimiento.metodoPago}
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -231,7 +245,7 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="depositoCierre" variant="secondary">
           Depósito de Cierre
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -239,7 +253,7 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="depositoProveedor" variant="secondary">
           Depósito a Proveedor
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -247,7 +261,7 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="gastoOperativo" variant="outline">
           {movimiento.gastoOperativoTipo}
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -255,7 +269,7 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="costoVenta" variant="outline">
           {movimiento.costoVentaTipo}
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -263,12 +277,14 @@ export default function MovimientoFinancieroDetail() {
       chips.push(
         <Badge key="afectaInventario" variant="secondary">
           Afecta Inventario
-        </Badge>
+        </Badge>,
       );
     }
 
     return chips;
   };
+
+  const handleOpenDelete = () => setOpenDelete(!openDelete);
 
   if (!movimiento) {
     return (
@@ -291,8 +307,6 @@ export default function MovimientoFinancieroDetail() {
   const montoFormatted = `${
     sign > 0 ? "+" : sign < 0 ? "−" : ""
   }${formattMonedaGT(movimiento.monto)}`;
-
-  console.log("El movimiento financiero es: ", movimiento);
 
   return (
     <motion.div
@@ -366,8 +380,8 @@ export default function MovimientoFinancieroDetail() {
                       isTransfer
                         ? "text-blue-600"
                         : sign > 0
-                        ? "text-green-600"
-                        : "text-red-600"
+                          ? "text-green-600"
+                          : "text-red-600"
                     }`}
                   />
                   <div className="min-w-0 flex-1">
@@ -377,8 +391,8 @@ export default function MovimientoFinancieroDetail() {
                         isTransfer
                           ? "text-blue-600"
                           : sign > 0
-                          ? "text-green-600"
-                          : "text-red-600"
+                            ? "text-green-600"
+                            : "text-red-600"
                       }`}
                     >
                       {montoFormatted}
@@ -553,7 +567,7 @@ export default function MovimientoFinancieroDetail() {
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {formateDateWithMinutes(
-                              movimiento.comprobanteFecha
+                              movimiento.comprobanteFecha,
                             )}
                           </p>
                         </div>
@@ -583,7 +597,7 @@ export default function MovimientoFinancieroDetail() {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {ReplaceUnderlines(
-                            String(movimiento.comprobanteTipo)
+                            String(movimiento.comprobanteTipo),
                           )}
                         </p>
                       </div>
@@ -663,7 +677,7 @@ export default function MovimientoFinancieroDetail() {
                         </span>
                         <span className="text-xs">
                           {formateDateWithMinutes(
-                            movimiento.caja.fechaApertura
+                            movimiento.caja.fechaApertura,
                           )}
                         </span>
                       </div>
@@ -674,7 +688,7 @@ export default function MovimientoFinancieroDetail() {
                           </span>
                           <span className="text-xs">
                             {formateDateWithMinutes(
-                              movimiento.caja.fechaCierre
+                              movimiento.caja.fechaCierre,
                             )}
                           </span>
                         </div>
@@ -776,6 +790,32 @@ export default function MovimientoFinancieroDetail() {
             </CardContent>
           </Card>
         </motion.div>
+
+        <Button
+          disabled={movimiento.caja?.estadoCaja}
+          size={"sm"}
+          variant={"destructive"}
+          onClick={handleOpenDelete}
+        >
+          Eliminar registro
+        </Button>
+
+        <AdvancedDialog
+          onOpenChange={setOpenDelete}
+          open={openDelete}
+          title="Eliminación de Movimiento Financiero"
+          confirmButton={{
+            label: "Eliminar",
+            disabled: deleteMovimiento.isPending,
+            loading: deleteMovimiento.isPending,
+            onClick: deleteMf,
+          }}
+          cancelButton={{
+            label: "Cancelar",
+            onClick: handleOpenDelete,
+            disabled: deleteMovimiento.isPending,
+          }}
+        />
       </div>
     </motion.div>
   );

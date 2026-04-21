@@ -1,17 +1,10 @@
 "use client";
 
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
-import type {
-  MovimientoCajaItem,
-  TipoMovimientoCaja,
-} from "./Interfaces/types";
+import type { MovimientoCajaItem } from "./Interfaces/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import {
   Tooltip,
   TooltipContent,
@@ -19,14 +12,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Info,
-  Eye,
   User,
   Calendar,
   DollarSign,
   Building2,
   FileText,
   Hash,
+  ExternalLink,
 } from "lucide-react";
 import {
   getTipoStyles,
@@ -256,113 +248,19 @@ export const columnasMovimientos: ColumnDef<MovimientoCajaItem, any>[] = [
 
   ch.display({
     id: "acciones",
-    header: () => <span className="font-medium text-xs">Acciones</span>,
+    header: () => (
+      <span className="font-medium text-xs flex justify-center">Acciones</span>
+    ),
     cell: (info) => {
       const movimiento = info.row.original;
+
       return (
-        <div className="flex items-center gap-1">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 w-6 p-0 bg-transparent"
-              >
-                <Info className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72" align="end">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold">
-                    Movimiento #{movimiento.id}
-                  </div>
-                  <Badge
-                    className={`${getTipoStyles(
-                      movimiento.tipo as TipoMovimientoCaja
-                    )} text-xs`}
-                  >
-                    {movimiento.tipo}
-                  </Badge>
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                  <div className="font-medium">
-                    {movimiento.usuario?.nombre || "Sin usuario"}
-                  </div>
-                  <div>
-                    {formatDate(movimiento.fecha).fecha} -{" "}
-                    {formatDate(movimiento.fecha).hora}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 text-xs">
-                  <div className="space-y-0.5">
-                    <div className="text-xs text-muted-foreground">Monto</div>
-                    <div
-                      className={`font-semibold ${
-                        movimiento.tipo === "INGRESO" ||
-                        movimiento.tipo === "VENTA"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {formatMoneda(movimiento.monto)}
-                    </div>
-                  </div>
-                </div>
-
-                {movimiento.descripcion && (
-                  <div className="text-xs">
-                    <div className="text-muted-foreground">Descripción:</div>
-                    <div className="font-medium">
-                      {truncateText(movimiento.descripcion, 50)}
-                    </div>
-                  </div>
-                )}
-
-                {movimiento.banco && (
-                  <div className="text-xs">
-                    <span className="text-muted-foreground">Banco: </span>
-                    <span className="font-medium">{movimiento.banco}</span>
-                  </div>
-                )}
-
-                {movimiento.numeroBoleta && (
-                  <div className="text-xs">
-                    <span className="text-muted-foreground">Boleta: </span>
-                    <span className="font-medium">
-                      {movimiento.numeroBoleta}
-                    </span>
-                  </div>
-                )}
-
-                <Link to={`/movimiento-caja/${movimiento.id}`}>
-                  <span className="text-xs pt-2 font-semibold text-blue-500 hover:underline hover:text-blue-600">
-                    Ver movimiento completo
-                  </span>
-                </Link>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() =>
-                    info.table.options.meta?.onOpenDetalle?.(movimiento)
-                  }
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Ver</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Ver detalle completo</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="flex items-center justify-center gap-1 w-full">
+          <Link to={`/movimiento-caja/${movimiento.id}`}>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       );
     },

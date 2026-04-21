@@ -165,7 +165,6 @@ export default function HistorialVentasMain() {
       montoMin: montoMin ? Number(montoMin) : undefined,
       montoMax: montoMax ? Number(montoMax) : undefined,
       isVendedor: rol !== "ADMIN",
-      // usuarioId: userId,
       tipoComprobante: comprobantes.length
         ? (comprobantes as TipoComprobante[])
         : undefined,
@@ -183,7 +182,6 @@ export default function HistorialVentasMain() {
       montoMin,
       montoMax,
       rol,
-      // userId,
       comprobantes,
       metodosPago,
     ],
@@ -356,7 +354,7 @@ export default function HistorialVentasMain() {
 
     useCreateReporteUtilidad.mutateAsync(dto, {
       onSuccess: (data: any) => {
-        downloadFile(data, `Historial_Pagos_${Date.now()}.xlsx`);
+        downloadFile(data, `Utilidad_Reporte_${Date.now()}.xlsx`);
         toast.success("Reporte de utilidad descargado");
       },
       onError: (error) => {

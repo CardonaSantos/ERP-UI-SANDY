@@ -2,26 +2,54 @@ import { createColumnHelper, ColumnDef } from "@tanstack/react-table";
 import { RegistroCajaResponse } from "../interfaces/registroscajas.interfaces";
 import { formattFechaWithMinutes } from "@/Pages/Utils/Utils";
 import { formattMonedaGT } from "@/utils/formattMoneda";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Info, Eye, User, Calendar, DollarSign } from "lucide-react";
+import { User, Calendar, DollarSign, ExternalLink } from "lucide-react";
 import { getEstadoStyles, getEstadoIcon } from "../utils/estadoStyles";
 import { truncateText } from "../utils/textUtils";
 import { Link } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+
+declare module "@tanstack/react-table" {
+  interface TableMeta<TData> {
+    onToggleCaja?: (id: number) => void;
+    cajasIds?: number[];
+    onOpenDetalle?: (row: TData) => void;
+  }
+}
 
 const ch = createColumnHelper<RegistroCajaResponse>();
 
 export const columnas: ColumnDef<RegistroCajaResponse, any>[] = [
+  ch.display({
+    id: "select",
+    header: () => (
+      <div className="flex justify-center">
+        <span className="font-medium text-xs">Sel</span>
+      </div>
+    ),
+    cell: (info) => {
+      const caja = info.row.original;
+
+      const { onToggleCaja, cajasIds } = info.table.options.meta!;
+
+      if (!onToggleCaja || !cajasIds) return null;
+
+      const isSelected = cajasIds.includes(caja.id);
+
+      return (
+        <div className="flex justify-center">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleCaja(caja.id)}
+          />
+        </div>
+      );
+    },
+    size: 40,
+    minSize: 40,
+    maxSize: 40,
+  }),
+
   ch.accessor("id", {
     header: () => (
       <div className="flex items-center gap-1">
@@ -192,87 +220,21 @@ export const columnas: ColumnDef<RegistroCajaResponse, any>[] = [
     enableColumnFilter: true,
     size: 90,
   }),
-
   ch.display({
     id: "acciones",
-    header: () => <span className="font-medium text-xs">Acciones</span>,
+    header: () => (
+      <span className="font-medium text-xs flex justify-center">Acciones</span>
+    ),
     cell: (info) => {
       const caja = info.row.original;
+
       return (
-        <div className="flex items-center gap-1">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 w-6 p-0 bg-transparent"
-              >
-                <Info className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72" align="end">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold">Caja #{caja.id}</div>
-                  <span className={`${getEstadoStyles(caja.estado)} text-xs`}>
-                    {caja.estado}
-                  </span>
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                  <div className="font-medium">{caja.sucursal.nombre}</div>
-                  <div>
-                    {formattFechaWithMinutes(caja.fechaApertura)} —{" "}
-                    {caja.fechaCierre
-                      ? formattFechaWithMinutes(caja.fechaCierre)
-                      : "En curso"}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="space-y-0.5">
-                    <div className="text-xs text-muted-foreground">Inicial</div>
-                    <div className="font-semibold text-green-600">
-                      {formattMonedaGT(caja.saldoInicial)}
-                    </div>
-                  </div>
-                  <div className="space-y-0.5">
-                    <div className="text-xs text-muted-foreground">Final</div>
-                    <div className="font-semibold text-blue-600">
-                      {formattMonedaGT(caja.saldoFinal)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between text-xs">
-                  <span>{caja.movimientosLenght} mov.</span>
-                  <span>{caja.ventasLenght} ventas</span>
-                </div>
-
-                <Link to={`/caja/${caja.id}`}>
-                  <span className="text-xs pt-2 font-semibold text-blue-500 hover:underline hover:text-blue-600">
-                    Ver caja completa
-                  </span>
-                </Link>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => info.table.options.meta?.onOpenDetalle?.(caja)}
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Ver</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Ver detalle completo</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="flex items-center justify-center w-full">
+          <Link to={`/caja/${caja.id}`}>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       );
     },

@@ -10,6 +10,44 @@ import {
   PreviaCierreResponse,
 } from "@/Pages/Caja/types/cierres.types";
 import { CrearMovimientoFinancieroDto } from "@/Pages/Caja/Movimientos/movimientos-financieros";
+import { PaginatedRegistrosCajaResponse } from "@/Pages/CajaRegistros/interfaces/registroscajas.interfaces";
+import { PagedResponseMovimientos } from "@/Pages/movimientos-cajas/Interfaces/registroCajas";
+
+export type GetCajasQuery = {
+  page?: number;
+  limit?: number;
+  sucursalId?: number;
+  estado?: "ABIERTO" | "CERRADO" | "ARQUEO";
+  depositado?: boolean;
+
+  fechaAperturaInicio?: string;
+  fechaAperturaFin?: string;
+  fechaCierreInicio?: string;
+  fechaCierreFin?: string;
+
+  tipo?: string | string[];
+  categoria?: string | string[];
+  fechaMovInicio?: string;
+  fechaMovFin?: string;
+  search?: string;
+
+  groupBySucursal?: boolean;
+};
+
+export type GetMovimientosQuery = {
+  page?: number;
+  limit?: number;
+  sucursalId?: number;
+  search?: string;
+  usadoParaCierre?: boolean;
+  groupBySucursal?: boolean;
+
+  // filtros por movimiento
+  tipo?: string | string[]; // p.ej: ["INGRESO","EGRESO"]
+  categoria?: string | string[]; // p.ej: ["DEPOSITO_CIERRE","GASTO_OPERATIVO"]
+  fechaInicio?: string;
+  fechaFin?: string;
+};
 
 /**
  * GETTER DE SELECT PARA CAJAS DISPONIBLES
@@ -134,6 +172,85 @@ export function useCreateMovimientoFinanciero() {
     "post",
     erpEndpoints.movimiento.create_movimiento,
     undefined,
+    undefined,
+  );
+}
+
+/**
+ *  GET DE CAJAS TABLA
+ * @param params
+ * @returns
+ */
+export function useGetRegistrosCajas(params: GetCajasQuery = {}) {
+  return erp.useQueryApi<PaginatedRegistrosCajaResponse>(
+    cajasQkeys.registros(params),
+    erpEndpoints.cajas.list_registros,
+    {
+      params: {
+        page: params.page,
+        limit: params.limit,
+        sucursalId: params.sucursalId,
+        estado: params.estado,
+        depositado: params.depositado,
+        fechaAperturaInicio: params.fechaAperturaInicio,
+        fechaAperturaFin: params.fechaAperturaFin,
+        fechaCierreInicio: params.fechaCierreInicio,
+        fechaCierreFin: params.fechaCierreFin,
+        tipo: params.tipo,
+        categoria: params.categoria,
+        fechaMovInicio: params.fechaMovInicio,
+        fechaMovFin: params.fechaMovFin,
+        search: params.search,
+        groupBySucursal: params.groupBySucursal,
+      },
+    },
+    {
+      enabled: true,
+      staleTime: 0,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+    },
+  );
+}
+
+export function useGetRegistrosMovimientos(params: GetMovimientosQuery = {}) {
+  return erp.useQueryApi<PagedResponseMovimientos>(
+    cajasQkeys.registros_movimientos(params),
+    erpEndpoints.movimiento.list_movimientos,
+    {
+      params: {
+        page: params.page,
+        limit: params.limit,
+        sucursalId: params.sucursalId,
+        search: params.search,
+        usadoParaCierre: params.usadoParaCierre,
+        groupBySucursal: params.groupBySucursal,
+        tipo: params.tipo,
+        categoria: params.categoria,
+        fechaInicio: params.fechaInicio,
+        fechaFin: params.fechaFin,
+      },
+    },
+    {
+      enabled: true,
+      staleTime: 0,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+    },
+  );
+}
+
+export function useGetReportCajas() {
+  console.log("entrando a get reporte cajas");
+
+  return erp.useMutationApi<Array<number>>(
+    "post",
+    erpEndpoints.excel.cajas,
+    {
+      responseType: "blob",
+    },
     undefined,
   );
 }

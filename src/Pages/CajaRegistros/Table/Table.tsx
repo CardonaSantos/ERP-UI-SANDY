@@ -7,7 +7,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import React from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RegistroCajaResponse } from "../interfaces/registroscajas.interfaces";
 import { Input } from "@/components/ui/input";
@@ -22,16 +22,20 @@ import {
   ChevronsRight,
   Filter,
   X,
+  FileText,
 } from "lucide-react";
 import { columnas } from "./Columnas";
-import DialogCajaDetails from "../Dialog/DialogCajaDetails";
+import { toast } from "sonner";
+import { useGetReportCajas } from "@/hooks/use-cajas/use-cajas";
+import { getApiErrorMessageAxios } from "@/Pages/Utils/UtilsErrorApi";
+import { downloadFile } from "@/hooks/use-reports/use-report-excel";
 
 type PropsCajasTable = {
   data: RegistroCajaResponse[];
-  page: number; // 1-based
+  page: number;
   limit: number;
-  pages: number; // total de páginas (server)
-  total: number; // total de registros (server)
+  pages: number;
+  total: number;
   loading?: boolean;
   onChangePage: (p: number) => void;
   onChangeLimit: (l: number) => void;
@@ -73,18 +77,26 @@ function Table({
   total,
   loading,
 }: PropsCajasTable) {
-  const [selected, setSelected] = React.useState<RegistroCajaResponse | null>(
-    null
-  );
-  const [openDetalle, setOpenDetalle] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    [],
   );
+
+  const [cajasIds, setCajasIds] = useState<Array<number>>([]);
+
+  const handleSetCajaId = (id: number) => {
+    setCajasIds((previa) =>
+      previa.includes(id)
+        ? previa.filter((item) => item !== id)
+        : [...previa, id],
+    );
+  };
+  const getReport = useGetReportCajas();
+
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [showFilters, setShowFilters] = React.useState(false);
 
-  const table = useReactTable({
+  const table = useReactTable<RegistroCajaResponse>({
     data,
     columns: columnas,
     state: {
@@ -92,15 +104,14 @@ function Table({
       columnFilters,
       globalFilter,
       pagination: {
-        pageIndex: Math.max(0, page - 1), // TanStack usa base 0
+        pageIndex: Math.max(0, page - 1),
         pageSize: limit,
       },
     },
-    onSortingChange: setSorting, // si luego haces sorting en server, cámbialo
-    onColumnFiltersChange: setColumnFilters, // idem
-    onGlobalFilterChange: setGlobalFilter, // ojo: esto filtra solo la página actual
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: (updater) => {
-      // Traducir el updater de TanStack a tus setters de padre
       const next =
         typeof updater === "function"
           ? updater({ pageIndex: Math.max(0, page - 1), pageSize: limit })
@@ -111,21 +122,16 @@ function Table({
         onChangePage(next.pageIndex + 1);
     },
 
-    // 🔑 Server-side pagination:
     manualPagination: true,
     pageCount: pages,
 
-    // Row models: NO uses getPaginationRowModel en server-side
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(), // filtra la página actual
-    getSortedRowModel: getSortedRowModel(), // ordena la página actual
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
 
-    // callback para abrir detalle desde las celdas
     meta: {
-      onOpenDetalle: (row: RegistroCajaResponse) => {
-        setSelected(row);
-        setOpenDetalle(true);
-      },
+      onToggleCaja: handleSetCajaId,
+      cajasIds: cajasIds,
     },
   });
 
@@ -135,66 +141,95 @@ function Table({
     setGlobalFilter("");
     setColumnFilters([]);
   };
-  console.log("La data con las cajas es: ", data);
+
+  const handleDownloadReport = async () => {
+    console.log("Clickeo");
+
+    toast.promise(
+      getReport.mutateAsync({
+        ids: cajasIds,
+      }),
+      {
+        success: (data: any) => {
+          downloadFile(data, `Cajas_reporte_${Date.now()}.xlsx`);
+          return "Reporte Generado";
+        },
+        error: (error) => getApiErrorMessageAxios(error),
+        loading: "Generando reporte...",
+      },
+    );
+  };
 
   return (
-    <motion.div
-      className="space-y-3"
-      initial="hidden"
-      animate="visible"
-      variants={tableVariants}
-    >
-      {/* Header compacto */}
-      <Card>
-        <CardHeader className="pb-2 pt-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <CardTitle className="text-base font-medium">
-              Registros de Caja
-              <Badge variant="secondary" className="ml-2 text-xs">
+    <div className="space-y-3">
+      <Card className="border rounded-md">
+        <CardHeader className="py-2 px-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            {/* IZQUIERDA */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <CardTitle className="text-sm font-medium">
+                Registros de Caja
+              </CardTitle>
+
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 {table.getFilteredRowModel().rows.length}
               </Badge>
-            </CardTitle>
 
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              {cajasIds.length > 0 && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  {cajasIds.length} sel.
+                </Badge>
+              )}
+            </div>
+
+            {/* DERECHA */}
+            <div className="flex items-center gap-1 flex-wrap sm:flex-nowrap">
+              {/* Buscar */}
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar..."
+                  placeholder="Buscar"
                   value={globalFilter ?? ""}
                   onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-7 h-8 text-xs"
+                  className="pl-6 h-7 text-xs w-[140px] sm:w-[180px]"
                 />
               </div>
 
+              {/* Filtros */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
-                className="relative h-8 text-xs"
+                className="h-7 px-2 text-xs flex items-center gap-1"
               >
-                <Filter className="h-3 w-3 mr-1" />
-                Filtros
+                <Filter className="h-3 w-3" />
                 {activeFiltersCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="ml-1 h-4 w-4 p-0 text-xs"
-                  >
-                    {activeFiltersCount}
-                  </Badge>
+                  <span className="text-[10px]">({activeFiltersCount})</span>
                 )}
               </Button>
 
+              {/* Limpiar */}
               {activeFiltersCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={clearAllFilters}
-                  className="text-muted-foreground hover:text-foreground h-8 text-xs"
+                  className="h-7 px-2 text-xs flex items-center gap-1"
                 >
-                  <X className="h-3 w-3 mr-1" />
-                  Limpiar
+                  <X className="h-3 w-3" />
                 </Button>
               )}
+
+              {/* Reporte */}
+              <Button
+                size="sm"
+                onClick={handleDownloadReport}
+                disabled={getReport.isPending}
+                className="h-7 px-2 text-xs flex items-center gap-1"
+              >
+                <FileText className="h-3 w-3" />
+                <span className="hidden sm:inline">Reporte X</span>
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -218,7 +253,7 @@ function Table({
                         <div className="flex items-center gap-1">
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                           <div className="flex flex-col">
                             {{
@@ -286,7 +321,7 @@ function Table({
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </td>
                       ))}
@@ -334,7 +369,7 @@ function Table({
                   {Math.min(
                     (table.getState().pagination.pageIndex + 1) *
                       table.getState().pagination.pageSize,
-                    table.getFilteredRowModel().rows.length
+                    table.getFilteredRowModel().rows.length,
                   )}{" "}
                   de {table.getFilteredRowModel().rows.length}
                 </span>
@@ -419,13 +454,7 @@ function Table({
           </CardContent>
         </Card>
       )}
-
-      <DialogCajaDetails
-        openDetalle={openDetalle}
-        selected={selected}
-        setOpenDetalle={setOpenDetalle}
-      />
-    </motion.div>
+    </div>
   );
 }
 

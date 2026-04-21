@@ -36,6 +36,7 @@ export interface CajaSlimDetail {
   saldoInicial: number;
   saldoFinal: number;
   estado: EstadoCaja;
+  estadoCaja: boolean;
   depositado: boolean;
   creadoEn: string; // ISO
   actualizadoEn: string; // ISO
