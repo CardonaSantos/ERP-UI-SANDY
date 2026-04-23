@@ -81,4 +81,26 @@ export const erpEndpoints = {
   excel: {
     cajas: `/excel-reports/cajas`,
   },
+
+  // CONTABILIDAD
+  contabilidad: {
+    cuentas: {
+      get_all: "/cuentas-contables",
+      create: "/cuentas-contables",
+      update: (id: number) => `/cuentas-contables/${id}`,
+      delete: (id: number) => `/cuentas-contables/${id}`,
+    },
+    reglas: {
+      get_all: "/reglas-contables",
+      create: "/reglas-contables",
+      update: (id: number) => `/reglas-contables/${id}`,
+      delete: (id: number) => `/reglas-contables/${id}`,
+    },
+    asientos: {
+      get_all: "/asientos-contables",
+      get_one: (id: number) => `/asientos-contables/${id}`,
+      create: "/asientos-contables",
+      anular: (id: number) => `/asientos-contables/${id}/anular`,
+    },
+  },
 } as const;

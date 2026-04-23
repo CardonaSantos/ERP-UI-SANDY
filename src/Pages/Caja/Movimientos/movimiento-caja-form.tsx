@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useForm, Controller } from "react-hook-form";
+import Select from "react-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,13 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   ArrowLeftRight,
@@ -35,7 +27,6 @@ import {
 import {
   type CrearMovimientoFinancieroDto,
   type MovimientoFinancieroFormProps,
-  type MotivoMovimiento,
   type MetodoPago,
   type GastoOperativoTipo,
   type CostoVentaTipo,
@@ -55,134 +46,44 @@ import {
 import { useStore } from "@/components/Context/ContextSucursal";
 import { getApiErrorMessageAxios } from "@/Pages/Utils/UtilsErrorApi";
 
-const MOTIVO_VALUES = [
+export const MOTIVO_VALUES = [
+  // --- INGRESOS ---
+  "VENTA_CREDITO",
+  "COBRO_CREDITO",
+  "ANTICIPO_CLIENTE",
+  "AJUSTE_SOBRANTE",
+  "OTRO_INGRESO",
+
+  // --- EGRESOS / GASTOS ---
   "GASTO_OPERATIVO",
   "COMPRA_MERCADERIA",
+  "COMPRA_INSUMOS",
   "COSTO_ASOCIADO",
+  "PAGO_PROVEEDOR_BANCO",
+  "PAGO_PROVEEDOR_EFECTIVO",
+  "PAGO_CREDITO",
+  "PAGO_NOMINA",
+  "PAGO_ALQUILER",
+  "PAGO_SERVICIOS",
+  "PAGO_IMPUESTOS",
+  "PAGO_COMISIONES",
+  "ANTICIPO_PROVEEDOR",
+  "AJUSTE_FALTANTE",
+  "OTRO_EGRESO",
+
+  // --- MOVIMIENTOS DE CAJA / BANCO ---
   "DEPOSITO_CIERRE",
   "DEPOSITO_PROVEEDOR",
-  "PAGO_PROVEEDOR_BANCO",
-  "AJUSTE_SOBRANTE",
-  "AJUSTE_FALTANTE",
-  "DEVOLUCION",
   "BANCO_A_CAJA",
+  "CAJA_A_BANCO",
+
+  // --- DEVOLUCIONES ---
+  "DEVOLUCION",
+  "DEVOLUCION_PROVEEDOR",
 ] as const;
 
-const METODO_PAGO_VALUES = [
-  "EFECTIVO",
-  "TRANSFERENCIA",
-  "DEPOSITO",
-  "TARJETA",
-  "CHEQUE",
-  "OTRO",
-] as const;
+export type MotivoMovimiento = (typeof MOTIVO_VALUES)[number];
 
-const GASTO_OPERATIVO_VALUES = [
-  "SALARIO",
-  "ENERGIA",
-  "LOGISTICA",
-  "RENTA",
-  "INTERNET",
-  "PUBLICIDAD",
-  "VIATICOS",
-  "OTROS",
-] as const;
-
-const COSTO_VENTA_VALUES = [
-  "MERCADERIA",
-  "FLETE",
-  "ENCOMIENDA",
-  "TRANSPORTE",
-  "OTROS",
-] as const;
-
-const createSchema = (
-  motivo?: MotivoMovimiento,
-  metodoPago?: MetodoPago,
-  isDepositoCierreTotal?: boolean,
-  efectivoDisponible?: number,
-) => {
-  const rules = motivo ? UI_RULES[motivo] : null;
-
-  return z.object({
-    motivo: z.enum(MOTIVO_VALUES, { message: "El motivo es requerido" }),
-
-    metodoPago: z
-      .enum(METODO_PAGO_VALUES)
-      .optional()
-      .refine((val) => {
-        if (
-          motivo === "DEPOSITO_CIERRE" ||
-          motivo === "PAGO_PROVEEDOR_BANCO" ||
-          motivo === "BANCO_A_CAJA"
-        ) {
-          return val === "TRANSFERENCIA" || val === "DEPOSITO";
-        }
-        return true;
-      }, "Método de pago inválido para este motivo"),
-
-    monto: z
-      .number()
-      .refine((val) => {
-        if (motivo === "DEPOSITO_CIERRE" && isDepositoCierreTotal) return true;
-        return val > 0;
-      }, "El monto debe ser mayor a 0")
-      .refine(
-        (val) => {
-          if (
-            motivo === "DEPOSITO_CIERRE" &&
-            !isDepositoCierreTotal &&
-            typeof efectivoDisponible === "number"
-          ) {
-            return val <= efectivoDisponible;
-          }
-          return true;
-        },
-        `No puedes depositar más de Q ${efectivoDisponible?.toFixed(2) ?? 0}`,
-      ),
-
-    descripcion: z.string().optional(),
-    referencia: z.string().optional(),
-
-    proveedorId: z
-      .number()
-      .optional()
-      .refine(
-        (val) => (rules?.requireProveedor ? val !== undefined : true),
-        "Proveedor es requerido",
-      ),
-
-    cuentaBancariaId: z
-      .number()
-      .optional()
-      .refine((val) => {
-        if (typeof rules?.requireCuenta === "function")
-          return rules.requireCuenta(metodoPago) ? val !== undefined : true;
-        if (rules?.requireCuenta === true) return val !== undefined;
-        return true;
-      }, "Cuenta bancaria es requerida"),
-
-    gastoOperativoTipo: z
-      .enum(GASTO_OPERATIVO_VALUES)
-      .optional()
-      .refine(
-        (val) => (rules?.requireSubtipoGO ? val !== undefined : true),
-        "Tipo de gasto requerido",
-      ),
-
-    costoVentaTipo: z
-      .enum(COSTO_VENTA_VALUES)
-      .optional()
-      .refine(
-        (val) => (rules?.requireCostoVentaTipo ? val !== undefined : true),
-        "Tipo de costo requerido",
-      ),
-  });
-};
-
-type FormData = z.infer<ReturnType<typeof createSchema>>;
-
-// ───────── Helpers UI ─────────
 /** Métodos que no necesitan cuenta bancaria (pagan de caja) */
 function metodoPagoEsCaja(mp?: MetodoPago): boolean {
   return !mp || METODOS_CAJA.includes(mp);
@@ -200,6 +101,70 @@ function showCuentaBancaria(
     return rules.requireCuenta(metodoPago);
   return rules.requireCuenta;
 }
+
+const EMPTY_FORM_VALUES = {
+  motivo: undefined,
+  metodoPago: undefined,
+  monto: 0,
+  descripcion: "",
+  referencia: "",
+  proveedorId: undefined,
+  cuentaBancariaId: undefined,
+  gastoOperativoTipo: undefined,
+  costoVentaTipo: undefined,
+};
+
+// Estilos custom para react-select
+const selectStyles = {
+  control: (base: any) => ({
+    ...base,
+    minHeight: "32px",
+    height: "32px",
+    fontSize: "0.75rem",
+    borderColor: "#d1d5db",
+    backgroundColor: "#ffffff",
+    "&:hover": {
+      borderColor: "#9ca3af",
+    },
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    fontSize: "0.75rem",
+    backgroundColor: state.isSelected
+      ? "#3b82f6"
+      : state.isFocused
+        ? "#f3f4f6"
+        : "#ffffff",
+    color: state.isSelected ? "#ffffff" : "#000000",
+    padding: "6px 12px",
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: state.isSelected ? "#3b82f6" : "#f3f4f6",
+    },
+  }),
+  menu: (base: any) => ({
+    ...base,
+    fontSize: "0.75rem",
+  }),
+  menuList: (base: any) => ({
+    ...base,
+    maxHeight: "200px",
+  }),
+  input: (base: any) => ({
+    ...base,
+    fontSize: "0.75rem",
+    margin: 0,
+    padding: 0,
+  }),
+  valueContainer: (base: any) => ({
+    ...base,
+    padding: "2px 8px",
+  }),
+  indicatorsContainer: (base: any) => ({
+    ...base,
+    height: "32px",
+  }),
+};
 
 // ───────── Component ─────────
 export function MovimientoFinancieroForm({
@@ -223,21 +188,17 @@ export function MovimientoFinancieroForm({
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(
-      createSchema(
-        undefined,
-        undefined,
-        isDepositoCierreTotal,
-        efectivoDisponible ?? undefined,
-      ),
-    ),
+  const form = useForm<CrearMovimientoFinancieroDto>({
     defaultValues: {
-      motivo: undefined,
-      metodoPago: undefined,
+      sucursalId: 0,
+      usuarioId: 0,
       monto: 0,
-      descripcion: "",
-      referencia: "",
+      motivo: "GASTO_OPERATIVO",
+      proveedorId: undefined,
+      cuentaBancariaId: undefined,
+      gastoOperativoTipo: undefined,
+      costoVentaTipo: undefined,
+      metodoPago: undefined,
     },
   });
 
@@ -321,7 +282,6 @@ export function MovimientoFinancieroForm({
         monto: data.monto,
         descripcion: data.descripcion,
         referencia: data.referencia,
-        // registroCajaId: caja
       };
 
       if (needsCaja && cajaAbierta) payload.registroCajaId = cajaAbierta.id;
@@ -338,8 +298,6 @@ export function MovimientoFinancieroForm({
       if (currentRules?.flags?.esDepositoProveedor)
         payload.esDepositoProveedor = true;
 
-      // createMovimientoFinanciero
-
       toast.promise(createMf.mutateAsync(payload), {
         loading: "Registrando movimiento...",
         success: () => {
@@ -348,7 +306,7 @@ export function MovimientoFinancieroForm({
         error: (error) => getApiErrorMessageAxios(error),
       });
 
-      form.reset();
+      form.reset(EMPTY_FORM_VALUES);
       setIsDepositoCierreTotal(true);
       setEfectivoDisponible(null);
       if (reloadContext) await reloadContext();
@@ -365,6 +323,18 @@ export function MovimientoFinancieroForm({
     watchedMotivo === "DEPOSITO_CIERRE" ||
     watchedMotivo === "PAGO_PROVEEDOR_BANCO" ||
     watchedMotivo === "BANCO_A_CAJA";
+
+  // Transformar MOTIVO_OPTIONS para react-select
+  const motivoOptions = MOTIVO_OPTIONS.map((o) => ({
+    value: o.value,
+    label: `${o.label} - ${o.desc}`,
+  }));
+
+  // Transformar METODO_PAGO_OPTIONS para react-select
+  const metodoPagoOptions = METODO_PAGO_OPTIONS.map((o) => ({
+    value: o.value,
+    label: o.label,
+  }));
 
   return (
     <div className="">
@@ -393,27 +363,46 @@ export function MovimientoFinancieroForm({
                       <FormLabel className="text-xs font-medium">
                         Motivo
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Selecciona motivo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {MOTIVO_OPTIONS.map((o) => (
-                            <SelectItem
-                              key={o.value}
-                              value={o.value}
-                              className="text-xs"
-                            >
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Controller
+                          control={form.control}
+                          name="motivo"
+                          render={({ field: { value, onChange } }) => (
+                            <Select
+                              inputId="motivo-select"
+                              options={motivoOptions}
+                              value={
+                                motivoOptions.find(
+                                  (opt) => opt.value === value,
+                                ) || null
+                              }
+                              onChange={(option) => onChange(option?.value)}
+                              styles={selectStyles}
+                              isSearchable
+                              isClearable={false}
+                              placeholder="Selecciona motivo"
+                              formatOptionLabel={(option) => (
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-xs">
+                                    {
+                                      MOTIVO_OPTIONS.find(
+                                        (o) => o.value === option.value,
+                                      )?.label
+                                    }
+                                  </span>
+                                  <span className="text-[10px] text-gray-600">
+                                    {
+                                      MOTIVO_OPTIONS.find(
+                                        (o) => o.value === option.value,
+                                      )?.desc
+                                    }
+                                  </span>
+                                </div>
+                              )}
+                            />
+                          )}
+                        />
+                      </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )}
@@ -428,28 +417,29 @@ export function MovimientoFinancieroForm({
                         <CreditCard className="h-3 w-3" aria-hidden="true" />
                         Método de pago
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isMetodoPagoLocked}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Selecciona método" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {METODO_PAGO_OPTIONS.map((o) => (
-                            <SelectItem
-                              key={o.value}
-                              value={o.value}
-                              className="text-xs"
-                            >
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Controller
+                          control={form.control}
+                          name="metodoPago"
+                          render={({ field: { value, onChange } }) => (
+                            <Select
+                              inputId="metodo-pago-select"
+                              options={metodoPagoOptions}
+                              value={
+                                metodoPagoOptions.find(
+                                  (opt) => opt.value === value,
+                                ) || null
+                              }
+                              onChange={(option) => onChange(option?.value)}
+                              styles={selectStyles}
+                              isSearchable={false}
+                              isClearable={false}
+                              isDisabled={isMetodoPagoLocked}
+                              placeholder="Selecciona método"
+                            />
+                          )}
+                        />
+                      </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )}
@@ -595,7 +585,6 @@ export function MovimientoFinancieroForm({
                     aria-hidden="true"
                   />
                   Caja abierta disponible
-                  {/* ({formattFechaWithMinutes(cajaAbierta.fechaApertura)}) */}
                 </div>
               )}
 
