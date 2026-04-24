@@ -96,6 +96,7 @@ import CotizadorMainPage from "./Pages/cotizador/page";
 import CostoPresupuestalMainPage from "./Pages/costo_presupuestal/page";
 import { PresupuestoDetallePage } from "./Pages/costo_presupuestal/components/presupuestos/details/page";
 import { CreatePresupuestoForm } from "./Pages/costo_presupuestal/components/presupuestos/form/presupuesto-form";
+import ContabilidadPage from "./Pages/contabilidad/contabilidad-page";
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -439,6 +440,15 @@ function App() {
               element={
                 <ProtectRouteAdmin>
                   <CajaDetalle />
+                </ProtectRouteAdmin>
+              }
+            />
+
+            <Route
+              path="/contabilidad"
+              element={
+                <ProtectRouteAdmin>
+                  <ContabilidadPage />
                 </ProtectRouteAdmin>
               }
             />

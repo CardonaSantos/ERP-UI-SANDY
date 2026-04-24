@@ -32,6 +32,7 @@ import {
   LineChart,
   TrendingUp,
   FileSignature,
+  ChartScatter,
 } from "lucide-react";
 
 import {
@@ -218,6 +219,13 @@ const menuItemsAdmin = [
         label: "Costos Presupuestales",
         href: "/costos-presupuestales",
       },
+
+      {
+        icon: ChartScatter,
+        label: "Contabilidad",
+        href: "/contabilidad",
+      },
+
       {
         icon: HandCoins,
         label: "Flujo de Efectivo",

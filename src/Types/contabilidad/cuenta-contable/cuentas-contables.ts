@@ -11,7 +11,7 @@ export interface CuentaContable {
   nivel: number;
 
   permiteMovimiento: boolean;
-  activa: boolean;
+  activo: boolean;
 
   cuentaPadreId?: number | null;
 

@@ -45,6 +45,8 @@ export type MetodoPago =
   | "DEPOSITO"
   | "TARJETA"
   | "CHEQUE"
+  | "CONTADO"
+  | "CREDITO"
   | "OTRO";
 
 export type GastoOperativoTipo =

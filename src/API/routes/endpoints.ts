@@ -95,6 +95,7 @@ export const erpEndpoints = {
       create: "/reglas-contables",
       update: (id: number) => `/reglas-contables/${id}`,
       delete: (id: number) => `/reglas-contables/${id}`,
+      resolver: "/reglas-contables/resolver",
     },
     asientos: {
       get_all: "/asientos-contables",

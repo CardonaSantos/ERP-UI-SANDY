@@ -3,6 +3,10 @@ import { erpEndpoints } from "@/API/routes/endpoints";
 import { useInvalidateHandler } from "@/utils/query";
 import { contabilidadQKeys } from "./Qk";
 import { ReglaContable } from "@/Types/contabilidad/regla-contable/regla-contable";
+import {
+  CreateReglaContableDto,
+  UpdateReglaContableDto,
+} from "@/Types/contabilidad/mutations-types/mutations-types";
 
 export function useGetReglasContables() {
   return erp.useQueryApi<ReglaContable[]>(
@@ -14,7 +18,7 @@ export function useGetReglasContables() {
 export function useCreateReglaContable() {
   const invalidate = useInvalidateHandler();
 
-  return erp.useMutationApi<any>(
+  return erp.useMutationApi<CreateReglaContableDto>(
     "post",
     erpEndpoints.contabilidad.reglas.create,
     undefined,
@@ -29,8 +33,8 @@ export function useCreateReglaContable() {
 export function useUpdateReglaContable(id: number) {
   const invalidate = useInvalidateHandler();
 
-  return erp.useMutationApi<any>(
-    "put",
+  return erp.useMutationApi<UpdateReglaContableDto>(
+    "patch",
     erpEndpoints.contabilidad.reglas.update(id),
     undefined,
     {
