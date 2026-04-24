@@ -111,6 +111,13 @@ export const MOTIVOS = [
     label: "Banco → Caja",
     desc: "Retiro desde banco",
   },
+
+  {
+    value: "VENTA",
+    label: "VENTA",
+    desc: "Venta",
+  },
+
   {
     value: "OTRO_EGRESO",
     label: "Otro egreso",

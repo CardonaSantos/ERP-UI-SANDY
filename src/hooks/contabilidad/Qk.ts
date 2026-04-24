@@ -4,6 +4,12 @@ export const contabilidadQKeys = {
 };
 export const asientosQKeys = {
   all: () => ["asientos-contables"],
-  list: () => [...asientosQKeys.all(), "list"],
+  // list: () => [...asientosQKeys.all(), "list"],
+  list: (params?: Record<string, any>) => [
+    ...asientosQKeys.all(),
+    "list",
+    params,
+  ],
+
   detail: (id: number) => [...asientosQKeys.all(), id],
 };

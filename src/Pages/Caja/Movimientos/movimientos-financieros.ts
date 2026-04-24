@@ -10,6 +10,7 @@ export type ClasificacionAdmin =
 
 export type MotivoMovimiento =
   // existentes
+  | "VENTA"
   | "OTRO_INGRESO"
   | "GASTO_OPERATIVO"
   | "COMPRA_MERCADERIA"
@@ -391,6 +392,11 @@ export const UI_RULES: Record<MotivoMovimiento, UiRule> = {
   DEVOLUCION_PROVEEDOR: {
     needsCajaIf: (mp) => mp === "EFECTIVO",
     requireProveedor: true,
+    requireCuenta: (mp) => mp !== "EFECTIVO",
+  },
+
+  VENTA: {
+    needsCajaIf: (mp) => mp === "EFECTIVO",
     requireCuenta: (mp) => mp !== "EFECTIVO",
   },
 

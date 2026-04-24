@@ -68,3 +68,34 @@ export interface CreateAsientoContableDto {
     descripcion?: string;
   }[];
 }
+// asiento-contable.response.ts
+export interface AsientoContablePaginatedResponse {
+  data: AsientoContableResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
+export interface AsientoContableResponse {
+  id: number;
+
+  fecha: string;
+  descripcion: string;
+  referencia?: string | null;
+
+  origen: OrigenAsientoContable;
+  origenId?: number | null;
+
+  estado: EstadoAsientoContable;
+
+  sucursalId?: number | null;
+  usuarioId?: number | null;
+
+  totalDebe: number;
+  totalHaber: number;
+
+  creadoEn: string;
+  actualizadoEn: string;
+
+  lineas: AsientoContableLinea[];
+}

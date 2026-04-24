@@ -66,6 +66,7 @@ export function CuentasContables() {
       onSuccess: () => setDeleteTarget(null),
     });
   }
+  console.log("Las cuentas son: ", cuentas);
 
   return (
     <div className="space-y-3">
@@ -114,9 +115,9 @@ export function CuentasContables() {
               <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                 Naturaleza
               </th>
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+              {/* <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                 Nivel
-              </th>
+              </th> */}
               <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                 Mov.
               </th>
@@ -154,7 +155,7 @@ export function CuentasContables() {
                   <td className="px-3 py-2">
                     <BadgeNaturaleza naturaleza={c.naturaleza} />
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{c.nivel}</td>
+                  {/* <td className="px-3 py-2 text-muted-foreground">{c.nivel}</td> */}
                   <td className="px-3 py-2 text-muted-foreground">
                     {c.permiteMovimiento ? (
                       <span className="text-emerald-600">Sí</span>

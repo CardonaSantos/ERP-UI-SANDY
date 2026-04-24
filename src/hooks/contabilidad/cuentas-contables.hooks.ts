@@ -34,7 +34,7 @@ export function useUpdateCuentaContable(id: number) {
   const invalidate = useInvalidateHandler();
 
   return erp.useMutationApi<UpdateCuentaContableDto>(
-    "put",
+    "patch",
     erpEndpoints.contabilidad.cuentas.update(id),
     undefined,
     {
