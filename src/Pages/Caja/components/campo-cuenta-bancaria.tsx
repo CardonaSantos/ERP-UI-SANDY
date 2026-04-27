@@ -78,7 +78,7 @@ export function CampoCuentaBancaria({ form, cuentasBancarias }: Props) {
     <FormField
       control={form.control}
       name="cuentaBancariaId"
-      render={({ field }) => (
+      render={() => (
         <FormItem>
           <FormLabel className="text-xs font-medium">Cuenta bancaria</FormLabel>
           <FormControl>

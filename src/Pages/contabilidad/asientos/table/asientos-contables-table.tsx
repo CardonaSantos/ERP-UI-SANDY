@@ -6,6 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
   PaginationState,
+  OnChangeFn,
 } from "@tanstack/react-table";
 import { AsientoContable } from "@/Types/contabilidad/asientos-contables/asiento-contables";
 import {
@@ -22,7 +23,8 @@ interface AsientosTableProps {
   data: AsientoContable[];
   isLoading: boolean;
   pagination: PaginationState;
-  onPaginationChange: (pagination: PaginationState) => void;
+  // onPaginationChange: (pagination: PaginationState) => void;
+  onPaginationChange: OnChangeFn<PaginationState>;
   pageCount: number;
   onSelectAsiento: (asiento: AsientoContable) => void;
 }
@@ -31,7 +33,7 @@ export function AsientosContablesTable({
   data,
   isLoading,
   pagination,
-  //   onPaginationChange,
+  onPaginationChange,
   pageCount,
   onSelectAsiento,
 }: AsientosTableProps) {
@@ -46,6 +48,7 @@ export function AsientosContablesTable({
       pagination,
     },
     pageCount,
+    onPaginationChange: onPaginationChange,
   });
 
   return (

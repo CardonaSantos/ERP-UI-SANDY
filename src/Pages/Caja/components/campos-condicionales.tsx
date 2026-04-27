@@ -138,7 +138,7 @@ export function CamposCondicionales({
         <FormField
           control={form.control}
           name="proveedorId"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel className="text-xs font-medium">Proveedor</FormLabel>
               <FormControl>
@@ -172,7 +172,7 @@ export function CamposCondicionales({
         <FormField
           control={form.control}
           name="gastoOperativoTipo"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel className="text-xs font-medium">
                 Tipo de gasto
@@ -209,7 +209,7 @@ export function CamposCondicionales({
         <FormField
           control={form.control}
           name="costoVentaTipo"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel className="text-xs font-medium">
                 Tipo de costo

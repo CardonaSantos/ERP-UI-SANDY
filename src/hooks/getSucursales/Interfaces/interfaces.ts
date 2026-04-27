@@ -1,5 +1,5 @@
 // /sucursales/sucursales-interfaces.ts
-export interface SucursalApi {
+export interface SucursalResponseSelect {
   id: number;
   nombre: string;
 }

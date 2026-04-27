@@ -1,20 +1,9 @@
+import { ClientSelect } from "@/Types/clients/cliente-select";
 import { useApiQuery } from "../genericoCall/genericoCallHook";
 import { clientesQkeys } from "./Qk";
 
-type Client = {
-  id: number;
-  nombre: string;
-  apellidos: string;
-  telefono: string;
-  dpi: string;
-  nit: string;
-  iPInternet: string;
-  direccion: string;
-  actualizadoEn: Date;
-};
-
 export function useClientes() {
-  return useApiQuery<Client[]>(
+  return useApiQuery<ClientSelect[]>(
     clientesQkeys.all,
     "client/get-all-customers",
     undefined,

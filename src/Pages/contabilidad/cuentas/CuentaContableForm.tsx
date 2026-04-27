@@ -1,14 +1,6 @@
 "use client";
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-// import { CuentaContable, CreateCuentaContableDto } from "@/lib/contabilidad/entity-types";
-// import {
-//   NaturalezaCuentaContable,
-//   TipoCuentaContable,
-//   TIPOS_CUENTA,
-//   NATURALEZAS_CUENTA,
-// } from "@/lib/contabilidad/types-enums";
 import { SelectCuentaContable } from "../shared/SelectCuentaContable";
 import {
   NaturalezaCuentaContable,

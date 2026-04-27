@@ -2,6 +2,15 @@ export const erpEndpoints = {
   auth: {
     login: "/auth/login-user",
   },
+
+  sucursales: {
+    todas_sucursales: "/sucursales",
+  },
+
+  users: {
+    get_users_select: "/user",
+  },
+
   costos_presupuestales: {
     presupuestos: `/presupuestos`,
     presupuestos_select: `/presupuestos/select`,
@@ -80,6 +89,27 @@ export const erpEndpoints = {
   },
   excel: {
     cajas: `/excel-reports/cajas`,
+    libro_diario: `/excel-reports/libro-diario`,
+
+    libro_mayor: `/excel-reports/libro-mayor`,
+
+    balance_comprobacion: `/excel-reports/balance-comprobacion`,
+    estado_resultados: `/excel-reports/estado-resultados`,
+    flujo_caja: `/excel-reports/flujo-caja`,
+
+    estado_caja_turno: `/excel-reports/estado-caja-turno`,
+    estado_cuenta_contable: `/excel-reports/estado-cuenta-contable`,
+    estado_cuenta_cliente: `/excel-reports/estado-cuenta-cliente`,
+
+    estado_cuenta_proveedor: `/excel-reports/estado-cuenta-proveedor`,
+    ventas_reportes: `/excel-reports/ventas-2`,
+    gastos: `/excel-reports/gastos`,
+
+    reglas_contables: `/excel-reports/reglas-contables`,
+
+    movimientos_sin_asiento: `/excel-reports/movimientos-sin-asiento`,
+
+    estado_bancario: `/excel-reports/estado-bancario`,
   },
 
   // CONTABILIDAD

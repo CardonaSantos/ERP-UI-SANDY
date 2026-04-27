@@ -63,7 +63,8 @@ export function AsientosContables({ cuentas }: Props) {
     if (newEstado !== undefined) setFilterEstado(newEstado);
     if (newOrigen !== undefined) setFilterOrigen(newOrigen);
     // Reset a la primera página al filtrar
-    setPagination({ ...pagination, pageIndex: 0 });
+    // setPagination({ ...pagination, pageIndex: 0 });
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   };
 
   return (

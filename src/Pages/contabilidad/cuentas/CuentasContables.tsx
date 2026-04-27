@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { Plus, Pencil, Trash2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// import { CuentaContable, CreateCuentaContableDto, UpdateCuentaContableDto } from "@/lib/contabilidad/entity-types";
 import {
   BadgeActiva,
   BadgeNaturaleza,

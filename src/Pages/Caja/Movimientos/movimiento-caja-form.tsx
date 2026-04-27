@@ -358,7 +358,7 @@ export function MovimientoFinancieroForm({
                 <FormField
                   control={form.control}
                   name="motivo"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem>
                       <FormLabel className="text-xs font-medium">
                         Motivo
@@ -411,7 +411,7 @@ export function MovimientoFinancieroForm({
                 <FormField
                   control={form.control}
                   name="metodoPago"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem>
                       <FormLabel className="text-xs font-medium flex items-center gap-1">
                         <CreditCard className="h-3 w-3" aria-hidden="true" />
