@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { costoAdicional } from "../page";
-import logo from "@/assets/NOVAPOSPNG.png";
+import logo from "@/assets/sandy-logo-png.png";
 import { CartItem } from "@/Types/POS/interfaces";
 
 interface Props {
@@ -35,9 +35,9 @@ const CotizacionPrint = forwardRef<HTMLDivElement, Props>((props, ref) => {
   const today = new Date();
   const fechaStr = today.toLocaleDateString("es-GT");
 
-  const VERDE = "#2d6a4f";
-  const VERDE2 = "#40916c";
-  const ROJO = "#c1121f";
+  const VERDE = "#A24BA1"; // morado principal del logo
+  const VERDE2 = "#C47CC6"; // morado claro / fondo
+  const ROJO = "#E3007A"; // rosa/fucsia del logo
 
   return (
     <div
