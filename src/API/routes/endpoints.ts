@@ -3,8 +3,23 @@ export const erpEndpoints = {
     login: "/auth/login-user",
   },
 
+  productos: {
+    solicitar: "/solicitud-transferencia-producto",
+    get_to_transfer: (sucursalId: number) =>
+      `/products/products/to-transfer/${sucursalId}`,
+  },
+  stock: {
+    get_to_edit: (id: number) => `/stock/get-stock-to-edit/${id}`,
+    update: "/stock/update-stock-dates",
+  },
+
   sucursales: {
     todas_sucursales: "/sucursales",
+    get_to_transfer: "/sucursales/sucursales-to-transfer",
+  },
+
+  transferencias: {
+    solicitar: "/solicitud-transferencia-producto",
   },
 
   users: {
