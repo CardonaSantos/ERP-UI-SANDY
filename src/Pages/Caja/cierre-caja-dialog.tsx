@@ -128,22 +128,16 @@ export function CierreCajaDialog({
 
   const modo = watched.modo;
   const enCaja = round2(Number(previa?.enCaja ?? 0));
-  // const baseDeseada = round2(
-  //   Number(watched.dejarEnCaja ?? previa?.fondoFijoActual ?? 0),
-  // );
   const isDepositoTodo = watched.modo === "DEPOSITO_TODO";
   const showBaseInput = !isDepositoTodo;
-
   const baseDeseada = isDepositoTodo
     ? 0
     : round2(Number(watched.dejarEnCaja ?? previa?.fondoFijoActual ?? 0));
 
-  // const disponibleOperable = Math.max(0, round2(enCaja - baseDeseada));
   const disponibleOperable = Math.max(0, round2(enCaja - baseDeseada));
 
   const requiereDeposito =
     modo === "DEPOSITO_PARCIAL" || modo === "DEPOSITO_TODO";
-
   const depositoCalculado = useMemo(() => {
     if (!previa) return 0;
     if (modo === "DEPOSITO_TODO") return disponibleOperable;
@@ -471,7 +465,9 @@ export function CierreCajaDialog({
                         name="dejarEnCaja"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Base</FormLabel>
+                            <FormLabel className="text-xs">
+                              Dejar base
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -570,7 +566,7 @@ export function CierreCajaDialog({
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs">
-                                  Monto *
+                                  Monto depósito *
                                 </FormLabel>
                                 <FormControl>
                                   <Input

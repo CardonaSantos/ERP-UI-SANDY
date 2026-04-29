@@ -79,6 +79,8 @@ export const menuVendedor = [
         label: "Punto de Venta",
         href: "/punto-venta",
       },
+      { icon: FileText, label: "Cotizador", href: "/cotizador" },
+
       { icon: CreditCard, label: "Gestión de Créditos", href: "/creditos" },
       {
         icon: History,
@@ -93,6 +95,19 @@ export const menuVendedor = [
   // ==========================================
   // Ruta aplanada: un vendedor necesita ver el stock con 1 solo clic
   { icon: Package, label: "Inventario General", href: "/inventario-stock" },
+
+  {
+    icon: Wallet,
+    label: "Caja Operativa",
+    submenu: [
+      {
+        icon: NotebookPen,
+        label: "Apertura / Registro",
+        href: "/registro-caja",
+      },
+    ],
+  },
+
   { icon: Users, label: "Directorio de Clientes", href: "/clientes-manage" },
 
   // ==========================================
